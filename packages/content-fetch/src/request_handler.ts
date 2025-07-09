@@ -59,9 +59,12 @@ interface FetchResult {
   contentType?: string
 }
 
-const storage = process.env.GCS_UPLOAD_SA_KEY_FILE_PATH
-  ? new Storage({ keyFilename: process.env.GCS_UPLOAD_SA_KEY_FILE_PATH })
-  : new Storage()
+const storage =
+  process.env.SKIP_UPLOAD_ORIGINAL === 'true'
+    ? null
+    : process.env.GCS_UPLOAD_SA_KEY_FILE_PATH
+    ? new Storage({ keyFilename: process.env.GCS_UPLOAD_SA_KEY_FILE_PATH })
+    : new Storage()
 const bucketName = process.env.GCS_UPLOAD_BUCKET || 'omnivore-files'
 
 const NO_CACHE_URLS = [
@@ -79,6 +82,10 @@ const JWT_SECRET = process.env.JWT_SECRET
 const MAX_IMPORT_ATTEMPTS = 1
 
 const uploadToBucket = async (filePath: string, data: string) => {
+  if (!storage) {
+    console.log('Storage upload skipped (SKIP_UPLOAD_ORIGINAL=true)')
+    return
+  }
   await storage
     .bucket(bucketName)
     .file(filePath)

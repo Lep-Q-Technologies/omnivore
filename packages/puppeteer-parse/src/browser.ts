@@ -44,6 +44,16 @@ export const getBrowser = async (): Promise<Browser> => {
       '--disable-background-networking',
       '--disable-gpu',
       '--disable-software-rasterizer',
+      // Additional SSL/Security flags for development
+      '--ignore-ssl-errors',
+      '--ignore-certificate-errors',
+      '--ignore-certificate-errors-spki-list',
+      '--disable-web-security',
+      '--allow-running-insecure-content',
+      '--disable-features=VizDisplayCompositor',
+      // Suppress D-Bus errors
+      '--disable-dbus',
+      '--disable-features=MediaRouter',
     ],
     defaultViewport: {
       deviceScaleFactor: 1,
