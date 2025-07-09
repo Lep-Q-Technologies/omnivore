@@ -294,25 +294,34 @@ export const savePageJob = async (data: Data, attemptsMade: number) => {
         }
       )
 
-      // download the original content
-      const filePath = contentFilePath({
-        userId,
-        libraryItemId: articleSavingRequestId,
-        format: 'original',
-        savedAt: new Date(savedAt),
-      })
-      const exists = await isFileExists(filePath)
-      if (!exists) {
-        logger.error('Original content file does not exist', {
-          finalUrl,
-          filePath,
+      // Skip GCS download in local development when SKIP_UPLOAD_ORIGINAL is true
+      if (process.env.SKIP_UPLOAD_ORIGINAL === 'true') {
+        logger.info(
+          'Skipping GCS download - using basic content for local development'
+        )
+        // Create basic content for local development
+        content = `<html><head><title>${title}</title></head><body><h1>${title}</h1><p>Content fetched from: ${finalUrl}</p></body></html>`
+      } else {
+        // download the original content
+        const filePath = contentFilePath({
+          userId,
+          libraryItemId: articleSavingRequestId,
+          format: 'original',
+          savedAt: new Date(savedAt),
         })
+        const exists = await isFileExists(filePath)
+        if (!exists) {
+          logger.error('Original content file does not exist', {
+            finalUrl,
+            filePath,
+          })
 
-        throw new Error('Original content file does not exist')
+          throw new Error('Original content file does not exist')
+        }
+
+        content = (await downloadFromBucket(filePath)).toString()
+        logger.info('Downloaded original content from:', { filePath })
       }
-
-      content = (await downloadFromBucket(filePath)).toString()
-      logger.info('Downloaded original content from:', { filePath })
     }
 
     // for non-pdf content, we need to save the content
