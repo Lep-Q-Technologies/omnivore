@@ -1,0 +1,181 @@
+# Multi-stage Dockerfile for consolidated Omnivore
+# Supports minimal, standard, and enterprise profiles
+
+# Base stage with common dependencies
+FROM node:20-alpine AS base
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev \
+    pangomm-dev \
+    libjpeg-turbo-dev \
+    freetype-dev
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json yarn.lock lerna.json ./
+COPY packages/omnivore-core/package.json ./packages/omnivore-core/
+COPY packages/omnivore-worker/package.json ./packages/omnivore-worker/
+COPY packages/web/package.json ./packages/web/
+COPY packages/api/package.json ./packages/api/
+COPY packages/db/package.json ./packages/db/
+COPY packages/utils/package.json ./packages/utils/
+
+# Dependencies stage
+FROM base AS deps
+RUN yarn install --frozen-lockfile --network-timeout 1000000
+
+# Source code stage
+FROM base AS source
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/*/node_modules ./packages/*/node_modules
+COPY . .
+
+# Build stage for minimal profile
+FROM source AS build-minimal
+ARG NEXT_PUBLIC_APP_ENV=prod
+ARG NEXT_PUBLIC_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_SERVER_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_HIGHLIGHTS_BASE_URL=http://localhost:3000
+ENV NODE_ENV=production
+ENV PROFILE=minimal
+
+# Build only essential components
+RUN yarn workspace @omnivore/web build
+RUN yarn workspace @omnivore/api build
+RUN yarn workspace @omnivore/db build
+
+# Remove unnecessary dependencies for minimal build
+RUN rm -rf packages/puppeteer-parse packages/pdf-handler packages/thumbnail-handler
+RUN rm -rf packages/rss-handler packages/integration-handler packages/rule-handler
+
+# Build stage for standard profile
+FROM source AS build-standard
+ARG NEXT_PUBLIC_APP_ENV=prod
+ARG NEXT_PUBLIC_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_SERVER_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_HIGHLIGHTS_BASE_URL=http://localhost:3000
+ENV NODE_ENV=production
+ENV PROFILE=standard
+
+# Build all standard components
+RUN yarn build
+
+# Build stage for enterprise profile
+FROM source AS build-enterprise
+ARG NEXT_PUBLIC_APP_ENV=prod
+ARG NEXT_PUBLIC_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_SERVER_BASE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_HIGHLIGHTS_BASE_URL=http://localhost:3000
+ENV NODE_ENV=production
+ENV PROFILE=enterprise
+
+# Build all components including AI features
+RUN yarn build
+
+# Runtime base
+FROM node:20-alpine AS runtime-base
+RUN apk add --no-cache \
+    cairo \
+    jpeg \
+    pango \
+    giflib \
+    pixman \
+    pangomm \
+    libjpeg-turbo \
+    freetype \
+    curl \
+    tini
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Minimal runtime
+FROM runtime-base AS runtime-minimal
+COPY --from=build-minimal --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build-minimal --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build-minimal --chown=nodejs:nodejs /app/package.json ./package.json
+
+# Create data directory
+RUN mkdir -p /data && chown -R nodejs:nodejs /data
+VOLUME ["/data"]
+
+USER nodejs
+EXPOSE 3000
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "packages/omnivore-core/dist/server.js"]
+
+# Standard runtime
+FROM runtime-base AS runtime-standard
+# Install Chromium for Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Tell Puppeteer to use installed Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+COPY --from=build-standard --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build-standard --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build-standard --chown=nodejs:nodejs /app/package.json ./package.json
+
+# Create data directory
+RUN mkdir -p /data && chown -R nodejs:nodejs /data
+VOLUME ["/data"]
+
+USER nodejs
+EXPOSE 3000
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "packages/omnivore-core/dist/server.js"]
+
+# Enterprise runtime
+FROM runtime-base AS runtime-enterprise
+# Install additional dependencies for enterprise features
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    ffmpeg \
+    imagemagick
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+COPY --from=build-enterprise --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build-enterprise --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build-enterprise --chown=nodejs:nodejs /app/package.json ./package.json
+
+# Create data directory
+RUN mkdir -p /data && chown -R nodejs:nodejs /data
+VOLUME ["/data"]
+
+USER nodejs
+EXPOSE 3000
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "packages/omnivore-core/dist/server.js"]
+
+# Final stage selector based on build argument
+ARG PROFILE=standard
+FROM runtime-${PROFILE} AS final

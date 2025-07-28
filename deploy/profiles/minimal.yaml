@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  omnivore:
+    image: omnivore/omnivore:minimal
+    container_name: omnivore
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.consolidated
+      args:
+        PROFILE: minimal
+    environment:
+      # Core configuration
+      - NODE_ENV=production
+      - PORT=3000
+      - DEPLOYMENT_PROFILE=minimal
+      
+      # Database - SQLite for minimal setup
+      - DATABASE_TYPE=sqlite
+      - SQLITE_PATH=/data/omnivore.db
+      
+      # Storage - Local filesystem
+      - USE_LOCAL_STORAGE=true
+      - LOCAL_STORAGE_PATH=/data/uploads
+      
+      # Disable optional features
+      - ENABLE_AI_FEATURES=false
+      - ENABLE_EMAIL=false
+      - ENABLE_RSS=false
+      - ENABLE_ELASTICSEARCH=false
+      - ENABLE_PUPPETEER=false
+      - ENABLE_THUMBNAILS=false
+      - ENABLE_TTS=false
+      - ENABLE_NEWSLETTERS=false
+      - ENABLE_WEBHOOKS=false
+      - ENABLE_API=false
+      
+      # Disable all integrations
+      - ENABLE_POCKET=false
+      - ENABLE_INSTAPAPER=false
+      - ENABLE_READWISE=false
+      - ENABLE_LOGSEQ=false
+      - ENABLE_OBSIDIAN=false
+      - ENABLE_NOTION=false
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-please-change-this-secret}
+      - SESSION_SECRET=${SESSION_SECRET:-please-change-this-secret}
+      
+    volumes:
+      # Single volume for all data
+      - omnivore-data:/data
+      
+    ports:
+      - "3000:3000"
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      
+    restart: unless-stopped
+    
+    # Resource limits for small VPS
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+volumes:
+  omnivore-data:
+    driver: local
