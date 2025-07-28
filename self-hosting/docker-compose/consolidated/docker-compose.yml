@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  omnivore:
+    image: ghcr.io/omnivore-app/omnivore:latest
+    container_name: omnivore
+    ports:
+      - "3000:3000"  # Web UI
+      - "4000:4000"  # API
+    environment:
+      # Deployment Configuration
+      - DEPLOYMENT_PROFILE=${DEPLOYMENT_PROFILE:-standard}
+      
+      # Database Configuration
+      - PG_HOST=postgres
+      - PG_USER=${POSTGRES_USER:-omnivore}
+      - PG_PASSWORD=${POSTGRES_PASSWORD:-omnivore_password}
+      - PG_DB=${POSTGRES_DB:-omnivore}
+      - PG_PORT=5432
+      - PG_POOL_MAX=20
+      
+      # Redis Configuration
+      - REDIS_URL=redis://redis:6379
+      - MQ_REDIS_URL=redis://redis:6379
+      
+      # Storage Configuration
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - STORAGE_PATH=/app/data
+      - GCS_UPLOAD_BUCKET=${GCS_UPLOAD_BUCKET:-omnivore-local}
+      
+      # Feature Flags
+      - ENABLE_CONTENT_PROCESSING=${ENABLE_CONTENT_PROCESSING:-true}
+      - ENABLE_PDF_PROCESSING=${ENABLE_PDF_PROCESSING:-true}
+      - ENABLE_THUMBNAIL_GENERATION=${ENABLE_THUMBNAIL_GENERATION:-true}
+      - ENABLE_EMAIL_INGESTION=${ENABLE_EMAIL_INGESTION:-false}
+      - ENABLE_AI_FEATURES=${ENABLE_AI_FEATURES:-false}
+      - ENABLE_TEXT_TO_SPEECH=${ENABLE_TEXT_TO_SPEECH:-false}
+      - ENABLE_RSS_HANDLING=${ENABLE_RSS_HANDLING:-true}
+      - ENABLE_INTEGRATIONS=${ENABLE_INTEGRATIONS:-true}
+      
+      # Application URLs
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - SERVER_BASE_URL=${SERVER_BASE_URL:-http://localhost:4000}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - HIGHLIGHTS_BASE_URL=${HIGHLIGHTS_BASE_URL:-http://localhost:3000}
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-here}
+      - SSO_JWT_SECRET=${SSO_JWT_SECRET:-your-sso-jwt-secret-here}
+      - IMAGE_PROXY_SECRET=${IMAGE_PROXY_SECRET:-your-image-proxy-secret-here}
+      
+      # Resource Limits
+      - MAX_WORKERS=${MAX_WORKERS:-4}
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-10}
+      
+    volumes:
+      - omnivore_data:/app/data
+      - omnivore_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: omnivore-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-omnivore}
+      POSTGRES_USER: ${POSTGRES_USER:-omnivore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnivore_password}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnivore} -d ${POSTGRES_DB:-omnivore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: |
+      postgres 
+      -c wal_level=replica 
+      -c hot_standby=on 
+      -c max_wal_senders=10 
+      -c max_replication_slots=10 
+      -c hot_standby_feedback=on
+
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: omnivore-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory ${REDIS_MAXMEMORY:-256mb} --maxmemory-policy allkeys-lru
+
+  # Optional: Separate worker service for heavy processing
+  omnivore-worker:
+    image: ghcr.io/omnivore-app/omnivore:latest
+    container_name: omnivore-worker
+    environment:
+      # Same environment as main service
+      - DEPLOYMENT_PROFILE=${DEPLOYMENT_PROFILE:-standard}
+      - PG_HOST=postgres
+      - PG_USER=${POSTGRES_USER:-omnivore}
+      - PG_PASSWORD=${POSTGRES_PASSWORD:-omnivore_password}
+      - PG_DB=${POSTGRES_DB:-omnivore}
+      - REDIS_URL=redis://redis:6379
+      - MQ_REDIS_URL=redis://redis:6379
+      
+      # Worker-specific configuration
+      - WORKER_MODE=true
+      - MAX_WORKERS=${WORKER_MAX_WORKERS:-8}
+      - MAX_CONCURRENT_JOBS=${WORKER_MAX_CONCURRENT_JOBS:-20}
+      
+      # Enable heavy processing features
+      - ENABLE_CONTENT_PROCESSING=true
+      - ENABLE_PDF_PROCESSING=true
+      - ENABLE_THUMBNAIL_GENERATION=true
+      - ENABLE_AI_FEATURES=${ENABLE_AI_FEATURES:-false}
+      
+    volumes:
+      - omnivore_data:/app/data
+    depends_on:
+      omnivore:
+        condition: service_healthy
+    profiles:
+      - worker
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+
+volumes:
+  omnivore_data:
+    driver: local
+  omnivore_uploads:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: omnivore-network
+    driver: bridge

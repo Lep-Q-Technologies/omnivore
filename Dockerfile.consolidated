@@ -1,0 +1,96 @@
+# Omnivore Consolidated Dockerfile
+# Builds web + api + all services into a single container
+
+FROM node:18-alpine AS base
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    python3 \
+    make \
+    g++ \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Set Puppeteer to use installed Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Copy package files
+COPY package.json yarn.lock lerna.json ./
+COPY packages/*/package.json ./packages/*/
+
+# Install dependencies
+FROM base AS deps
+RUN yarn install --frozen-lockfile --production=false
+
+# Build stage
+FROM base AS build
+COPY . .
+COPY --from=deps /app/node_modules ./node_modules
+
+# Build all packages
+RUN yarn build
+
+# Production stage
+FROM node:18-alpine AS production
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    curl \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Set Puppeteer configuration
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Create app user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S omnivore -u 1001
+
+# Copy built application
+COPY --from=build --chown=omnivore:nodejs /app/packages/web/dist ./web/
+COPY --from=build --chown=omnivore:nodejs /app/packages/api/dist ./api/
+COPY --from=build --chown=omnivore:nodejs /app/packages/db ./db/
+COPY --from=build --chown=omnivore:nodejs /app/node_modules ./node_modules/
+
+# Copy configuration files
+COPY --from=build --chown=omnivore:nodejs /app/packages/api/package.json ./api/
+COPY --from=build --chown=omnivore:nodejs /app/packages/web/package.json ./web/
+
+# Create data directories
+RUN mkdir -p /app/data /app/uploads && chown -R omnivore:nodejs /app/data /app/uploads
+
+# Copy startup scripts
+COPY --chown=omnivore:nodejs docker/consolidated/ ./scripts/
+
+# Make scripts executable
+RUN chmod +x ./scripts/*.sh
+
+USER omnivore
+
+# Expose ports
+EXPOSE 3000 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:4000/api/health || exit 1
+
+# Default startup script
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["./scripts/start.sh"]
