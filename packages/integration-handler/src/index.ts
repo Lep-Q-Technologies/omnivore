@@ -1,4 +1,4 @@
-import { File, Storage } from '@google-cloud/storage'
+import { File, S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import * as Sentry from '@sentry/serverless'
 import { stringify } from 'csv-stringify'
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
@@ -29,7 +29,13 @@ Sentry.GCPFunction.init({
   tracesSampleRate: 0,
 })
 
-const storage = new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 const signToken = promisify(jwt.sign)
 
 export const wait = (ms: number): Promise<void> => {
@@ -45,7 +51,7 @@ function isIntegrationRequest(body: any): body is IntegrationRequest {
 }
 
 const createGCSFile = (bucket: string, filename: string): File => {
-  return storage.bucket(bucket).file(filename)
+  return storage.createFile(bucket, filename)
 }
 
 const createSystemToken = async (

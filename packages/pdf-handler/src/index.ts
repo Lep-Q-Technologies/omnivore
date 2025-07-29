@@ -1,4 +1,5 @@
-import { GetSignedUrlConfig, Storage } from '@google-cloud/storage'
+import { GetSignedUrlConfig } from '@google-cloud/storage'
+import { S3StorageClient, GcsStorageClient, File } from '@omnivore/utils/storage'
 import { RedisDataSource } from '@omnivore/utils'
 import * as Sentry from '@sentry/serverless'
 import 'dotenv/config'
@@ -10,7 +11,13 @@ Sentry.GCPFunction.init({
   tracesSampleRate: 0,
 })
 
-const storage = new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 
 interface StorageEventData {
   bucket: string
@@ -40,9 +47,11 @@ const getDocumentUrl = async (
   }
 
   try {
-    const bucket = storage.bucket(data.bucket)
-    const file = bucket.file(data.name)
-    const [url] = await file.getSignedUrl(options)
+    const url = await storage.signedUrl(
+      data.bucket,
+      data.name,
+      options
+    )
     return new URL(url)
   } catch (e) {
     return undefined

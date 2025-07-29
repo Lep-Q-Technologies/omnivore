@@ -1,4 +1,4 @@
-import { Storage } from '@google-cloud/storage'
+import { S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import { fetchContent } from '@omnivore/puppeteer-parse'
 import { RedisDataSource } from '@omnivore/utils'
 import axios from 'axios'
@@ -59,9 +59,13 @@ interface FetchResult {
   contentType?: string
 }
 
-const storage = process.env.GCS_UPLOAD_SA_KEY_FILE_PATH
-  ? new Storage({ keyFilename: process.env.GCS_UPLOAD_SA_KEY_FILE_PATH })
-  : new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 const bucketName = process.env.GCS_UPLOAD_BUCKET || 'omnivore-files'
 
 const NO_CACHE_URLS = [
@@ -79,10 +83,10 @@ const JWT_SECRET = process.env.JWT_SECRET
 const MAX_IMPORT_ATTEMPTS = 1
 
 const uploadToBucket = async (filePath: string, data: string) => {
-  await storage
-    .bucket(bucketName)
-    .file(filePath)
-    .save(data, { public: false, timeout: 5000 })
+  await storage.upload(bucketName, filePath, Buffer.from(data), {
+    public: false,
+    timeout: 5000,
+  })
 }
 
 const uploadOriginalContent = async (

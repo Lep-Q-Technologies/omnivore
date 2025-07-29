@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { File, Storage } from '@google-cloud/storage'
+import { File, S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import { RedisDataSource } from '@omnivore/utils'
 import * as Sentry from '@sentry/serverless'
 import axios from 'axios'
@@ -51,7 +51,13 @@ Sentry.GCPFunction.init({
 })
 
 const MAX_CHARACTER_COUNT = 50000
-const storage = new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 
 const textToSpeechHandlers = [new OpenAITextToSpeech(), new AzureTextToSpeech()]
 
@@ -73,11 +79,11 @@ const uploadToBucket = async (
   bucket: string,
   options?: { contentType?: string; public?: boolean }
 ): Promise<void> => {
-  await storage.bucket(bucket).file(filePath).save(data, options)
+  await storage.upload(bucket, filePath, data, options || {})
 }
 
 export const createGCSFile = (bucket: string, filename: string): File => {
-  return storage.bucket(bucket).file(filename)
+  return storage.createFile(bucket, filename)
 }
 
 const updateSpeech = async (

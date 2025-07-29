@@ -1,11 +1,15 @@
-import { Storage } from '@google-cloud/storage'
+import { S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import { RedisDataSource } from '@omnivore/utils'
 import { v4 as uuid } from 'uuid'
 import { EmailJobType, queueEmailJob } from './job'
 
-const storage = process.env.GCS_UPLOAD_SA_KEY_FILE_PATH
-  ? new Storage({ keyFilename: process.env.GCS_UPLOAD_SA_KEY_FILE_PATH })
-  : new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 const bucketName = process.env.GCS_UPLOAD_BUCKET || 'omnivore-files'
 
 export interface Attachment {
@@ -29,10 +33,12 @@ export const uploadToBucket = async (
 ) => {
   const uploadFileId = uuid()
 
-  await storage
-    .bucket(bucketName)
-    .file(`u/${uploadFileId}/${fileName}`)
-    .save(data, { ...options, timeout: 30000 })
+  await storage.upload(
+    bucketName,
+    `u/${uploadFileId}/${fileName}`,
+    data,
+    { ...options, timeout: 30000 }
+  )
 
   return uploadFileId
 }

@@ -1,10 +1,16 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
-import { Storage } from '@google-cloud/storage'
+import { S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import { parsePdf } from './pdf'
 import axios from 'axios'
 
-const storage = new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 
 const postUpdate = async (
   fileId: string,

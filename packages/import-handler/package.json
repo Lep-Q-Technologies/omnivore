@@ -34,7 +34,6 @@
   "dependencies": {
     "@fast-csv/parse": "^5.0.0",
     "@google-cloud/functions-framework": "3.4.5",
-    "@google-cloud/storage": "^7.0.1",
     "@omnivore/readability": "1.0.0",
     "@omnivore/utils": "1.0.0",
     "@sentry/serverless": "^7.77.0",

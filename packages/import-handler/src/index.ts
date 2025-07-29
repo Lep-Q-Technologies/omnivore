@@ -1,11 +1,11 @@
-import { Storage } from '@google-cloud/storage'
+import { S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 import { Readability } from '@omnivore/readability'
 import { RedisDataSource } from '@omnivore/utils'
 import * as Sentry from '@sentry/serverless'
 import axios from 'axios'
 import 'dotenv/config'
 import * as jwt from 'jsonwebtoken'
-import { Stream } from 'node:stream'
+import { Readable, Stream } from 'node:stream'
 import * as path from 'path'
 import { promisify } from 'util'
 import { v4 as uuid } from 'uuid'
@@ -30,7 +30,13 @@ Sentry.GCPFunction.init({
 
 const signToken = promisify(jwt.sign)
 
-const storage = new Storage()
+const storage =
+  process.env.GCS_USE_LOCAL_HOST === 'true'
+    ? new S3StorageClient(
+        process.env.LOCAL_MINIO_URL,
+        process.env.AWS_S3_ENDPOINT_URL
+      )
+    : new GcsStorageClient(process.env.GCS_UPLOAD_SA_KEY_FILE_PATH)
 
 const CONTENT_TYPES = ['text/csv', 'application/zip']
 
@@ -307,10 +313,8 @@ const handleEvent = async (
       return
     }
 
-    const stream = storage
-      .bucket(data.bucket)
-      .file(data.name)
-      .createReadStream()
+    const file = await storage.downloadFile(data.bucket, data.name)
+    const stream = Readable.from(await file.download())
 
     const ctx: ImportContext = {
       userId,

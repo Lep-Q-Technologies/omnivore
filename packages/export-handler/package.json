@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@google-cloud/functions-framework": "3.4.5",
-    "@google-cloud/storage": "^7.0.1",
     "@omnivore-app/api": "^1.0.4",
     "@omnivore/utils": "1.0.0",
     "@sentry/serverless": "^7.77.0",

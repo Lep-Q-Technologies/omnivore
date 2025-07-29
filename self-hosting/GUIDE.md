@@ -98,6 +98,7 @@ Replace the following with the correct parameters.
 AWS_ACCESS_KEY_ID=minio   # Used for Minio S3 Client
 AWS_SECRET_ACCESS_KEY=miniominio
 AWS_REGION=us-east-1      # REQUIRED: Region for S3/MinIO signed URL generation
+AWS_S3_ENDPOINT_URL=http://minio:9000
 ```
 
 **Important**: The `AWS_REGION` environment variable is **required** for both MinIO and AWS S3 storage. If not set, PDF uploads and signed URL generation will fail.

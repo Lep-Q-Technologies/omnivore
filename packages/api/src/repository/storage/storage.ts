@@ -1,6 +1,5 @@
 import { env } from '../../env'
-import { S3StorageClient } from './S3StorageClient'
-import { GcsStorageClient } from './GcsStorageClient'
+import { S3StorageClient, GcsStorageClient } from '@omnivore/utils/storage'
 
 export const storage = env.fileUpload.useLocalStorage
   ? new S3StorageClient(
