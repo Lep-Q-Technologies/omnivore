@@ -774,30 +774,29 @@ const LibraryPage: React.FC = () => {
         <div className={`toast toast-${toast.type}`}>{toast.message}</div>
       )}
       <div className="library-page">
-        {/* Top Bar: Search + Add + User Menu */}
-        <div className="library-top-bar">
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="Search saved items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-            {searching && <span className="search-spinner">⏳</span>}
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary add-article-btn"
-            onClick={() => setShowAddLinkModal(true)}
-          >
-            + Add
-          </button>
-        </div>
-
-        {/* Filters Bar: Labels + View Toggle + Multi-Select + Sort */}
-        <div className="library-filters-bar">
-          <div className="filter-controls-left">
+        <div className="library-header">
+          <h1>
+            Your Library{' '}
+            {searching && (
+              <span className="searching-indicator">Searching...</span>
+            )}
+            {selectedItems.size > 0 && (
+              <span className="selection-count">
+                ({selectedItems.size} selected)
+              </span>
+            )}
+          </h1>
+          <div className="library-controls">
+            <div className="search-box">
+              <input
+                type="text"
+                placeholder="Search saved items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+              {searching && <span className="search-spinner">⏳</span>}
+            </div>
             <div className="label-filter-wrapper">
               <button
                 type="button"
@@ -805,7 +804,9 @@ const LibraryPage: React.FC = () => {
                 onClick={() => setShowLabelFilter(!showLabelFilter)}
               >
                 🏷️ Labels{' '}
+               {' '}
                 {selectedLabelFilters.length > 0 &&
+                 
                   `(${selectedLabelFilters.length})`}
               </button>
               {showLabelFilter && (
@@ -1000,36 +1001,64 @@ const LibraryPage: React.FC = () => {
           </div>
         )}
 
-        {/* Folder Tabs: Inbox, Archive, Trash */}
-        <div className="library-folder-tabs">
-          <button
-            type="button"
-            className={`folder-tab ${activeFolder === 'inbox' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('inbox')}
-          >
-            Inbox
-          </button>
-          <button
-            type="button"
-            className={`folder-tab ${
-              activeFolder === 'archive' ? 'active' : ''
-            }`}
-            onClick={() => setActiveFolder('archive')}
-          >
-            Archive
-          </button>
-          <button
-            type="button"
-            className={`folder-tab ${activeFolder === 'trash' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('trash')}
-          >
-            Trash
-          </button>
-          {selectedItems.size > 0 && (
-            <span className="selection-indicator">
-              {selectedItems.size} selected
-            </span>
-          )}
+        <div className="library-filters">
+          <div className="folder-tabs">
+            <button
+              className={`folder-tab ${activeFolder === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveFolder('all')}
+            >
+              All
+            </button>
+            <button
+              className={`folder-tab ${
+                activeFolder === 'inbox' ? 'active' : ''
+              }`}
+              onClick={() => setActiveFolder('inbox')}
+            >
+              Inbox
+            </button>
+            <button
+              className={`folder-tab ${
+                activeFolder === 'archive' ? 'active' : ''
+              }`}
+              onClick={() => setActiveFolder('archive')}
+            >
+              Archive
+            </button>
+            <button
+              className={`folder-tab ${
+                activeFolder === 'trash' ? 'active' : ''
+              }`}
+              onClick={() => setActiveFolder('trash')}
+            >
+              Trash
+            </button>
+          </div>
+
+          <div className="sort-controls">
+            <label htmlFor="sort-by">Sort by:</label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="SAVED_AT">Date Saved</option>
+              <option value="UPDATED_AT">Last Updated</option>
+              <option value="PUBLISHED_AT">Published Date</option>
+              <option value="TITLE">Title</option>
+              <option value="AUTHOR">Author</option>
+            </select>
+            <button
+              className="sort-order-btn"
+              onClick={() =>
+                setSortOrder(sortOrder === 'DESC' ? 'ASC' : 'DESC')
+              }
+              title={sortOrder === 'DESC' ? 'Descending' : 'Ascending'}
+            >
+              {sortOrder === 'DESC' ? '↓' : '↑'}
+            </button>
+          </div>
         </div>
 
         <div className="library-stats">
@@ -1074,29 +1103,98 @@ const LibraryPage: React.FC = () => {
             {filteredItems.map((item) => (
               <LibraryItemCard
                 key={item.id}
-                item={item}
-                isSelected={selectedItems.has(item.id)}
-                isMultiSelectMode={isMultiSelectMode}
-                onRead={handleRead}
-                onAction={handleCardAction}
-                onToggleSelect={toggleItemSelection}
-                isProcessing={processingItemId === item.id}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="articles-list">
-            {filteredItems.map((item) => (
-              <LibraryItemRow
-                key={item.id}
-                item={item}
-                isSelected={selectedItems.has(item.id)}
-                isMultiSelectMode={isMultiSelectMode}
-                onRead={handleRead}
-                onAction={handleCardAction}
-                onToggleSelect={toggleItemSelection}
-                isProcessing={processingItemId === item.id}
-              />
+                className={`article-card ${
+                  selectedItems.has(item.id) ? 'selected' : ''
+                }`}
+              >
+                {isMultiSelectMode && (
+                  <div className="article-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => toggleItemSelection(item.id)}
+                      className="checkbox-input"
+                    />
+                  </div>
+                )}
+                <div className="article-header">
+                  <div className="article-state">
+                    <span
+                      className="state-indicator"
+                      style={{ backgroundColor: getStateColor(item.state) }}
+                    ></span>
+                    <span className="state-label">
+                      {getStateLabel(item.state)}
+                    </span>
+                  </div>
+                  <div className="article-date">{formatDate(item.savedAt)}</div>
+                </div>
+
+                <h3 className="article-title">
+                  <button
+                    onClick={() => handleRead(item.id)}
+                    className="article-title-btn"
+                  >
+                    {item.title}
+                  </button>
+                </h3>
+
+                <div className="article-meta">
+                  <span className="article-url">{item.originalUrl}</span>
+                </div>
+
+                {item.labels && item.labels.length > 0 && (
+                  <div className="article-labels">
+                    {item.labels.map((label) => (
+                      <span
+                        key={label.id}
+                        className="label"
+                        style={{
+                          backgroundColor: label.color,
+                          color: '#fff',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          marginRight: '0.25rem',
+                        }}
+                      >
+                        {label.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="article-actions">
+                  <button
+                    className="action-btn"
+                    onClick={() => handleRead(item.id)}
+                    disabled={processingItemId === item.id}
+                  >
+                    Read
+                  </button>
+                  <button
+                    className="action-btn"
+                    onClick={() => handleArchive(item.id, item.state)}
+                    disabled={processingItemId === item.id}
+                  >
+                    {item.state === 'ARCHIVED' ? 'Unarchive' : 'Archive'}
+                  </button>
+                  <LabelPicker
+                    itemId={item.id}
+                    currentLabels={item.labels?.map((l) => l.name) || []}
+                    onUpdate={(labelNames) =>
+                      handleLabelsUpdate(item.id, labelNames)
+                    }
+                  />
+                  <button
+                    className="action-btn action-btn-danger"
+                    onClick={() => handleDelete(item.id)}
+                    disabled={processingItemId === item.id}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}
