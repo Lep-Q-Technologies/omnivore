@@ -20,13 +20,14 @@ import { EVENT_NAMES } from '../queue/events.constants'
 import { JOB_PRIORITY } from '../queue/queue.constants'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import { FOLDERS, VALID_FOLDERS } from '../constants/folders.constants'
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
 @Injectable()
 export class LibraryService {
   private readonly logger = new Logger(LibraryService.name)
 
   constructor(
-    @Inject('ILibraryItemRepository')
+    @Inject(REPOSITORY_TOKENS.ILibraryItemRepository)
     private readonly libraryRepository: ILibraryItemRepository,
     private readonly eventBus: EventBusService,
   ) {}

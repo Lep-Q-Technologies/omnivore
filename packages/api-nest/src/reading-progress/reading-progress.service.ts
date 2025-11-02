@@ -9,6 +9,7 @@ import { ReadingProgressEntity } from './entities/reading-progress.entity'
 import { UpdateReadingProgressInput } from './dto/reading-progress-inputs.type'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
 /**
  * Service for managing sentinel-based reading progress
@@ -19,9 +20,9 @@ export class ReadingProgressService {
   private readonly logger = new Logger(ReadingProgressService.name)
 
   constructor(
-    @Inject('IReadingProgressRepository')
+    @Inject(REPOSITORY_TOKENS.IReadingProgressRepository)
     private readonly progressRepository: IReadingProgressRepository,
-    @Inject('ILibraryItemRepository')
+    @Inject(REPOSITORY_TOKENS.ILibraryItemRepository)
     private readonly libraryItemRepository: ILibraryItemRepository,
   ) {}
 

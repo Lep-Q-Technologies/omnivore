@@ -17,15 +17,16 @@ import {
 } from './dto/highlight-inputs.type'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
 @Injectable()
 export class HighlightService {
   private readonly logger = new Logger(HighlightService.name)
 
   constructor(
-    @Inject('IHighlightRepository')
+    @Inject(REPOSITORY_TOKENS.IHighlightRepository)
     private readonly highlightRepository: IHighlightRepository,
-    @Inject('ILibraryItemRepository')
+    @Inject(REPOSITORY_TOKENS.ILibraryItemRepository)
     private readonly libraryItemRepository: ILibraryItemRepository,
   ) {}
 
