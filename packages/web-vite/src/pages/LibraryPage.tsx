@@ -12,26 +12,24 @@ import {
   useBulkDelete,
   useBulkMoveToFolder,
   useBulkMarkAsRead,
-  useUpdateReadingProgress,
+  useUpdateLibraryItem,
   useLabels,
+  useUpdateNotebook,
 } from '../lib/graphql-client'
 import type {
   LibraryItem as LibraryItemType,
   LibraryItemsConnection,
   LibraryItemState,
+  LibrarySearchInput
 } from '../types/api'
 import ErrorBoundary from '../components/ErrorBoundary'
-import LabelPicker from '../components/LabelPicker'
 import LabelPickerModal from '../components/LabelPickerModal'
 import AddLinkModal from '../components/AddLinkModal'
 import EditInfoModal from '../components/EditInfoModal'
+import NotebookModal from '../components/NotebookModal'
 import LibraryItemCard, { type CardAction } from '../components/LibraryItemCard'
 import LibraryItemRow from '../components/LibraryItemRow'
-import '../styles/LabelPicker.css'
-import '../styles/LibraryGrid.css'
-import '../styles/LibraryList.css'
-import '../styles/LibraryCard.css'
-import '../styles/LibraryPage.css'
+// CSS imported via consolidated bundle in main.tsx
 
 const LIBRARY_ITEMS_QUERY = `
   query LibraryItems($first: Int!, $after: String, $search: LibrarySearchInput) {
@@ -62,8 +60,8 @@ const LIBRARY_ITEMS_QUERY = `
         siteName
         siteIcon
         itemType
-        readingProgressTopPercent
-        readingProgressBottomPercent
+        note
+        noteUpdatedAt
       }
       nextCursor
     }
@@ -98,6 +96,7 @@ const LibraryPage: React.FC = () => {
   })
   const [editingLabelsItemId, setEditingLabelsItemId] = useState<string | null>(null)
   const [editingInfoItemId, setEditingInfoItemId] = useState<string | null>(null)
+  const [notebookItemId, setNotebookItemId] = useState<string | null>(null)
 
   const { archiveItem } = useArchiveItem()
   const { deleteItem } = useDeleteItem()
@@ -105,7 +104,8 @@ const LibraryPage: React.FC = () => {
   const { bulkDelete } = useBulkDelete()
   const { bulkMoveToFolder } = useBulkMoveToFolder()
   const { bulkMarkAsRead } = useBulkMarkAsRead()
-  const { updateProgress } = useUpdateReadingProgress()
+  const { updateLibraryItem } = useUpdateLibraryItem()
+  const { updateNotebook } = useUpdateNotebook()
   const { data: allLabels, fetchLabels } = useLabels()
 
   useEffect(() => {
@@ -128,7 +128,7 @@ const LibraryPage: React.FC = () => {
     const pollInterval = setInterval(async () => {
       try {
         // Build search parameters
-        const searchParams: any = {}
+        const searchParams: LibrarySearchInput = {}
         if (searchQuery.trim()) {
           searchParams.query = searchQuery.trim()
         }
@@ -195,7 +195,7 @@ const LibraryPage: React.FC = () => {
         }
 
         // Build search parameters
-        const searchParams: any = {}
+        const searchParams: LibrarySearchInput = {}
         if (searchQuery.trim()) {
           searchParams.query = searchQuery.trim()
         }
@@ -565,7 +565,7 @@ const LibraryPage: React.FC = () => {
     // Refetch library items to get the actual updated data from server
     // This ensures the labels are persisted and the filter will work correctly
     try {
-      const searchParams: any = {}
+      const searchParams: LibrarySearchInput = {}
       if (searchQuery.trim()) {
         searchParams.query = searchQuery.trim()
       }
@@ -592,7 +592,7 @@ const LibraryPage: React.FC = () => {
     }
   }
 
-  const handleInfoUpdate = async (itemId: string, updatedFields: any) => {
+  const handleInfoUpdate = async (itemId: string, updatedFields: Partial<LibraryItemType>) => {
     // Optimistic update
     setItems((prevItems) =>
       prevItems.map((item) =>
@@ -600,6 +600,26 @@ const LibraryPage: React.FC = () => {
       )
     )
     showToast('Info updated', 'success')
+  }
+
+  const handleNotebookSave = async (itemId: string, note: string) => {
+    try {
+      await updateNotebook(itemId, note)
+
+      // Optimistic update
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? { ...item, note, noteUpdatedAt: new Date().toISOString() }
+            : item
+        )
+      )
+
+      showToast('Notebook saved', 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save notebook', 'error')
+      throw err // Re-throw so NotebookModal can handle it
+    }
   }
 
   const handleMarkAsRead = async (itemId: string) => {
@@ -612,18 +632,14 @@ const LibraryPage: React.FC = () => {
           item.id === itemId
             ? {
                 ...item,
-                readingProgressTopPercent: 100,
-                readingProgressBottomPercent: 100,
                 readAt: new Date().toISOString(),
               }
             : item
         )
       )
 
-      await updateProgress(itemId, {
-        readingProgressTopPercent: 100,
-        readingProgressBottomPercent: 100,
-      })
+      // Use bulkMarkAsRead with single item
+      await bulkMarkAsRead([itemId])
       showToast('Marked as read', 'success')
     } catch (err) {
       // Revert optimistic update on error
@@ -644,18 +660,14 @@ const LibraryPage: React.FC = () => {
           item.id === itemId
             ? {
                 ...item,
-                readingProgressTopPercent: 0,
-                readingProgressBottomPercent: 0,
                 readAt: null,
               }
             : item
         )
       )
 
-      await updateProgress(itemId, {
-        readingProgressTopPercent: 0,
-        readingProgressBottomPercent: 0,
-      })
+      // Use updateLibraryItem to set readAt to null
+      await updateLibraryItem(itemId, { readAt: null })
       showToast('Marked as unread', 'success')
     } catch (err) {
       // Revert optimistic update on error
@@ -683,10 +695,7 @@ const LibraryPage: React.FC = () => {
         setEditingLabelsItemId(itemId)
         break
       case 'open-notebook':
-        // Show toast about upcoming feature, but still navigate to reader
-        showToast('Notebook sidebar coming soon! Opening article...', 'success')
-        // Navigate to reader with notebook sidebar open (when implemented in ARC-010-FE)
-        setTimeout(() => navigate(`/reader/${itemId}?notebook=open`), 500)
+        setNotebookItemId(itemId)
         break
       case 'open-original':
         if (item.originalUrl) {
@@ -723,7 +732,7 @@ const LibraryPage: React.FC = () => {
     showToast('Link added successfully!', 'success')
     // Refetch library items
     try {
-      const searchParams: any = {}
+      const searchParams: LibrarySearchInput = {}
       if (searchQuery.trim()) {
         searchParams.query = searchQuery.trim()
       }
@@ -935,6 +944,21 @@ const LibraryPage: React.FC = () => {
                 setEditingInfoItemId(null)
               }}
               onClose={() => setEditingInfoItemId(null)}
+            />
+          )
+        })()}
+
+        {/* Notebook Modal */}
+        {notebookItemId && (() => {
+          const notebookItem = items.find(i => i.id === notebookItemId)
+          if (!notebookItem) return null
+
+          return (
+            <NotebookModal
+              itemTitle={notebookItem.title}
+              currentNote={notebookItem.note}
+              onSave={(note) => handleNotebookSave(notebookItem.id, note)}
+              onClose={() => setNotebookItemId(null)}
             />
           )
         })()}

@@ -61,7 +61,8 @@ export interface RegisterSuccessWithLoginResponse extends AuthBaseResponse {
   expiresIn: string
 }
 
-export interface RegisterSuccessWithVerificationResponse extends AuthBaseResponse {
+export interface RegisterSuccessWithVerificationResponse
+  extends AuthBaseResponse {
   success: true
   pendingEmailVerification: true
 }
@@ -71,10 +72,7 @@ export type RegisterResponse =
   | RegisterSuccessWithVerificationResponse
   | LoginErrorResponse
 
-export type AuthStatus =
-  | 'AUTHENTICATED'
-  | 'NOT_AUTHENTICATED'
-  | 'PENDING_USER'
+export type AuthStatus = 'AUTHENTICATED' | 'NOT_AUTHENTICATED' | 'PENDING_USER'
 
 export interface VerifyAuthResponse {
   authStatus: AuthStatus
@@ -138,13 +136,47 @@ export interface Label {
   internal?: boolean // true for system labels (Flair), false for user tags
 }
 
+// Highlight anchoring types for robust text positioning
+export type HighlightColor = 'YELLOW' | 'RED' | 'GREEN' | 'BLUE'
+
+export interface AnchorDomRange {
+  startPath: string
+  startOffset: number
+  endPath: string
+  endOffset: number
+}
+
+export interface AnchorTextPosition {
+  start: number
+  end: number
+  version?: string
+}
+
+export interface AnchorTextQuote {
+  exact: string
+  prefix?: string
+  suffix?: string
+}
+
+export interface AnchoredSelectors {
+  domRange?: AnchorDomRange
+  textPosition?: AnchorTextPosition
+  textQuote?: AnchorTextQuote
+}
+
 export interface Highlight {
   id: string
-  text: string
-  position: number
+  quote: string // The highlighted text
+  annotation?: string | null
+  color: HighlightColor
+  highlightPositionPercent: number
+  highlightPositionAnchorIndex: number
+  prefix?: string | null
+  suffix?: string | null
   createdAt: string
   updatedAt: string
-  note?: string
+  // New: Anchored selectors for robust positioning
+  selectors?: AnchoredSelectors
 }
 
 export interface PaginatedResponse<T> {
@@ -260,7 +292,7 @@ export const ErrorCode = {
   RATE_LIMIT_ERROR: 'RATE_LIMIT_ERROR',
 } as const
 
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
+export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode]
 
 export interface FormError {
   field: string
@@ -270,4 +302,13 @@ export interface FormError {
 export interface ValidationResult {
   isValid: boolean
   errors: FormError[]
+}
+
+export interface LibrarySearchInput {
+  query?: string
+  folder?: string
+  labels?: string[]
+  sortBy?: string
+  sortOrder?: string
+  state?: string
 }

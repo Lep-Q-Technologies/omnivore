@@ -5,8 +5,16 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common'
-import { HighlightEntity, HighlightType } from './entities/highlight.entity'
-import { CreateHighlightInput, UpdateHighlightInput } from './dto/highlight-inputs.type'
+import {
+  HighlightEntity,
+  HighlightType,
+  HighlightColor,
+  RepresentationType,
+} from './entities/highlight.entity'
+import {
+  CreateHighlightInput,
+  UpdateHighlightInput,
+} from './dto/highlight-inputs.type'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
 
@@ -73,6 +81,26 @@ export class HighlightService {
     // Generate a short ID (8 characters)
     const shortId = this.generateShortId()
 
+    // Build selectors from input - prefer explicit selectors, fallback to quote/prefix/suffix
+    let selectors: Record<string, any>
+    if (input.selectors) {
+      // Parse JSON selectors
+      try {
+        selectors = JSON.parse(input.selectors)
+      } catch {
+        throw new BadRequestException('Invalid selectors JSON format')
+      }
+    } else {
+      // Build TextQuote selector from legacy fields
+      selectors = {
+        textQuote: {
+          exact: input.quote,
+          prefix: input.prefix || undefined,
+          suffix: input.suffix || undefined,
+        },
+      }
+    }
+
     const highlight = this.highlightRepository.create({
       userId,
       libraryItemId: input.libraryItemId,
@@ -83,10 +111,12 @@ export class HighlightService {
       annotation: input.annotation,
       highlightPositionPercent: input.highlightPositionPercent ?? 0,
       highlightPositionAnchorIndex: input.highlightPositionAnchorIndex ?? 0,
-      color: input.color ?? 'yellow',
+      color: input.color ?? HighlightColor.YELLOW,
       html: input.html,
       highlightType: HighlightType.HIGHLIGHT,
-      representation: 'CONTENT' as any,
+      representation: RepresentationType.CONTENT,
+      selectors,
+      contentVersion: input.contentVersion,
     })
 
     return this.highlightRepository.save(highlight)

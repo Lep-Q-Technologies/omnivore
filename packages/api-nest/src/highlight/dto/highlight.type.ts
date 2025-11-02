@@ -1,5 +1,16 @@
-import { Field, Float, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql'
-import { HighlightType, RepresentationType } from '../entities/highlight.entity'
+import {
+  Field,
+  Float,
+  ID,
+  Int,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql'
+import {
+  HighlightType,
+  RepresentationType,
+  HighlightColor,
+} from '../entities/highlight.entity'
 
 registerEnumType(HighlightType, {
   name: 'HighlightType',
@@ -7,6 +18,11 @@ registerEnumType(HighlightType, {
 
 registerEnumType(RepresentationType, {
   name: 'RepresentationType',
+})
+
+registerEnumType(HighlightColor, {
+  name: 'HighlightColor',
+  description: 'Highlight color options',
 })
 
 @ObjectType()
@@ -56,9 +72,21 @@ export class Highlight {
   @Field({ nullable: true })
   html?: string | null
 
-  @Field({ nullable: true })
-  color?: string | null
+  @Field(() => HighlightColor)
+  color!: HighlightColor
 
   @Field(() => RepresentationType)
   representation!: RepresentationType
+
+  @Field(() => String, {
+    description:
+      'JSON-serialized anchored selectors for robust text positioning',
+  })
+  selectors!: string
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Optional content version/hash for tracking',
+  })
+  contentVersion?: string | null
 }

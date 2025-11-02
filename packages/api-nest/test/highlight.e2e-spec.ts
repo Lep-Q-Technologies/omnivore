@@ -11,7 +11,12 @@ import {
   LibraryItemEntity,
   LibraryItemState,
 } from '../src/library/entities/library-item.entity'
-import { HighlightEntity } from '../src/highlight/entities/highlight.entity'
+import {
+  HighlightEntity,
+  HighlightColor,
+  RepresentationType,
+  HighlightType,
+} from '../src/highlight/entities/highlight.entity'
 import { FOLDERS } from '../src/constants/folders.constants'
 
 const HIGHLIGHTS_QUERY = `
@@ -23,6 +28,8 @@ const HIGHLIGHTS_QUERY = `
       annotation
       color
       highlightPositionPercent
+      selectors
+      contentVersion
       createdAt
       updatedAt
     }
@@ -49,6 +56,8 @@ const CREATE_HIGHLIGHT_MUTATION = `
       annotation
       color
       highlightPositionPercent
+      selectors
+      contentVersion
       createdAt
     }
   }
@@ -141,7 +150,8 @@ describe('Highlight GraphQL (e2e)', () => {
       contentReader: ContentReaderType.WEB,
       folder: FOLDERS.INBOX,
       itemType: 'ARTICLE',
-      readableContent: 'This is the content of the article that can be highlighted.',
+      readableContent:
+        'This is the content of the article that can be highlighted.',
     })
 
     const saved = await libraryRepository.save(testItem)
@@ -152,17 +162,20 @@ describe('Highlight GraphQL (e2e)', () => {
     await app.close()
   }, 30000)
 
-  const executeQuery = (query: string, variables: Record<string, unknown> = {}) =>
+  const executeQuery = (
+    query: string,
+    variables: Record<string, unknown> = {},
+  ) =>
     request(app.getHttpServer())
       .post('/api/graphql')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ query, variables })
-      .expect(200)
+      .expect(200) as Promise<request.Response>
+
+  console.log('executeQuery', executeQuery)
 
   describe('Query highlights', () => {
     beforeAll(async () => {
-      // Create test highlights with different colors
-      // Use shorter timestamp (last 8 digits) to fit in varchar(14) constraint
       const shortTimestamp = Date.now().toString().slice(-8)
       const highlights = [
         {
@@ -174,11 +187,12 @@ describe('Highlight GraphQL (e2e)', () => {
           shortId: `t${shortTimestamp}1`,
           quote: 'First important quote',
           annotation: 'This is significant',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 10,
           highlightPositionAnchorIndex: 0,
-          highlightType: 'HIGHLIGHT' as any,
-          representation: 'CONTENT' as any,
+          highlightType: HighlightType.HIGHLIGHT,
+          representation: RepresentationType.CONTENT,
+          selectors: { textQuote: { exact: 'First important quote' } },
         },
         {
           id: randomUUID(),
@@ -189,11 +203,12 @@ describe('Highlight GraphQL (e2e)', () => {
           shortId: `t${shortTimestamp}2`,
           quote: 'Second important quote',
           annotation: 'Very interesting',
-          color: 'green',
+          color: HighlightColor.GREEN,
           highlightPositionPercent: 25,
           highlightPositionAnchorIndex: 0,
           highlightType: 'HIGHLIGHT' as any,
           representation: 'CONTENT' as any,
+          selectors: { textQuote: { exact: 'Second important quote' } },
         },
         {
           id: randomUUID(),
@@ -203,11 +218,12 @@ describe('Highlight GraphQL (e2e)', () => {
           libraryItem: { id: testLibraryItemId } as any,
           shortId: `t${shortTimestamp}3`,
           quote: 'Third important quote',
-          color: 'red',
+          color: HighlightColor.RED,
           highlightPositionPercent: 50,
           highlightPositionAnchorIndex: 0,
           highlightType: 'HIGHLIGHT' as any,
           representation: 'CONTENT' as any,
+          selectors: { textQuote: { exact: 'Third important quote' } },
         },
         {
           id: randomUUID(),
@@ -218,11 +234,12 @@ describe('Highlight GraphQL (e2e)', () => {
           shortId: `t${shortTimestamp}4`,
           quote: 'Fourth important quote',
           annotation: 'Key insight',
-          color: 'blue',
+          color: HighlightColor.BLUE,
           highlightPositionPercent: 75,
           highlightPositionAnchorIndex: 0,
           highlightType: 'HIGHLIGHT' as any,
           representation: 'CONTENT' as any,
+          selectors: { textQuote: { exact: 'Fourth important quote' } },
         },
       ]
 
@@ -233,6 +250,8 @@ describe('Highlight GraphQL (e2e)', () => {
       const response = await executeQuery(HIGHLIGHTS_QUERY, {
         libraryItemId: testLibraryItemId,
       })
+
+      console.log('response', response.body)
 
       expect(response.body.errors).toBeUndefined()
       expect(response.body.data.highlights).toHaveLength(4)
@@ -260,10 +279,10 @@ describe('Highlight GraphQL (e2e)', () => {
 
       expect(response.body.errors).toBeUndefined()
       const colors = response.body.data.highlights.map((h: any) => h.color)
-      expect(colors).toContain('yellow')
-      expect(colors).toContain('green')
-      expect(colors).toContain('red')
-      expect(colors).toContain('blue')
+      expect(colors).toContain(HighlightColor.YELLOW)
+      expect(colors).toContain(HighlightColor.GREEN)
+      expect(colors).toContain(HighlightColor.RED)
+      expect(colors).toContain(HighlightColor.BLUE)
     })
 
     it('retrieves a single highlight by id', async () => {
@@ -284,7 +303,7 @@ describe('Highlight GraphQL (e2e)', () => {
         id: existing!.id,
         quote: 'First important quote',
         annotation: 'This is significant',
-        color: 'yellow',
+        color: HighlightColor.YELLOW,
       })
     })
 
@@ -329,7 +348,7 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.data.createHighlight).toMatchObject({
         quote: 'New highlight quote',
         annotation: 'My thoughts',
-        color: 'yellow',
+        color: HighlightColor.YELLOW,
       })
       expect(response.body.data.createHighlight.id).toBeTruthy()
       expect(response.body.data.createHighlight.shortId).toBeTruthy()
@@ -338,7 +357,7 @@ describe('Highlight GraphQL (e2e)', () => {
       const highlight = await highlightRepository.findOneBy({
         id: response.body.data.createHighlight.id,
       })
-      expect(highlight?.color).toBe('yellow')
+      expect(highlight?.color).toBe(HighlightColor.YELLOW)
     })
 
     it('creates a highlight with red color', async () => {
@@ -346,7 +365,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Important red highlight',
-          color: 'red',
+          color: HighlightColor.RED,
           highlightPositionPercent: 42,
         },
       })
@@ -354,14 +373,14 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.errors).toBeUndefined()
       expect(response.body.data.createHighlight).toMatchObject({
         quote: 'Important red highlight',
-        color: 'red',
+        color: HighlightColor.RED,
       })
 
       // Verify in database
       const highlight = await highlightRepository.findOneBy({
         id: response.body.data.createHighlight.id,
       })
-      expect(highlight?.color).toBe('red')
+      expect(highlight?.color).toBe(HighlightColor.RED)
     })
 
     it('creates a highlight with green color', async () => {
@@ -369,13 +388,15 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Positive green highlight',
-          color: 'green',
+          color: HighlightColor.GREEN,
           highlightPositionPercent: 55,
         },
       })
 
       expect(response.body.errors).toBeUndefined()
-      expect(response.body.data.createHighlight.color).toBe('green')
+      expect(response.body.data.createHighlight.color).toBe(
+        HighlightColor.GREEN,
+      )
     })
 
     it('creates a highlight with blue color', async () => {
@@ -383,13 +404,13 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Information blue highlight',
-          color: 'blue',
+          color: HighlightColor.BLUE,
           highlightPositionPercent: 68,
         },
       })
 
       expect(response.body.errors).toBeUndefined()
-      expect(response.body.data.createHighlight.color).toBe('blue')
+      expect(response.body.data.createHighlight.color).toBe(HighlightColor.BLUE)
     })
 
     it('creates a highlight without annotation', async () => {
@@ -397,7 +418,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Quote without annotation',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 20,
         },
       })
@@ -416,7 +437,7 @@ describe('Highlight GraphQL (e2e)', () => {
           quote: 'highlighted text',
           prefix: 'This is the ',
           suffix: ' with context',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 30,
         },
       })
@@ -452,7 +473,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: randomUUID(),
           quote: 'Test quote',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 40,
         },
       })
@@ -466,7 +487,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'First quote',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 11,
         },
       })
@@ -475,7 +496,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Second quote',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 12,
         },
       })
@@ -499,11 +520,12 @@ describe('Highlight GraphQL (e2e)', () => {
         shortId: `u${Date.now().toString().slice(-8)}`,
         quote: 'Original quote',
         annotation: 'Original annotation',
-        color: 'yellow',
+        color: HighlightColor.YELLOW,
         highlightPositionPercent: 50,
         highlightPositionAnchorIndex: 0,
         highlightType: 'HIGHLIGHT' as any,
         representation: 'CONTENT' as any,
+        selectors: { textQuote: { exact: 'Original quote' } },
       })
 
       const saved = await highlightRepository.save(highlight)
@@ -520,31 +542,35 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.data.updateHighlight).toMatchObject({
         id: testHighlightId,
         annotation: 'Updated annotation',
-        color: 'yellow', // Unchanged
+        color: HighlightColor.YELLOW, // Unchanged
       })
 
       // Verify in database
-      const highlight = await highlightRepository.findOneBy({ id: testHighlightId })
+      const highlight = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
       expect(highlight?.annotation).toBe('Updated annotation')
-      expect(highlight?.color).toBe('yellow')
+      expect(highlight?.color).toBe(HighlightColor.YELLOW)
     })
 
     it('updates highlight color from yellow to red', async () => {
       const response = await executeQuery(UPDATE_HIGHLIGHT_MUTATION, {
         id: testHighlightId,
-        input: { color: 'red' },
+        input: { color: HighlightColor.RED },
       })
 
       expect(response.body.errors).toBeUndefined()
       expect(response.body.data.updateHighlight).toMatchObject({
         id: testHighlightId,
-        color: 'red',
+        color: HighlightColor.RED,
         annotation: 'Original annotation', // Unchanged
       })
 
       // Verify in database
-      const highlight = await highlightRepository.findOneBy({ id: testHighlightId })
-      expect(highlight?.color).toBe('red')
+      const highlight = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
+      expect(highlight?.color).toBe(HighlightColor.RED)
       expect(highlight?.annotation).toBe('Original annotation')
     })
 
@@ -553,7 +579,7 @@ describe('Highlight GraphQL (e2e)', () => {
         id: testHighlightId,
         input: {
           annotation: 'New annotation',
-          color: 'blue',
+          color: HighlightColor.BLUE,
         },
       })
 
@@ -561,13 +587,15 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.data.updateHighlight).toMatchObject({
         id: testHighlightId,
         annotation: 'New annotation',
-        color: 'blue',
+        color: HighlightColor.BLUE,
       })
 
       // Verify in database
-      const highlight = await highlightRepository.findOneBy({ id: testHighlightId })
+      const highlight = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
       expect(highlight?.annotation).toBe('New annotation')
-      expect(highlight?.color).toBe('blue')
+      expect(highlight?.color).toBe(HighlightColor.BLUE)
     })
 
     it('clears annotation with empty string', async () => {
@@ -580,12 +608,19 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.data.updateHighlight.annotation).toBe('')
 
       // Verify in database
-      const highlight = await highlightRepository.findOneBy({ id: testHighlightId })
+      const highlight = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
       expect(highlight?.annotation).toBe('')
     })
 
     it('cycles through all color options', async () => {
-      const colors = ['yellow', 'red', 'green', 'blue']
+      const colors = [
+        HighlightColor.YELLOW,
+        HighlightColor.RED,
+        HighlightColor.GREEN,
+        HighlightColor.BLUE,
+      ]
 
       for (const color of colors) {
         const response = await executeQuery(UPDATE_HIGHLIGHT_MUTATION, {
@@ -598,14 +633,16 @@ describe('Highlight GraphQL (e2e)', () => {
       }
 
       // Verify final state in database
-      const highlight = await highlightRepository.findOneBy({ id: testHighlightId })
-      expect(highlight?.color).toBe('blue')
+      const highlight = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
+      expect(highlight?.color).toBe(HighlightColor.BLUE)
     })
 
     it('returns error for invalid color', async () => {
       const response = await executeQuery(UPDATE_HIGHLIGHT_MUTATION, {
         id: testHighlightId,
-        input: { color: 'orange' }, // Invalid color
+        input: { color: 'orange' as any as HighlightColor }, // Invalid color
       })
 
       expect(response.body.errors).toBeDefined()
@@ -622,7 +659,9 @@ describe('Highlight GraphQL (e2e)', () => {
     })
 
     it('updates updatedAt timestamp', async () => {
-      const before = await highlightRepository.findOneBy({ id: testHighlightId })
+      const before = await highlightRepository.findOneBy({
+        id: testHighlightId,
+      })
       const originalUpdatedAt = before!.updatedAt
 
       // Wait a bit to ensure timestamp difference
@@ -650,11 +689,12 @@ describe('Highlight GraphQL (e2e)', () => {
         libraryItem: { id: testLibraryItemId } as any,
         shortId: `d${Date.now().toString().slice(-8)}`,
         quote: 'To be deleted',
-        color: 'yellow',
+        color: HighlightColor.YELLOW,
         highlightPositionPercent: 50,
         highlightPositionAnchorIndex: 0,
         highlightType: 'HIGHLIGHT' as any,
         representation: 'CONTENT' as any,
+        selectors: { textQuote: { exact: 'To be deleted' } },
       })
 
       const saved = await highlightRepository.save(highlight)
@@ -693,7 +733,7 @@ describe('Highlight GraphQL (e2e)', () => {
           libraryItemId: testLibraryItemId,
           quote: 'Critical information',
           annotation: 'Must remember',
-          color: 'red',
+          color: HighlightColor.RED,
           highlightPositionPercent: 15,
         },
       })
@@ -703,7 +743,7 @@ describe('Highlight GraphQL (e2e)', () => {
           libraryItemId: testLibraryItemId,
           quote: 'To do item',
           annotation: 'Action required',
-          color: 'green',
+          color: HighlightColor.GREEN,
           highlightPositionPercent: 35,
         },
       })
@@ -713,14 +753,20 @@ describe('Highlight GraphQL (e2e)', () => {
           libraryItemId: testLibraryItemId,
           quote: 'Reference material',
           annotation: 'For later',
-          color: 'blue',
+          color: HighlightColor.BLUE,
           highlightPositionPercent: 65,
         },
       })
 
-      expect(importantQuote.body.data.createHighlight.color).toBe('red')
-      expect(actionItem.body.data.createHighlight.color).toBe('green')
-      expect(reference.body.data.createHighlight.color).toBe('blue')
+      expect(importantQuote.body.data.createHighlight.color).toBe(
+        HighlightColor.RED,
+      )
+      expect(actionItem.body.data.createHighlight.color).toBe(
+        HighlightColor.GREEN,
+      )
+      expect(reference.body.data.createHighlight.color).toBe(
+        HighlightColor.BLUE,
+      )
 
       // Verify all highlights are retrievable
       const allHighlights = await executeQuery(HIGHLIGHTS_QUERY, {
@@ -728,9 +774,9 @@ describe('Highlight GraphQL (e2e)', () => {
       })
 
       const colors = allHighlights.body.data.highlights.map((h: any) => h.color)
-      expect(colors).toContain('red')
-      expect(colors).toContain('green')
-      expect(colors).toContain('blue')
+      expect(colors).toContain(HighlightColor.RED)
+      expect(colors).toContain(HighlightColor.GREEN)
+      expect(colors).toContain(HighlightColor.BLUE)
     })
 
     it('supports changing highlight color based on re-evaluation', async () => {
@@ -739,7 +785,7 @@ describe('Highlight GraphQL (e2e)', () => {
         input: {
           libraryItemId: testLibraryItemId,
           quote: 'Initially interesting',
-          color: 'yellow',
+          color: HighlightColor.YELLOW,
           highlightPositionPercent: 45,
         },
       })
@@ -750,15 +796,140 @@ describe('Highlight GraphQL (e2e)', () => {
       const updateResponse = await executeQuery(UPDATE_HIGHLIGHT_MUTATION, {
         id: highlightId,
         input: {
-          color: 'red',
+          color: HighlightColor.RED,
           annotation: 'Actually very important!',
         },
       })
 
       expect(updateResponse.body.data.updateHighlight).toMatchObject({
-        color: 'red',
+        color: HighlightColor.RED,
         annotation: 'Actually very important!',
       })
+    })
+  })
+
+  describe('Robust anchored selectors', () => {
+    it('creates highlight with explicit selectors JSON', async () => {
+      const selectors = {
+        textQuote: {
+          exact: 'highlighted text',
+          prefix: 'This is the ',
+          suffix: ' with context',
+        },
+        domRange: {
+          startPath: '0/1/2',
+          startOffset: 5,
+          endPath: '0/1/2',
+          endOffset: 20,
+        },
+        textPosition: {
+          start: 150,
+          end: 165,
+        },
+      }
+
+      const response = await executeQuery(CREATE_HIGHLIGHT_MUTATION, {
+        input: {
+          libraryItemId: testLibraryItemId,
+          quote: 'highlighted text',
+          color: HighlightColor.YELLOW,
+          highlightPositionPercent: 30,
+          selectors: JSON.stringify(selectors),
+        },
+      })
+
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data.createHighlight.selectors).toBeTruthy()
+
+      // Verify selectors are stored as JSON
+      const parsedSelectors = JSON.parse(
+        response.body.data.createHighlight.selectors,
+      )
+      expect(parsedSelectors).toMatchObject(selectors)
+
+      // Verify in database
+      const highlight = await highlightRepository.findOneBy({
+        id: response.body.data.createHighlight.id,
+      })
+      expect(highlight?.selectors).toMatchObject(selectors)
+    })
+
+    it('creates highlight with contentVersion tracking', async () => {
+      const contentVersion = 'test-version-hash-12345'
+
+      const response = await executeQuery(CREATE_HIGHLIGHT_MUTATION, {
+        input: {
+          libraryItemId: testLibraryItemId,
+          quote: 'versioned highlight',
+          color: HighlightColor.GREEN,
+          highlightPositionPercent: 50,
+          contentVersion,
+        },
+      })
+
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data.createHighlight.contentVersion).toBe(
+        contentVersion,
+      )
+
+      // Verify in database
+      const highlight = await highlightRepository.findOneBy({
+        id: response.body.data.createHighlight.id,
+      })
+      expect(highlight?.contentVersion).toBe(contentVersion)
+    })
+
+    it('creates highlight without selectors (legacy format)', async () => {
+      // Test backward compatibility - no selectors provided
+      const response = await executeQuery(CREATE_HIGHLIGHT_MUTATION, {
+        input: {
+          libraryItemId: testLibraryItemId,
+          quote: 'simple highlight',
+          prefix: 'before ',
+          suffix: ' after',
+          color: HighlightColor.BLUE,
+          highlightPositionPercent: 75,
+        },
+      })
+
+      expect(response.body.errors).toBeUndefined()
+      expect(response.body.data.createHighlight.selectors).toBeTruthy()
+
+      // Verify fallback to textQuote selector from quote/prefix/suffix
+      const parsedSelectors = JSON.parse(
+        response.body.data.createHighlight.selectors,
+      )
+      expect(parsedSelectors.textQuote).toMatchObject({
+        exact: 'simple highlight',
+        prefix: 'before ',
+        suffix: ' after',
+      })
+    })
+
+    it('retrieves highlights with selectors correctly', async () => {
+      // Create a highlight with selectors
+      await executeQuery(CREATE_HIGHLIGHT_MUTATION, {
+        input: {
+          libraryItemId: testLibraryItemId,
+          quote: 'test quote',
+          color: HighlightColor.YELLOW,
+          highlightPositionPercent: 45,
+          selectors: JSON.stringify({
+            textQuote: { exact: 'test quote' },
+          }),
+        },
+      })
+
+      // Query all highlights
+      const response = await executeQuery(HIGHLIGHTS_QUERY, {
+        libraryItemId: testLibraryItemId,
+      })
+
+      expect(response.body.errors).toBeUndefined()
+      const highlightsWithSelectors = response.body.data.highlights.filter(
+        (h: any) => h.selectors,
+      )
+      expect(highlightsWithSelectors.length).toBeGreaterThan(0)
     })
   })
 })
