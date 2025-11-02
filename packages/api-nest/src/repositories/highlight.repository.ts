@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { Repository, In } from 'typeorm'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
 import { IHighlightRepository } from './interfaces/highlight-repository.interface'
 
@@ -68,5 +68,36 @@ export class HighlightRepository implements IHighlightRepository {
    */
   async remove(highlight: HighlightEntity): Promise<void> {
     await this.repository.remove(highlight)
+  }
+
+  /**
+   * Batch find highlights for multiple library items
+   * Used by DataLoader to prevent N+1 queries
+   */
+  async findByLibraryItemIds(
+    libraryItemIds: string[],
+    userId: string,
+  ): Promise<Map<string, HighlightEntity[]>> {
+    if (libraryItemIds.length === 0) {
+      return new Map()
+    }
+
+    const highlights = await this.repository.find({
+      where: {
+        libraryItemId: In(libraryItemIds),
+        userId,
+      },
+      order: {
+        highlightPositionPercent: 'ASC',
+      },
+    })
+
+    // Group by library item ID
+    const result = new Map<string, HighlightEntity[]>()
+    for (const libraryItemId of libraryItemIds) {
+      result.set(libraryItemId, highlights.filter(h => h.libraryItemId === libraryItemId))
+    }
+
+    return result
   }
 }

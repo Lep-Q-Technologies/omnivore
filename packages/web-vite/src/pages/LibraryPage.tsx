@@ -16,6 +16,10 @@ import {
   useLabels,
   useUpdateNotebook,
 } from '../lib/graphql-client'
+import {
+  LIBRARY_ITEM_BASIC_FRAGMENT,
+  LABEL_BASIC_FRAGMENT,
+} from '../lib/graphql-fragments'
 import type {
   LibraryItem as LibraryItemType,
   LibraryItemsConnection,
@@ -32,36 +36,15 @@ import LibraryItemRow from '../components/LibraryItemRow'
 // CSS imported via consolidated bundle in main.tsx
 
 const LIBRARY_ITEMS_QUERY = `
+  ${LIBRARY_ITEM_BASIC_FRAGMENT}
+  ${LABEL_BASIC_FRAGMENT}
   query LibraryItems($first: Int!, $after: String, $search: LibrarySearchInput) {
     libraryItems(first: $first, after: $after, search: $search) {
       items {
-        id
-        title
-        slug
-        originalUrl
-        author
-        description
-        savedAt
-        createdAt
-        updatedAt
-        publishedAt
-        readAt
-        state
-        contentReader
-        folder
+        ...LibraryItemBasicFields
         labels {
-          id
-          name
-          color
-          description
+          ...LabelBasicFields
         }
-        thumbnail
-        wordCount
-        siteName
-        siteIcon
-        itemType
-        note
-        noteUpdatedAt
       }
       nextCursor
     }

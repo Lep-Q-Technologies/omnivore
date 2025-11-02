@@ -3,6 +3,13 @@
 
 import { useState, useCallback } from 'react'
 import type { LibraryItem, DeleteResult, HighlightColor } from '../types/api'
+import {
+  LABEL_BASIC_FRAGMENT,
+  LABEL_FRAGMENT,
+  HIGHLIGHT_FRAGMENT,
+  LIBRARY_ITEM_FULL_FRAGMENT,
+  READING_PROGRESS_FRAGMENT,
+} from './graphql-fragments'
 
 const DEFAULT_GRAPHQL_PATH = '/api/graphql'
 const TOKEN_STORAGE_KEY = 'omnivore-auth-token'
@@ -159,22 +166,11 @@ const BULK_MARK_AS_READ_MUTATION = `
 `
 
 const SAVE_URL_MUTATION = `
+  ${LIBRARY_ITEM_FULL_FRAGMENT}
+  ${LABEL_BASIC_FRAGMENT}
   mutation SaveUrl($input: SaveUrlInput!) {
     saveUrl(input: $input) {
-      id
-      title
-      slug
-      originalUrl
-      author
-      description
-      savedAt
-      createdAt
-      updatedAt
-      publishedAt
-      readAt
-      state
-      contentReader
-      folder
+      ...LibraryItemFullFields
     }
   }
 `
@@ -443,88 +439,26 @@ export interface UpdateLabelInput {
 // ==================== LIBRARY ITEM QUERIES ====================
 
 const GET_LIBRARY_ITEM_QUERY = `
+  ${LIBRARY_ITEM_FULL_FRAGMENT}
+  ${LABEL_BASIC_FRAGMENT}
   query GetLibraryItem($id: String!) {
     libraryItem(id: $id) {
-      id
-      title
-      slug
-      originalUrl
-      author
-      description
-      content
-      savedAt
-      createdAt
-      publishedAt
-      readAt
-      updatedAt
-      state
-      contentReader
-      folder
-      note
-      noteUpdatedAt
-      labels {
-        id
-        name
-        color
-      }
+      ...LibraryItemFullFields
     }
   }
 `
 
 // Batched query for reader page - fetches item + highlights in one request
 const GET_READER_PAGE_DATA_QUERY = `
+  ${LIBRARY_ITEM_FULL_FRAGMENT}
+  ${LABEL_FRAGMENT}
+  ${HIGHLIGHT_FRAGMENT}
   query GetReaderPageData($id: String!) {
     libraryItem(id: $id) {
-      id
-      title
-      slug
-      originalUrl
-      author
-      description
-      content
-      savedAt
-      createdAt
-      publishedAt
-      readAt
-      updatedAt
-      state
-      contentReader
-      folder
-      note
-      noteUpdatedAt
-      labels {
-        id
-        name
-        color
-        description
-        position
-        internal
-      }
-      thumbnail
-      siteName
-      siteIcon
-      itemType
-      wordCount
+      ...LibraryItemFullFields
     }
     highlights(libraryItemId: $id) {
-      id
-      shortId
-      libraryItemId
-      quote
-      prefix
-      suffix
-      patch
-      annotation
-      createdAt
-      updatedAt
-      sharedAt
-      highlightPositionPercent
-      highlightPositionAnchorIndex
-      highlightType
-      html
-      color
-      representation
-      selectors
+      ...HighlightFields
     }
   }
 `
@@ -532,31 +466,19 @@ const GET_READER_PAGE_DATA_QUERY = `
 // ==================== LABEL QUERIES ====================
 
 const GET_LABELS_QUERY = `
+  ${LABEL_FRAGMENT}
   query GetLabels {
     labels {
-      id
-      name
-      color
-      description
-      position
-      internal
-      createdAt
-      updatedAt
+      ...LabelFields
     }
   }
 `
 
 const GET_LABEL_QUERY = `
+  ${LABEL_FRAGMENT}
   query GetLabel($id: String!) {
     label(id: $id) {
-      id
-      name
-      color
-      description
-      position
-      internal
-      createdAt
-      updatedAt
+      ...LabelFields
     }
   }
 `
@@ -564,30 +486,19 @@ const GET_LABEL_QUERY = `
 // ==================== LABEL MUTATIONS ====================
 
 const CREATE_LABEL_MUTATION = `
+  ${LABEL_FRAGMENT}
   mutation CreateLabel($input: CreateLabelInput!) {
     createLabel(input: $input) {
-      id
-      name
-      color
-      description
-      position
-      internal
-      createdAt
-      updatedAt
+      ...LabelFields
     }
   }
 `
 
 const UPDATE_LABEL_MUTATION = `
+  ${LABEL_FRAGMENT}
   mutation UpdateLabel($id: String!, $input: UpdateLabelInput!) {
     updateLabel(id: $id, input: $input) {
-      id
-      name
-      color
-      description
-      position
-      internal
-      updatedAt
+      ...LabelFields
     }
   }
 `
@@ -603,11 +514,10 @@ const DELETE_LABEL_MUTATION = `
 `
 
 const SET_LIBRARY_ITEM_LABELS_MUTATION = `
+  ${LABEL_BASIC_FRAGMENT}
   mutation SetLibraryItemLabels($itemId: String!, $labelIds: [String!]!) {
     setLibraryItemLabels(itemId: $itemId, labelIds: $labelIds) {
-      id
-      name
-      color
+      ...LabelBasicFields
     }
   }
 `
@@ -943,53 +853,19 @@ export interface UpdateHighlightInput {
 // ==================== HIGHLIGHT QUERIES ====================
 
 const GET_HIGHLIGHTS_QUERY = `
+  ${HIGHLIGHT_FRAGMENT}
   query GetHighlights($libraryItemId: String!) {
     highlights(libraryItemId: $libraryItemId) {
-      id
-      shortId
-      libraryItemId
-      quote
-      prefix
-      suffix
-      patch
-      annotation
-      createdAt
-      updatedAt
-      sharedAt
-      highlightPositionPercent
-      highlightPositionAnchorIndex
-      highlightType
-      html
-      color
-      representation
-      selectors
-      contentVersion
+      ...HighlightFields
     }
   }
 `
 
 const GET_HIGHLIGHT_QUERY = `
+  ${HIGHLIGHT_FRAGMENT}
   query GetHighlight($id: String!) {
     highlight(id: $id) {
-      id
-      shortId
-      libraryItemId
-      quote
-      prefix
-      suffix
-      patch
-      annotation
-      createdAt
-      updatedAt
-      sharedAt
-      highlightPositionPercent
-      highlightPositionAnchorIndex
-      highlightType
-      html
-      color
-      representation
-      selectors
-      contentVersion
+      ...HighlightFields
     }
   }
 `
@@ -997,36 +873,19 @@ const GET_HIGHLIGHT_QUERY = `
 // ==================== HIGHLIGHT MUTATIONS ====================
 
 const CREATE_HIGHLIGHT_MUTATION = `
+  ${HIGHLIGHT_FRAGMENT}
   mutation CreateHighlight($input: CreateHighlightInput!) {
     createHighlight(input: $input) {
-      id
-      shortId
-      libraryItemId
-      quote
-      prefix
-      suffix
-      annotation
-      createdAt
-      updatedAt
-      highlightPositionPercent
-      highlightPositionAnchorIndex
-      highlightType
-      html
-      color
-      representation
-      selectors
-      contentVersion
+      ...HighlightFields
     }
   }
 `
 
 const UPDATE_HIGHLIGHT_MUTATION = `
+  ${HIGHLIGHT_FRAGMENT}
   mutation UpdateHighlight($id: String!, $input: UpdateHighlightInput!) {
     updateHighlight(id: $id, input: $input) {
-      id
-      annotation
-      color
-      updatedAt
+      ...HighlightFields
     }
   }
 `
@@ -1230,15 +1089,10 @@ export interface UpdateReadingProgressInput {
 // ==================== READING PROGRESS QUERIES ====================
 
 const GET_READING_PROGRESS_QUERY = `
+  ${READING_PROGRESS_FRAGMENT}
   query GetReadingProgress($libraryItemId: String!, $contentVersion: String) {
     readingProgress(libraryItemId: $libraryItemId, contentVersion: $contentVersion) {
-      id
-      libraryItemId
-      contentVersion
-      lastSeenSentinel
-      highestSeenSentinel
-      createdAt
-      updatedAt
+      ...ReadingProgressFields
     }
   }
 `
@@ -1246,15 +1100,10 @@ const GET_READING_PROGRESS_QUERY = `
 // ==================== READING PROGRESS MUTATIONS ====================
 
 const UPDATE_READING_PROGRESS_MUTATION = `
+  ${READING_PROGRESS_FRAGMENT}
   mutation UpdateReadingProgress($input: UpdateReadingProgressInput!) {
     updateReadingProgress(input: $input) {
-      id
-      libraryItemId
-      contentVersion
-      lastSeenSentinel
-      highestSeenSentinel
-      createdAt
-      updatedAt
+      ...ReadingProgressFields
     }
   }
 `
