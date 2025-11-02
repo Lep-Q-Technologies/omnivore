@@ -11,6 +11,7 @@ import { LibraryItemEntity } from '../library/entities/library-item.entity'
 import { Label } from '../label/entities/label.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
+import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { HighlightEntity } from '../highlight/entities/highlight.entity'
           Label,
           EntityLabel,
           HighlightEntity,
+          ReadingProgressEntity,
         ],
 
         // Migration configuration
@@ -57,8 +59,9 @@ import { HighlightEntity } from '../highlight/entities/highlight.entity'
         synchronize: false, // Never use synchronize with existing database
         logging:
           configService.get(EnvVariables.NODE_ENV) === 'development'
-            ? ['query', 'error']
+            ? ['error', 'warn']
             : ['error'],
+        maxQueryExecutionTime: 1000, // Log queries slower than 1 second
 
         // Connection pool settings for production
         extra: {

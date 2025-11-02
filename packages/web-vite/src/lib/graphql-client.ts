@@ -248,44 +248,6 @@ export function useDeleteItem() {
   return { ...state, deleteItem }
 }
 
-export function useUpdateReadingProgress() {
-  const [state, setState] = useState<MutationState<any>>({
-    loading: false,
-    error: null,
-    data: null,
-  })
-
-  const updateProgress = useCallback(
-    async (
-      id: string,
-      progress: {
-        readingProgressTopPercent: number
-        readingProgressBottomPercent: number
-        readingProgressAnchorIndex?: number
-        readingProgressHighestAnchor?: number
-      }
-    ) => {
-      setState({ loading: true, error: null, data: null })
-      try {
-        const data = await graphqlRequest(UPDATE_READING_PROGRESS_MUTATION, {
-          id,
-          progress,
-        })
-        setState({ loading: false, error: null, data })
-        return data
-      } catch (error) {
-        const err =
-          error instanceof Error ? error : new Error('Update progress failed')
-        setState({ loading: false, error: err, data: null })
-        throw err
-      }
-    },
-    []
-  )
-
-  return { ...state, updateProgress }
-}
-
 export function useMoveToFolder() {
   const [state, setState] = useState<MutationState<any>>({
     loading: false,

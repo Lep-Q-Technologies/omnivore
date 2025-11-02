@@ -84,17 +84,12 @@ export class LibraryItemEntity {
   @Column({ name: 'site_icon', type: 'text', nullable: true })
   siteIcon?: string | null
 
-  @Column({ name: 'reading_progress_top_percent', type: 'real', default: 0 })
-  readingProgressTopPercent!: number
-
-  @Column({ name: 'reading_progress_bottom_percent', type: 'real', default: 0 })
-  readingProgressBottomPercent!: number
-
-  @Column({ name: 'reading_progress_last_read_anchor', type: 'integer', default: 0 })
-  readingProgressLastReadAnchor!: number
-
-  @Column({ name: 'reading_progress_highest_read_anchor', type: 'integer', default: 0 })
-  readingProgressHighestReadAnchor!: number
+  /**
+   * SHA-256 hash of sanitized content for version tracking
+   * Used by sentinel-based reading progress to detect content changes
+   */
+  @Column({ name: 'content_hash', type: 'varchar', length: 64, nullable: true })
+  contentHash?: string | null
 
   @Column({ type: 'text', nullable: true })
   thumbnail?: string | null
@@ -113,7 +108,13 @@ export class LibraryItemEntity {
   @Column({ type: 'text' })
   folder!: string
 
-  @Column({ name: 'label_names', type: 'text', array: true, nullable: true, default: [] })
+  @Column({
+    name: 'label_names',
+    type: 'text',
+    array: true,
+    nullable: true,
+    default: [],
+  })
   labelNames?: string[] | null
 
   @Column({ name: 'readable_content', type: 'text', default: '' })

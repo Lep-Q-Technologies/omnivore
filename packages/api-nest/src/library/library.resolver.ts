@@ -1,4 +1,12 @@
-import { Args, Int, Query, Mutation, Resolver, ResolveField, Parent } from '@nestjs/graphql'
+import {
+  Args,
+  Int,
+  Query,
+  Mutation,
+  Resolver,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
@@ -14,7 +22,6 @@ import {
   SearchPageInfo,
 } from './dto/library-item.type'
 import {
-  ReadingProgressInput,
   DeleteResult,
   LibrarySearchInput,
   SaveUrlInput,
@@ -92,7 +99,11 @@ export class LibraryResolver {
     first = 20,
     @Args('after', { type: () => String, nullable: true }) after?: string,
     @Args('query', { type: () => String, nullable: true }) query?: string,
-    @Args('includeContent', { type: () => Boolean, nullable: true, defaultValue: false })
+    @Args('includeContent', {
+      type: () => Boolean,
+      nullable: true,
+      defaultValue: false,
+    })
     includeContent = false,
   ): Promise<typeof SearchResult> {
     try {
@@ -119,7 +130,7 @@ export class LibraryResolver {
         }
 
         return {
-          cursor: item.id,  // Each edge cursor should be the item's ID
+          cursor: item.id, // Each edge cursor should be the item's ID
           node: graphItem,
         }
       })
@@ -128,7 +139,7 @@ export class LibraryResolver {
         hasNextPage: !!nextCursor,
         hasPreviousPage: !!after,
         startCursor: items.length > 0 ? items[0].id : null,
-        endCursor: items.length > 0 ? items[items.length - 1].id : null,  // Last item's ID, not nextCursor
+        endCursor: items.length > 0 ? items[items.length - 1].id : null, // Last item's ID, not nextCursor
         totalCount: null, // Not currently tracked
       }
 
@@ -174,28 +185,6 @@ export class LibraryResolver {
     id: string,
   ): Promise<DeleteResult> {
     return await this.libraryService.deleteItem(user.id, id)
-  }
-
-  @Mutation(() => LibraryItem, {
-    description: 'Update reading progress for a library item',
-  })
-  @UseGuards(JwtAuthGuard)
-  async updateReadingProgress(
-    @CurrentUser() user: User,
-    @Args('id', { type: () => String, description: 'Library item ID' })
-    id: string,
-    @Args('progress', {
-      type: () => ReadingProgressInput,
-      description: 'Reading progress data',
-    })
-    progress: ReadingProgressInput,
-  ): Promise<LibraryItem> {
-    const entity = await this.libraryService.updateReadingProgress(
-      user.id,
-      id,
-      progress,
-    )
-    return mapEntityToGraph(entity)
   }
 
   @Mutation(() => LibraryItem, {
@@ -369,8 +358,6 @@ function mapEntityToGraph(entity: any): LibraryItem {
     publishedAt: entity.publishedAt ?? null,
     readAt: entity.readAt ?? null,
     updatedAt: entity.updatedAt,
-    readingProgressTopPercent: entity.readingProgressTopPercent ?? 0,
-    readingProgressBottomPercent: entity.readingProgressBottomPercent ?? 0,
     state: entity.state,
     contentReader: entity.contentReader,
     folder: entity.folder,

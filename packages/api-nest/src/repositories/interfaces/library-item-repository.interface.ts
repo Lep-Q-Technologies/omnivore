@@ -1,8 +1,5 @@
 import { LibraryItemEntity } from '../../library/entities/library-item.entity'
-import {
-  LibrarySearchInput,
-  ReadingProgressInput,
-} from '../../library/dto/library-inputs.type'
+import { LibrarySearchInput } from '../../library/dto/library-inputs.type'
 
 /**
  * Options for finding library items

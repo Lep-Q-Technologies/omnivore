@@ -376,8 +376,6 @@ export class LibraryItemRepository implements ILibraryItemRepository {
           .update(LibraryItemEntity)
           .set({
             readAt: new Date(),
-            readingProgressTopPercent: 100,
-            readingProgressBottomPercent: 100,
           })
           .where('id IN (:...ids)', { ids: batch })
           .andWhere('userId = :userId', { userId })

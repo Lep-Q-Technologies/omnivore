@@ -8,6 +8,8 @@ import { Label } from '../label/entities/label.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { LabelRepository } from './label.repository'
 import { EntityLabelRepository } from './entity-label.repository'
+import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
+import { ReadingProgressRepository } from './reading-progress.repository'
 
 /**
  * RepositoriesModule
@@ -24,6 +26,7 @@ import { EntityLabelRepository } from './entity-label.repository'
       HighlightEntity,
       Label,
       EntityLabel,
+      ReadingProgressEntity,
     ]),
   ],
   providers: [
@@ -43,12 +46,17 @@ import { EntityLabelRepository } from './entity-label.repository'
       provide: 'IEntityLabelRepository',
       useClass: EntityLabelRepository,
     },
+    {
+      provide: 'IReadingProgressRepository',
+      useClass: ReadingProgressRepository,
+    },
   ],
   exports: [
     'ILibraryItemRepository',
     'IHighlightRepository',
     'ILabelRepository',
     'IEntityLabelRepository',
+    'IReadingProgressRepository',
     TypeOrmModule, // Export TypeOrmModule to make raw repositories available in tests
   ],
 })

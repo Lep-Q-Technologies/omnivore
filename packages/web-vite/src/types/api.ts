@@ -198,8 +198,9 @@ export interface LibraryItem {
   siteName?: string | null
   siteIcon?: string | null
   itemType: string
-  readingProgressTopPercent?: number | null
-  readingProgressBottomPercent?: number | null
+  // ARC-010: Notebook feature
+  note?: string | null
+  noteUpdatedAt?: string | null
 }
 
 export interface DeleteResult {
