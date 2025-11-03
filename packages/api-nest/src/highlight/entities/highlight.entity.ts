@@ -109,7 +109,7 @@ export class HighlightEntity {
   representation!: RepresentationType
 
   // Robust anchored selectors for multi-strategy text positioning
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', default: {} })
   selectors!: Record<string, any>
 
   // Optional content version/hash for tracking
