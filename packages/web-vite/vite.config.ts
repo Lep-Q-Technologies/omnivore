@@ -48,15 +48,23 @@ export default defineConfig({
         // Advanced code splitting strategy
         manualChunks(id) {
           // React vendor bundle
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-router/')
+          ) {
             return 'react-vendor'
           }
           // DOMPurify for security (used in ReaderPage)
-          if (id.includes('node_modules/dompurify')) {
+          if (id.includes('node_modules/dompurify/')) {
             return 'security'
           }
           // GraphQL client and utilities
-          if (id.includes('src/lib/graphql-client') || id.includes('src/lib/contentHash') || id.includes('src/lib/anchoredHighlights')) {
+          if (
+            id.includes('src/lib/graphql-client') ||
+            id.includes('src/lib/contentHash') ||
+            id.includes('src/lib/anchoredHighlights')
+          ) {
             return 'api-utils'
           }
           // Component chunks by feature
@@ -70,7 +78,10 @@ export default defineConfig({
             return 'labels'
           }
           // Modal components (lazy loaded)
-          if (id.includes('src/components/') && (id.includes('Modal') || id.includes('Sidebar'))) {
+          if (
+            id.includes('src/components/') &&
+            (id.includes('Modal') || id.includes('Sidebar'))
+          ) {
             return 'modals'
           }
         },
