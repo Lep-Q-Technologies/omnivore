@@ -16,8 +16,13 @@ import { DataLoaderFactory } from './dataloader.service'
       driver: ApolloDriver,
       imports: [ConfigModule, RepositoriesModule],
       inject: [ConfigService, ModuleRef],
-      useFactory: async (configService: ConfigService, moduleRef: ModuleRef) => {
-        const isProduction = configService.get<string>(EnvVariables.NODE_ENV, 'development') === 'production'
+      useFactory: async (
+        configService: ConfigService,
+        moduleRef: ModuleRef,
+      ) => {
+        const isProduction =
+          configService.get<string>(EnvVariables.NODE_ENV, 'development') ===
+          'production'
 
         return {
           path: '/api/graphql',
@@ -27,11 +32,15 @@ import { DataLoaderFactory } from './dataloader.service'
           debug: !isProduction,
           playground: false,
           introspection: !isProduction,
-          plugins: isProduction ? [] : [ApolloServerPluginLandingPageLocalDefault({ footer: false })],
+          plugins: isProduction
+            ? []
+            : [ApolloServerPluginLandingPageLocalDefault({ footer: false })],
           context: async ({ req, res }: { req: any; res: any }) => {
             const request = req ?? { headers: {} }
             // Get DataLoaderFactory from module context
-            const dataLoaderFactory = moduleRef.get(DataLoaderFactory, { strict: false })
+            const dataLoaderFactory = moduleRef.get(DataLoaderFactory, {
+              strict: false,
+            })
             // Create a new DataLoader instance per request (request-scoped)
             const dataLoaders = dataLoaderFactory.create(request.user)
 

@@ -1,4 +1,13 @@
-import { Args, Int, Query, Mutation, Resolver, ResolveField, Parent, Context } from '@nestjs/graphql'
+import {
+  Args,
+  Int,
+  Query,
+  Mutation,
+  Resolver,
+  ResolveField,
+  Parent,
+  Context,
+} from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
@@ -28,7 +37,7 @@ import { Label } from '../label/dto/label.type'
 export class LibraryResolver {
   constructor(
     private readonly libraryService: LibraryService,
-    private readonly labelService: LabelService
+    private readonly labelService: LabelService,
   ) {}
 
   // ==================== FIELD RESOLVERS ====================
@@ -38,7 +47,7 @@ export class LibraryResolver {
   async labels(
     @Parent() libraryItem: LibraryItem,
     @CurrentUser() user: User,
-    @Context('dataLoaders') dataLoaders: DataLoaderService
+    @Context('dataLoaders') dataLoaders: DataLoaderService,
   ): Promise<Label[] | null> {
     // Use DataLoader to batch label queries and prevent N+1 problems
     return dataLoaders.labels.load(libraryItem.id)
@@ -54,9 +63,14 @@ export class LibraryResolver {
     first = 20,
     @Args('after', { type: () => String, nullable: true }) after?: string,
     @Args('search', { type: () => LibrarySearchInput, nullable: true })
-    search?: LibrarySearchInput
+    search?: LibrarySearchInput,
   ): Promise<LibraryItemsConnection> {
-    const { items, nextCursor } = await this.libraryService.listForUser(user.id, first, after, search)
+    const { items, nextCursor } = await this.libraryService.listForUser(
+      user.id,
+      first,
+      after,
+      search,
+    )
 
     return {
       items: items.map(mapEntityToGraph),
@@ -68,7 +82,7 @@ export class LibraryResolver {
   @UseGuards(JwtAuthGuard)
   async libraryItem(
     @CurrentUser() user: User,
-    @Args('id', { type: () => String }) id: string
+    @Args('id', { type: () => String }) id: string,
   ): Promise<LibraryItem | null> {
     const entity = await this.libraryService.findById(user.id, id)
     return entity ? mapEntityToGraph(entity) : null
@@ -94,17 +108,24 @@ export class LibraryResolver {
       nullable: true,
       defaultValue: false,
     })
-    includeContent = false
+    includeContent = false,
   ): Promise<typeof SearchResult> {
     try {
       // Convert query string to search input format
-      const searchInput: LibrarySearchInput | undefined = query ? { query } : undefined
+      const searchInput: LibrarySearchInput | undefined = query
+        ? { query }
+        : undefined
 
-      const { items, nextCursor } = await this.libraryService.listForUser(user.id, first, after, searchInput)
+      const { items, nextCursor } = await this.libraryService.listForUser(
+        user.id,
+        first,
+        after,
+        searchInput,
+      )
 
       // Transform to legacy format with edges and pageInfo
       // Each edge should have cursor = item.id, not nextCursor
-      const edges: SearchItemEdge[] = items.map(item => {
+      const edges: SearchItemEdge[] = items.map((item) => {
         const graphItem = mapEntityToGraph(item)
 
         // Strip content if includeContent is false for better performance
@@ -151,20 +172,21 @@ export class LibraryResolver {
       type: () => Boolean,
       description: 'Whether to archive (true) or unarchive (false)',
     })
-    archived: boolean
+    archived: boolean,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.archiveItem(user.id, id, archived)
     return mapEntityToGraph(entity)
   }
 
   @Mutation(() => DeleteResult, {
-    description: 'Delete a library item (moves to trash or permanently deletes if already in trash)',
+    description:
+      'Delete a library item (moves to trash or permanently deletes if already in trash)',
   })
   @UseGuards(JwtAuthGuard)
   async deleteLibraryItem(
     @CurrentUser() user: User,
     @Args('id', { type: () => String, description: 'Library item ID' })
-    id: string
+    id: string,
   ): Promise<DeleteResult> {
     return await this.libraryService.deleteItem(user.id, id)
   }
@@ -181,9 +203,13 @@ export class LibraryResolver {
       type: () => UpdateNotebookInput,
       description: 'Notebook content',
     })
-    input: UpdateNotebookInput
+    input: UpdateNotebookInput,
   ): Promise<LibraryItem> {
-    const entity = await this.libraryService.updateNotebook(user.id, id, input.note)
+    const entity = await this.libraryService.updateNotebook(
+      user.id,
+      id,
+      input.note,
+    )
     return mapEntityToGraph(entity)
   }
 
@@ -199,9 +225,13 @@ export class LibraryResolver {
       type: () => UpdateLibraryItemInput,
       description: 'Updated library item metadata',
     })
-    input: UpdateLibraryItemInput
+    input: UpdateLibraryItemInput,
   ): Promise<LibraryItem> {
-    const entity = await this.libraryService.updateLibraryItemMetadata(user.id, id, input)
+    const entity = await this.libraryService.updateLibraryItemMetadata(
+      user.id,
+      id,
+      input,
+    )
     return mapEntityToGraph(entity)
   }
 
@@ -217,7 +247,7 @@ export class LibraryResolver {
       type: () => String,
       description: 'Target folder (inbox, archive, trash)',
     })
-    folder: string
+    folder: string,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.moveToFolder(user.id, id, folder)
     return mapEntityToGraph(entity)
@@ -240,7 +270,7 @@ export class LibraryResolver {
       type: () => Boolean,
       description: 'Whether to archive (true) or unarchive (false)',
     })
-    archived: boolean
+    archived: boolean,
   ): Promise<BulkActionResult> {
     return await this.libraryService.bulkArchive(user.id, itemIds, archived)
   }
@@ -255,7 +285,7 @@ export class LibraryResolver {
       type: () => [String],
       description: 'List of library item IDs to delete',
     })
-    itemIds: string[]
+    itemIds: string[],
   ): Promise<BulkActionResult> {
     return await this.libraryService.bulkDelete(user.id, itemIds)
   }
@@ -275,7 +305,7 @@ export class LibraryResolver {
       type: () => String,
       description: 'Target folder (inbox, archive, trash)',
     })
-    folder: string
+    folder: string,
   ): Promise<BulkActionResult> {
     return await this.libraryService.bulkMoveToFolder(user.id, itemIds, folder)
   }
@@ -290,7 +320,7 @@ export class LibraryResolver {
       type: () => [String],
       description: 'List of library item IDs to mark as read',
     })
-    itemIds: string[]
+    itemIds: string[],
   ): Promise<BulkActionResult> {
     return await this.libraryService.bulkMarkAsRead(user.id, itemIds)
   }
@@ -304,7 +334,7 @@ export class LibraryResolver {
   async saveUrl(
     @CurrentUser() user: User,
     @Args('input', { type: () => SaveUrlInput })
-    input: SaveUrlInput
+    input: SaveUrlInput,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.saveUrl(user.id, input)
     return mapEntityToGraph(entity)
@@ -338,8 +368,7 @@ function mapEntityToGraph(entity: any): LibraryItem {
     content: entity.readableContent ?? null,
     note: entity.note ?? null,
     noteUpdatedAt: entity.noteUpdatedAt ?? null,
-    labels: null, // Labels will be resolved by the field resolver
-    // ARC-009: Add fields for frontend library feature parity
+    labels: null,
     thumbnail,
     wordCount,
     siteName: entity.siteName ?? null,

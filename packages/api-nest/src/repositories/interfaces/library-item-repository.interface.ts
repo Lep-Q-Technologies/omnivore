@@ -65,7 +65,7 @@ export interface ILibraryItemRepository {
     userId: string,
     first: number,
     after?: string,
-    search?: LibrarySearchInput
+    search?: LibrarySearchInput,
   ): Promise<PaginatedResult<LibraryItemEntity>>
 
   /**
@@ -89,7 +89,11 @@ export interface ILibraryItemRepository {
    * @param archived - Whether to archive (true) or unarchive (false)
    * @returns Bulk operation result with success/failure counts
    */
-  bulkArchive(userId: string, itemIds: string[], archived: boolean): Promise<BulkOperationResult>
+  bulkArchive(
+    userId: string,
+    itemIds: string[],
+    archived: boolean,
+  ): Promise<BulkOperationResult>
 
   /**
    * Bulk delete library items (soft delete)
@@ -106,7 +110,11 @@ export interface ILibraryItemRepository {
    * @param folder - Target folder (inbox, archive, trash)
    * @returns Bulk operation result with success/failure counts
    */
-  bulkMoveToFolder(userId: string, itemIds: string[], folder: string): Promise<BulkOperationResult>
+  bulkMoveToFolder(
+    userId: string,
+    itemIds: string[],
+    folder: string,
+  ): Promise<BulkOperationResult>
 
   /**
    * Bulk mark library items as read
@@ -114,5 +122,8 @@ export interface ILibraryItemRepository {
    * @param itemIds - List of library item IDs
    * @returns Bulk operation result with success/failure counts
    */
-  bulkMarkAsRead(userId: string, itemIds: string[]): Promise<BulkOperationResult>
+  bulkMarkAsRead(
+    userId: string,
+    itemIds: string[],
+  ): Promise<BulkOperationResult>
 }

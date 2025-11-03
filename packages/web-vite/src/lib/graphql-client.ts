@@ -29,7 +29,7 @@ const resolveGraphqlUrl = (): string => {
   if (normalizedBase.endsWith('/api/v2')) {
     return `${normalizedBase.slice(
       0,
-      -'/api/v2'.length
+      -'/api/v2'.length,
     )}${DEFAULT_GRAPHQL_PATH}`
   }
 
@@ -49,7 +49,7 @@ export interface GraphqlResponse<T> {
 
 export async function graphqlRequest<T>(
   query: string,
-  variables?: Record<string, unknown>
+  variables?: Record<string, unknown>,
 ): Promise<T> {
   const endpoint = resolveGraphqlUrl()
   const token = isBrowser
@@ -292,7 +292,7 @@ export function useBulkArchive() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, bulkArchive }
@@ -349,7 +349,7 @@ export function useBulkMoveToFolder() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, bulkMoveToFolder }
@@ -394,7 +394,7 @@ export function useSaveUrl() {
       try {
         const result = await graphqlRequest<{ saveUrl: any }>(
           SAVE_URL_MUTATION,
-          { input }
+          { input },
         )
         setState({ loading: false, error: null, data: result.saveUrl })
         return result.saveUrl
@@ -405,7 +405,7 @@ export function useSaveUrl() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, saveUrl }
@@ -577,7 +577,7 @@ export function useCreateLabel() {
     try {
       const result = await graphqlRequest<{ createLabel: Label }>(
         CREATE_LABEL_MUTATION,
-        { input }
+        { input },
       )
       setState({ loading: false, error: null, data: result.createLabel })
       return result.createLabel
@@ -605,7 +605,7 @@ export function useUpdateLabel() {
       try {
         const result = await graphqlRequest<{ updateLabel: Label }>(
           UPDATE_LABEL_MUTATION,
-          { id, input }
+          { id, input },
         )
         setState({ loading: false, error: null, data: result.updateLabel })
         return result.updateLabel
@@ -616,7 +616,7 @@ export function useUpdateLabel() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, updateLabel }
@@ -634,7 +634,7 @@ export function useDeleteLabel() {
     try {
       const result = await graphqlRequest<{ deleteLabel: DeleteResult }>(
         DELETE_LABEL_MUTATION,
-        { id }
+        { id },
       )
       setState({ loading: false, error: null, data: result.deleteLabel })
       return result.deleteLabel
@@ -678,7 +678,7 @@ export function useSetLibraryItemLabels() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, setLibraryItemLabels }
@@ -704,7 +704,7 @@ export function useLibraryItem(id: string) {
     try {
       const result = await graphqlRequest<{ libraryItem: LibraryItem | null }>(
         GET_LIBRARY_ITEM_QUERY,
-        { id }
+        { id },
       )
       setState({ loading: false, error: null, data: result.libraryItem })
       return result.libraryItem
@@ -785,7 +785,7 @@ export function useUpdateLibraryItem() {
       try {
         const result = await graphqlRequest<{ updateLibraryItem: any }>(
           UPDATE_LIBRARY_ITEM_MUTATION,
-          { id, input }
+          { id, input },
         )
         setState({
           loading: false,
@@ -802,7 +802,7 @@ export function useUpdateLibraryItem() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, updateLibraryItem }
@@ -920,7 +920,7 @@ export function useHighlights(libraryItemId: string) {
     try {
       const result = await graphqlRequest<{ highlights: Highlight[] }>(
         GET_HIGHLIGHTS_QUERY,
-        { libraryItemId }
+        { libraryItemId },
       )
       setState({ loading: false, error: null, data: result.highlights })
       return result.highlights
@@ -947,7 +947,7 @@ export function useCreateHighlight() {
     try {
       const result = await graphqlRequest<{ createHighlight: Highlight }>(
         CREATE_HIGHLIGHT_MUTATION,
-        { input }
+        { input },
       )
       setState({ loading: false, error: null, data: result.createHighlight })
       return result.createHighlight
@@ -975,7 +975,7 @@ export function useUpdateHighlight() {
       try {
         const result = await graphqlRequest<{ updateHighlight: Highlight }>(
           UPDATE_HIGHLIGHT_MUTATION,
-          { id, input }
+          { id, input },
         )
         setState({ loading: false, error: null, data: result.updateHighlight })
         return result.updateHighlight
@@ -988,7 +988,7 @@ export function useUpdateHighlight() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, updateHighlight }
@@ -1006,7 +1006,7 @@ export function useDeleteHighlight() {
     try {
       const result = await graphqlRequest<{ deleteHighlight: DeleteResult }>(
         DELETE_HIGHLIGHT_MUTATION,
-        { id }
+        { id },
       )
       setState({ loading: false, error: null, data: result.deleteHighlight })
       return result.deleteHighlight
@@ -1052,7 +1052,7 @@ export function useUpdateNotebook() {
     try {
       const result = await graphqlRequest<{ updateNotebook: LibraryItem }>(
         UPDATE_NOTEBOOK_MUTATION,
-        { id: itemId, input: { note } }
+        { id: itemId, input: { note } },
       )
       setState({ loading: false, error: null, data: result.updateNotebook })
       return result.updateNotebook
@@ -1112,7 +1112,7 @@ const UPDATE_READING_PROGRESS_MUTATION = `
 
 export function useReadingProgress(
   libraryItemId: string,
-  contentVersion?: string
+  contentVersion?: string,
 ) {
   const [state, setState] = useState<{
     loading: boolean
@@ -1176,7 +1176,7 @@ export function useUpdateReadingProgress() {
         throw err
       }
     },
-    []
+    [],
   )
 
   return { ...state, updateProgress }
