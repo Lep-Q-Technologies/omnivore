@@ -2,7 +2,6 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
-import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import tseslint from 'typescript-eslint'
 
 export default [
@@ -18,7 +17,6 @@ export default [
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
-      'simple-import-sort': simpleImportSort,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -26,8 +24,6 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
       // Standard rules from base config
       'prefer-const': 'warn',
       quotes: ['warn', 'single'],
