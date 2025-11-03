@@ -7,8 +7,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
-import { User } from '../../user/entities/user.entity'
+
 import { LibraryItemEntity } from '../../library/entities/library-item.entity'
+import { User } from '../../user/entities/user.entity'
+import { HighlightSelector } from './highlight-selector.interface'
 
 export enum HighlightType {
   HIGHLIGHT = 'HIGHLIGHT',
@@ -109,8 +111,11 @@ export class HighlightEntity {
   representation!: RepresentationType
 
   // Robust anchored selectors for multi-strategy text positioning
-  @Column({ type: 'jsonb', default: {} })
-  selectors!: Record<string, any>
+  @Column({
+    type: 'jsonb',
+    default: {},
+  })
+  selectors!: Record<string, HighlightSelector | HighlightSelector[]>
 
   // Optional content version/hash for tracking
   @Column({

@@ -18,10 +18,7 @@ export class HighlightRepository implements IHighlightRepository {
   /**
    * Find a highlight by ID and user ID
    */
-  async findById(
-    id: string,
-    userId: string,
-  ): Promise<HighlightEntity | null> {
+  async findById(id: string, userId: string): Promise<HighlightEntity | null> {
     return this.repository.findOne({
       where: {
         id,
@@ -94,8 +91,20 @@ export class HighlightRepository implements IHighlightRepository {
 
     // Group by library item ID
     const result = new Map<string, HighlightEntity[]>()
+
+    for (const highlight of highlights) {
+      const bucket = result.get(highlight.libraryItemId)
+      if (bucket) {
+        bucket.push(highlight)
+      } else {
+        result.set(highlight.libraryItemId, [highlight])
+      }
+    }
+
     for (const libraryItemId of libraryItemIds) {
-      result.set(libraryItemId, highlights.filter(h => h.libraryItemId === libraryItemId))
+      if (!result.has(libraryItemId)) {
+        result.set(libraryItemId, [])
+      }
     }
 
     return result

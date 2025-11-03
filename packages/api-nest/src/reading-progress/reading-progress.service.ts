@@ -90,21 +90,24 @@ export class ReadingProgressService {
       throw new BadRequestException('Sentinel values must be non-negative')
     }
 
+    // Normalize highestSeenSentinel: it should never be lower than lastSeenSentinel
+    // This ensures data consistency - highest can't be less than current position
+    let normalizedHighest = input.highestSeenSentinel
     if (input.lastSeenSentinel > input.highestSeenSentinel) {
-      // This is actually OK - user might scroll backwards
-      // Just log it for monitoring
+      normalizedHighest = input.lastSeenSentinel
       this.logger.debug(
-        `Last seen sentinel (${input.lastSeenSentinel}) > highest seen sentinel (${input.highestSeenSentinel}) for user ${userId} on item ${input.libraryItemId}`,
+        `Normalizing highestSeenSentinel: ${input.highestSeenSentinel} -> ${normalizedHighest} ` +
+          `(lastSeen: ${input.lastSeenSentinel}) for user ${userId} on item ${input.libraryItemId}`,
       )
     }
 
-    // Upsert progress (create or update)
+    // Upsert progress (create or update) with normalized values
     const progress = await this.progressRepository.upsertProgress(
       userId,
       input.libraryItemId,
       input.contentVersion || null,
       input.lastSeenSentinel,
-      input.highestSeenSentinel,
+      normalizedHighest,
     )
 
     this.logger.log(

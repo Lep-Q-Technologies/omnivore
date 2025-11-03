@@ -51,16 +51,27 @@ const CreateHighlightPopup: React.FC<{
     onCreateHighlight(selectedColor, annotation)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      onClose()
+    }
+    e.stopPropagation()
+  }
+
   return (
     <div
       ref={popupRef}
       className="create-highlight-popup"
+      role="dialog"
+      tabIndex={-1}
+      aria-label="Create Highlight"
       style={{
         position: 'absolute',
         top: `${position.top}px`,
         left: `${position.left}px`,
       }}
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={handleKeyDown}
     >
       <div className="popup-header">
         <span className="popup-title">Create Highlight</span>
@@ -216,9 +227,13 @@ const ReaderPage: React.FC = () => {
     const parsed = JSON.parse(highlightsJson || '[]')
     if (!parsed || parsed.length === 0) return []
     return parsed.map((h: any) => {
-      // Parse selectors from backend, fallback to legacy quote/prefix/suffix
+      // Parse selectors from backend (GraphQLJSON returns object), fallback to legacy quote/prefix/suffix
       let selectors: AnchoredSelectors
-      if (h.selectors) {
+      if (h.selectors && typeof h.selectors === 'object') {
+        // GraphQLJSON scalar returns object directly
+        selectors = h.selectors as AnchoredSelectors
+      } else if (h.selectors && typeof h.selectors === 'string') {
+        // Fallback for legacy string-encoded selectors
         try {
           selectors = JSON.parse(h.selectors)
         } catch {
@@ -582,8 +597,8 @@ const ReaderPage: React.FC = () => {
         suffix: selectors.textQuote?.suffix,
         highlightPositionPercent: Math.round(positionPercent * 100) / 100,
         highlightPositionAnchorIndex: 0,
-        // Serialize anchored selectors for backend storage
-        selectors: JSON.stringify(selectors),
+        // Send selectors as object (GraphQLJSON scalar handles serialization)
+        selectors,
       }
 
       console.log('[ReaderPage] Creating highlight with input:', {

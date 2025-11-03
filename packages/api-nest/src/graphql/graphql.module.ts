@@ -5,6 +5,7 @@ import { GraphQLModule } from '@nestjs/graphql'
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
 import { resolve } from 'path'
+import { GraphQLJSON } from 'graphql-scalars'
 import { EnvVariables } from '../config/env-variables'
 import { RepositoriesModule } from '../repositories/repositories.module'
 import { DataLoaderFactory } from './dataloader.service'
@@ -32,6 +33,7 @@ import { DataLoaderFactory } from './dataloader.service'
           debug: !isProduction,
           playground: false,
           introspection: !isProduction,
+          resolvers: { JSON: GraphQLJSON },
           plugins: isProduction
             ? []
             : [ApolloServerPluginLandingPageLocalDefault({ footer: false })],

@@ -1,15 +1,18 @@
-import { InputType, Field, Float, Int, registerEnumType } from '@nestjs/graphql'
+import { Field, Float, InputType, Int } from '@nestjs/graphql'
 import {
-  IsString,
-  IsOptional,
-  IsNumber,
-  Min,
-  Max,
-  IsInt,
   IsEnum,
-  IsJSON,
+  IsInt,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
 } from 'class-validator'
+import { GraphQLJSON } from 'graphql-scalars'
+
 import { HighlightColor } from '../entities/highlight.entity'
+import { HighlightSelector } from '../entities/highlight-selector.interface'
 
 // Note: HighlightColor enum is registered in highlight.type.ts to avoid duplicate registration
 
@@ -88,14 +91,13 @@ export class CreateHighlightInput {
   @IsString()
   html?: string
 
-  @Field(() => String, {
+  @Field(() => GraphQLJSON, {
     nullable: true,
-    description:
-      'Robust anchored selectors (JSON string) for multi-strategy text positioning',
+    description: 'Anchored selectors for robust text positioning',
   })
   @IsOptional()
-  @IsString()
-  selectors?: string
+  @IsObject()
+  selectors?: Record<string, HighlightSelector | HighlightSelector[]>
 
   @Field(() => String, {
     nullable: true,

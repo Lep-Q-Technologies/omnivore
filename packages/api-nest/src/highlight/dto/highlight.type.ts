@@ -6,11 +6,14 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql'
+import { GraphQLJSON } from 'graphql-scalars'
+
 import {
+  HighlightColor,
   HighlightType,
   RepresentationType,
-  HighlightColor,
 } from '../entities/highlight.entity'
+import { HighlightSelector } from '../entities/highlight-selector.interface'
 
 registerEnumType(HighlightType, {
   name: 'HighlightType',
@@ -78,11 +81,10 @@ export class Highlight {
   @Field(() => RepresentationType)
   representation!: RepresentationType
 
-  @Field(() => String, {
-    description:
-      'JSON-serialized anchored selectors for robust text positioning',
+  @Field(() => GraphQLJSON, {
+    description: 'Anchored selectors for robust text positioning',
   })
-  selectors!: string
+  selectors!: Record<string, HighlightSelector | HighlightSelector[]>
 
   @Field(() => String, {
     nullable: true,

@@ -11,7 +11,7 @@ interface HighlightSidebarProps {
   onUpdateHighlight: (
     id: string,
     annotation: string,
-    color: HighlightColor
+    color: HighlightColor,
   ) => Promise<void>
   onDeleteHighlight: (id: string) => Promise<void>
   onJumpToHighlight: (id: string) => void
@@ -31,7 +31,7 @@ const HighlightSidebar: React.FC<HighlightSidebarProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const sortedHighlights = [...highlights].sort(
-    (a, b) => a.highlightPositionPercent - b.highlightPositionPercent
+    (a, b) => a.highlightPositionPercent - b.highlightPositionPercent,
   )
 
   const colorOptions: Array<{
@@ -122,19 +122,13 @@ const HighlightSidebar: React.FC<HighlightSidebarProps> = ({
 
             <div className="highlight-body">
               {/* Quote */}
-              <div
+              <button
+                type="button"
                 className="highlight-quote"
                 onClick={() => onJumpToHighlight(highlight.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    onJumpToHighlight(highlight.id)
-                  }
-                }}
               >
                 "{highlight.quote}"
-              </div>
+              </button>
 
               {/* Annotation - editable or display */}
               {editingId === highlight.id ? (

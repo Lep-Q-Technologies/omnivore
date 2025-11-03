@@ -123,7 +123,7 @@ function mapEntityToGraph(entity: any): Highlight {
     html: entity.html ?? null,
     color: entity.color ?? HighlightColor.YELLOW,
     representation: entity.representation,
-    selectors: JSON.stringify(entity.selectors ?? {}),
+    selectors: entity.selectors ?? {},
     contentVersion: entity.contentVersion ?? null,
   }
 }

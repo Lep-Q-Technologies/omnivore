@@ -828,7 +828,7 @@ export interface Highlight {
   html: string | null
   color: HighlightColor
   representation: 'CONTENT' | 'FEED_CONTENT'
-  selectors: string // JSON-serialized AnchoredSelectors
+  selectors: Record<string, any> | null // AnchoredSelectors object (GraphQLJSON scalar)
   contentVersion?: string | null
 }
 
@@ -841,7 +841,7 @@ export interface CreateHighlightInput {
   suffix?: string
   highlightPositionPercent: number
   highlightPositionAnchorIndex?: number
-  selectors?: string // JSON-serialized AnchoredSelectors
+  selectors?: Record<string, any> // AnchoredSelectors object (GraphQLJSON scalar)
   contentVersion?: string
 }
 
