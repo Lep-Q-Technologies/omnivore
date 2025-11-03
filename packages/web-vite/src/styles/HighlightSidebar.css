@@ -137,16 +137,61 @@
 
 /* Quote */
 .highlight-quote {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   line-height: 1.5;
+  font-family: inherit;
   color: var(--color-text-primary);
   margin-bottom: 8px;
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .highlight-quote:hover {
-  color: var(--color-action-blue);
+  opacity: 0.9;
+  transform: translateX(2px);
+}
+
+/* Color-coded quote backgrounds matching article highlights */
+.highlight-item-YELLOW .highlight-quote {
+  background-color: rgba(255, 212, 59, 0.15);
+  border-left: 3px solid rgba(255, 212, 59, 0.6);
+}
+
+.highlight-item-YELLOW .highlight-quote:hover {
+  background-color: rgba(255, 212, 59, 0.25);
+}
+
+.highlight-item-RED .highlight-quote {
+  background-color: rgba(255, 107, 107, 0.15);
+  border-left: 3px solid rgba(255, 107, 107, 0.6);
+}
+
+.highlight-item-RED .highlight-quote:hover {
+  background-color: rgba(255, 107, 107, 0.25);
+}
+
+.highlight-item-GREEN .highlight-quote {
+  background-color: rgba(85, 239, 196, 0.15);
+  border-left: 3px solid rgba(85, 239, 196, 0.6);
+}
+
+.highlight-item-GREEN .highlight-quote:hover {
+  background-color: rgba(85, 239, 196, 0.25);
+}
+
+.highlight-item-BLUE .highlight-quote {
+  background-color: rgba(116, 185, 255, 0.15);
+  border-left: 3px solid rgba(116, 185, 255, 0.6);
+}
+
+.highlight-item-BLUE .highlight-quote:hover {
+  background-color: rgba(116, 185, 255, 0.25);
 }
 
 /* Annotation */

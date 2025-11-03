@@ -399,19 +399,21 @@
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-primary);
   border-radius: var(--radius-md);
-  padding: 16px;
-  min-width: 300px;
-  max-width: 400px;
+  padding: 20px;
+  width: 450px;
+  max-width: 90vw;
   box-shadow: var(--shadow-lg);
   z-index: 1001;
   animation: slideDown 150ms ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
 }
 
 .popup-title {
@@ -440,8 +442,12 @@
 .color-picker {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  min-height: fit-content;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .color-button {
@@ -455,6 +461,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 0;
 }
 
 .color-button:hover {
@@ -474,16 +482,20 @@
 }
 
 .add-note-button {
+  display: block;
   width: 100%;
-  padding: 8px;
+  padding: 10px;
+  margin: 0;
   background: transparent;
   border: 1px dashed var(--color-border-primary);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: 13px;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-fast);
-  margin-bottom: 12px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .add-note-button:hover {
@@ -493,20 +505,26 @@
 }
 
 .annotation-input-container {
-  margin-bottom: 12px;
+  width: 100%;
+  margin: 0;
+  display: block;
+  flex-shrink: 0;
+  position: static;
 }
 
 .annotation-textarea {
   width: 100%;
-  padding: 8px;
+  padding: 12px;
   border: 1px solid var(--color-border-primary);
   border-radius: var(--radius-md);
-  background: var(--color-bg-secondary);
+  background: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
+  line-height: 1.5;
   resize: vertical;
-  min-height: 60px;
+  min-height: 80px;
+  box-sizing: border-box;
 }
 
 .annotation-textarea:focus {
@@ -520,15 +538,16 @@
   color: var(--color-text-tertiary);
   font-style: italic;
   padding: 8px;
+  margin: 0;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-sm);
   line-height: 1.4;
-  margin-bottom: 12px;
 }
 
 .save-highlight-button {
   width: 100%;
   padding: 10px 16px;
+  margin: 0;
   background: var(--color-action-blue);
   color: white;
   border: none;
