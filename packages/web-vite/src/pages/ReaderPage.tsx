@@ -1,31 +1,32 @@
 // Reader page component for Omnivore Vite migration
 
-import React, { useEffect, useState, useRef, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import {
-  useLibraryItem,
-  useHighlights,
-  useReadingProgress,
-  useUpdateReadingProgress as useUpdateReadingProgressMutation,
-  useLabels,
-  useCreateHighlight,
-  useUpdateHighlight,
-  useDeleteHighlight,
-  useUpdateNotebook,
-  type CreateHighlightInput,
-} from '../lib/graphql-client'
-import {
-  useAnchoredHighlights,
-  buildSelectorsFromSelection,
-  type AnchoredHighlight,
-} from '../lib/anchoredHighlights'
-import { generateContentHashWithFallback } from '../lib/contentHash'
-import LabelPickerModal from '../components/LabelPickerModal'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+
 import EditInfoModal from '../components/EditInfoModal'
 import HighlightSidebar from '../components/HighlightSidebar'
+import LabelPickerModal from '../components/LabelPickerModal'
 import NotebookModal from '../components/NotebookModal'
-import type { Label, AnchoredSelectors, HighlightColor } from '../types/api'
+import {
+  type AnchoredHighlight,
+  buildSelectorsFromSelection,
+  useAnchoredHighlights,
+} from '../lib/anchoredHighlights'
+import { generateContentHashWithFallback } from '../lib/contentHash'
+import {
+  type CreateHighlightInput,
+  useCreateHighlight,
+  useDeleteHighlight,
+  useHighlights,
+  useLabels,
+  useLibraryItem,
+  useReadingProgress,
+  useUpdateHighlight,
+  useUpdateNotebook,
+  useUpdateReadingProgress as useUpdateReadingProgressMutation,
+} from '../lib/graphql-client'
+import type { AnchoredSelectors, HighlightColor, Label } from '../types/api'
 // CSS imported via consolidated bundle in main.tsx
 
 // Popup component for creating new highlights
@@ -226,6 +227,7 @@ const ReaderPage: React.FC = () => {
   const anchoredHighlights = useMemo<AnchoredHighlight[]>(() => {
     const parsed = JSON.parse(highlightsJson || '[]')
     if (!parsed || parsed.length === 0) return []
+    
     return parsed.map((h: any) => {
       // Parse selectors from backend (GraphQLJSON returns object), fallback to legacy quote/prefix/suffix
       let selectors: AnchoredSelectors
@@ -315,6 +317,7 @@ const ReaderPage: React.FC = () => {
         // Skip if this element already has a sentinel after it
         if (element.nextElementSibling?.hasAttribute('data-sentinel')) {
           sentinelIndex++
+          
           return
         }
 
@@ -339,7 +342,7 @@ const ReaderPage: React.FC = () => {
         clearTimeout(handle)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [item?.content, contentHash, loading]) // Re-run when content or loading state changes
 
   // Setup IntersectionObserver to track sentinel visibility - OPTIMIZED
@@ -351,6 +354,7 @@ const ReaderPage: React.FC = () => {
       // Re-attach to new sentinels if content changed
       const sentinels = contentRef.current.querySelectorAll('[data-sentinel]')
       sentinels.forEach((sentinel) => observerRef.current!.observe(sentinel))
+      
       return
     }
 
@@ -456,6 +460,7 @@ const ReaderPage: React.FC = () => {
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return null
     const date = new Date(dateString)
+    
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -495,6 +500,7 @@ const ReaderPage: React.FC = () => {
     }
 
     document.addEventListener('click', handleClickOutside)
+    
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
@@ -523,7 +529,7 @@ const ReaderPage: React.FC = () => {
             range: selection.getRangeAt(0).cloneRange(),
             text: text
           }
-          console.log('[ReaderPage] Saved selection:', text.substring(0, 50) + '...')
+          console.log('[ReaderPage] Saved selection:', `${text.substring(0, 50) }...`)
         }
 
         if (text.length < 3) {
@@ -551,6 +557,7 @@ const ReaderPage: React.FC = () => {
     }
 
     document.addEventListener('mouseup', handleMouseUp)
+    
     return () => document.removeEventListener('mouseup', handleMouseUp)
   }, [])
 
@@ -567,10 +574,11 @@ const ReaderPage: React.FC = () => {
       const savedSelection = savedSelectionRef.current
       if (!savedSelection) {
         console.error('[ReaderPage] No saved selection found')
+        
         return
       }
 
-      console.log('[ReaderPage] Using saved selection:', savedSelection.text.substring(0, 50) + '...')
+      console.log('[ReaderPage] Using saved selection:', `${savedSelection.text.substring(0, 50) }...`)
 
       // Create a temporary selection object to pass to buildSelectorsFromSelection
       const tempSelection = {
@@ -753,6 +761,7 @@ const ReaderPage: React.FC = () => {
     }
 
     window.addEventListener('keydown', handleKeyPress)
+    
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [showLabelModal, showEditInfoModal, showHighlightSidebar, showNotebookModal])
 

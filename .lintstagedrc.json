@@ -1,13 +1,11 @@
 {
   "*.ts": [
     "eslint --fix",
-    "prettier --write",
-    "eslint --rule 'simple-import-sort/imports: error' --rule 'simple-import-sort/exports: error' --fix"
+    "prettier --write"
   ],
   "*.tsx": [
     "eslint --fix",
-    "prettier --write",
-    "eslint --rule 'simple-import-sort/imports: error' --rule 'simple-import-sort/exports: error' --fix"
+    "prettier --write"
   ],
   "*.js": [
     "eslint --fix",

@@ -1,12 +1,13 @@
 // Minimal GraphQL helper targeting the NestJS `/api/graphql` endpoint
 // Mirrors the behaviour of the legacy web package's fetcher but keeps dependencies light
 
-import { useState, useCallback } from 'react'
-import type { LibraryItem, DeleteResult, HighlightColor } from '../types/api'
+import { useCallback, useState } from 'react'
+
+import type { DeleteResult, HighlightColor, LibraryItem } from '../types/api'
 import {
+  HIGHLIGHT_FRAGMENT,
   LABEL_BASIC_FRAGMENT,
   LABEL_FRAGMENT,
-  HIGHLIGHT_FRAGMENT,
   LIBRARY_ITEM_FULL_FRAGMENT,
   READING_PROGRESS_FRAGMENT,
 } from './graphql-fragments'
@@ -198,6 +199,7 @@ export function useArchiveItem() {
         archived,
       })
       setState({ loading: false, error: null, data })
+      
       return data
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Archive failed')
@@ -221,6 +223,7 @@ export function useDeleteItem() {
     try {
       const data = await graphqlRequest(DELETE_LIBRARY_ITEM_MUTATION, { id })
       setState({ loading: false, error: null, data })
+      
       return data
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Delete failed')
@@ -247,6 +250,7 @@ export function useMoveToFolder() {
         folder,
       })
       setState({ loading: false, error: null, data })
+      
       return data
     } catch (error) {
       const err =
@@ -284,6 +288,7 @@ export function useBulkArchive() {
           bulkArchiveItems: BulkActionResult
         }>(BULK_ARCHIVE_ITEMS_MUTATION, { itemIds, archived })
         setState({ loading: false, error: null, data: result.bulkArchiveItems })
+        
         return result.bulkArchiveItems
       } catch (error) {
         const err =
@@ -312,6 +317,7 @@ export function useBulkDelete() {
         bulkDeleteItems: BulkActionResult
       }>(BULK_DELETE_ITEMS_MUTATION, { itemIds })
       setState({ loading: false, error: null, data: result.bulkDeleteItems })
+      
       return result.bulkDeleteItems
     } catch (error) {
       const err =
@@ -339,6 +345,7 @@ export function useBulkMoveToFolder() {
           bulkMoveToFolder: BulkActionResult
         }>(BULK_MOVE_TO_FOLDER_MUTATION, { itemIds, folder })
         setState({ loading: false, error: null, data: result.bulkMoveToFolder })
+        
         return result.bulkMoveToFolder
       } catch (error) {
         const err =
@@ -369,6 +376,7 @@ export function useBulkMarkAsRead() {
         bulkMarkAsRead: BulkActionResult
       }>(BULK_MARK_AS_READ_MUTATION, { itemIds })
       setState({ loading: false, error: null, data: result.bulkMarkAsRead })
+      
       return result.bulkMarkAsRead
     } catch (error) {
       const err =
@@ -397,6 +405,7 @@ export function useSaveUrl() {
           { input },
         )
         setState({ loading: false, error: null, data: result.saveUrl })
+        
         return result.saveUrl
       } catch (error) {
         const err =
@@ -553,6 +562,7 @@ export function useLabels() {
     try {
       const result = await graphqlRequest<{ labels: Label[] }>(GET_LABELS_QUERY)
       setState({ loading: false, error: null, data: result.labels })
+      
       return result.labels
     } catch (error) {
       const err =
@@ -580,6 +590,7 @@ export function useCreateLabel() {
         { input },
       )
       setState({ loading: false, error: null, data: result.createLabel })
+      
       return result.createLabel
     } catch (error) {
       const err =
@@ -608,6 +619,7 @@ export function useUpdateLabel() {
           { id, input },
         )
         setState({ loading: false, error: null, data: result.updateLabel })
+        
         return result.updateLabel
       } catch (error) {
         const err =
@@ -637,6 +649,7 @@ export function useDeleteLabel() {
         { id },
       )
       setState({ loading: false, error: null, data: result.deleteLabel })
+      
       return result.deleteLabel
     } catch (error) {
       const err =
@@ -668,6 +681,7 @@ export function useSetLibraryItemLabels() {
           error: null,
           data: result.setLibraryItemLabels,
         })
+        
         return result.setLibraryItemLabels
       } catch (error) {
         const err =
@@ -707,6 +721,7 @@ export function useLibraryItem(id: string) {
         { id },
       )
       setState({ loading: false, error: null, data: result.libraryItem })
+      
       return result.libraryItem
     } catch (error) {
       const err =
@@ -751,6 +766,7 @@ export function useReaderPageData(id: string) {
         item: result.libraryItem,
         highlights: result.highlights || [],
       })
+      
       return { item: result.libraryItem, highlights: result.highlights }
     } catch (error) {
       const err =
@@ -792,6 +808,7 @@ export function useUpdateLibraryItem() {
           error: null,
           data: result.updateLibraryItem,
         })
+        
         return result.updateLibraryItem
       } catch (error) {
         const err =
@@ -923,6 +940,7 @@ export function useHighlights(libraryItemId: string) {
         { libraryItemId },
       )
       setState({ loading: false, error: null, data: result.highlights })
+      
       return result.highlights
     } catch (error) {
       const err =
@@ -950,6 +968,7 @@ export function useCreateHighlight() {
         { input },
       )
       setState({ loading: false, error: null, data: result.createHighlight })
+      
       return result.createHighlight
     } catch (error) {
       const err =
@@ -978,6 +997,7 @@ export function useUpdateHighlight() {
           { id, input },
         )
         setState({ loading: false, error: null, data: result.updateHighlight })
+        
         return result.updateHighlight
       } catch (error) {
         const err =
@@ -1009,6 +1029,7 @@ export function useDeleteHighlight() {
         { id },
       )
       setState({ loading: false, error: null, data: result.deleteHighlight })
+      
       return result.deleteHighlight
     } catch (error) {
       const err =
@@ -1055,6 +1076,7 @@ export function useUpdateNotebook() {
         { id: itemId, input: { note } },
       )
       setState({ loading: false, error: null, data: result.updateNotebook })
+      
       return result.updateNotebook
     } catch (error) {
       const err =
@@ -1133,6 +1155,7 @@ export function useReadingProgress(
         readingProgress: ReadingProgress | null
       }>(GET_READING_PROGRESS_QUERY, { libraryItemId, contentVersion })
       setState({ loading: false, error: null, data: result.readingProgress })
+      
       return result.readingProgress
     } catch (error) {
       const err =
@@ -1166,6 +1189,7 @@ export function useUpdateReadingProgress() {
           error: null,
           data: result.updateReadingProgress,
         })
+        
         return result.updateReadingProgress
       } catch (error) {
         const err =

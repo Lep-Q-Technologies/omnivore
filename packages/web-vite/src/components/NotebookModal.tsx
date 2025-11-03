@@ -1,9 +1,11 @@
 // Notebook Modal Component - Markdown-based note taking for articles
 // Allows users to write notes about articles they're reading
 
-import React, { useState, useEffect, useRef } from 'react'
-import { renderMarkdown } from '../lib/markdown'
 import '../styles/NotebookModal.css'
+
+import React, { useEffect, useRef, useState } from 'react'
+
+import { renderMarkdown } from '../lib/markdown'
 
 interface NotebookModalProps {
   itemTitle: string
@@ -58,6 +60,7 @@ const NotebookModal: React.FC<NotebookModalProps> = ({
     }
 
     window.addEventListener('keydown', handleKeyDown)
+    
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [hasChanges, note])
 

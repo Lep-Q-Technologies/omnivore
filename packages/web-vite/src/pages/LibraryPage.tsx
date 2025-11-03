@@ -1,38 +1,39 @@
 // Library page component for Omnivore Vite migration
 // Uses the new NestJS GraphQL endpoint to fetch the user's library items
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../stores'
+
+import AddLinkModal from '../components/AddLinkModal'
+import EditInfoModal from '../components/EditInfoModal'
+import ErrorBoundary from '../components/ErrorBoundary'
+import LabelPickerModal from '../components/LabelPickerModal'
+import LibraryItemCard, { type CardAction } from '../components/LibraryItemCard'
+import LibraryItemRow from '../components/LibraryItemRow'
+import NotebookModal from '../components/NotebookModal'
 import {
   graphqlRequest,
   useArchiveItem,
-  useDeleteItem,
   useBulkArchive,
   useBulkDelete,
-  useBulkMoveToFolder,
   useBulkMarkAsRead,
-  useUpdateLibraryItem,
+  useBulkMoveToFolder,
+  useDeleteItem,
   useLabels,
+  useUpdateLibraryItem,
   useUpdateNotebook,
 } from '../lib/graphql-client'
 import {
-  LIBRARY_ITEM_BASIC_FRAGMENT,
   LABEL_BASIC_FRAGMENT,
+  LIBRARY_ITEM_BASIC_FRAGMENT,
 } from '../lib/graphql-fragments'
+import { useAuthStore } from '../stores'
 import type {
   LibraryItem as LibraryItemType,
   LibraryItemsConnection,
   LibraryItemState,
   LibrarySearchInput
 } from '../types/api'
-import ErrorBoundary from '../components/ErrorBoundary'
-import LabelPickerModal from '../components/LabelPickerModal'
-import AddLinkModal from '../components/AddLinkModal'
-import EditInfoModal from '../components/EditInfoModal'
-import NotebookModal from '../components/NotebookModal'
-import LibraryItemCard, { type CardAction } from '../components/LibraryItemCard'
-import LibraryItemRow from '../components/LibraryItemRow'
 // CSS imported via consolidated bundle in main.tsx
 
 const LIBRARY_ITEMS_QUERY = `
@@ -75,6 +76,7 @@ const LibraryPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     // Load view mode from localStorage, default to 'grid'
     const saved = localStorage.getItem('omnivore-view-mode')
+    
     return (saved === 'grid' || saved === 'list') ? saved : 'grid'
   })
   const [editingLabelsItemId, setEditingLabelsItemId] = useState<string | null>(null)
@@ -213,6 +215,7 @@ const LibraryPage: React.FC = () => {
 
     // Debounce search query - shorter for better UX
     const debounceTimer = setTimeout(fetchItems, searchQuery ? 300 : 0)
+    
     return () => clearTimeout(debounceTimer)
   }, [
     user,
@@ -231,6 +234,7 @@ const LibraryPage: React.FC = () => {
       if (activeFolder === 'inbox' && item.folder !== 'inbox') return false
       if (activeFolder === 'archive' && item.folder !== 'archive') return false
       if (activeFolder === 'trash' && item.folder !== 'trash') return false
+      
       return true
     })
   }, [items, activeFolder])
@@ -245,6 +249,7 @@ const LibraryPage: React.FC = () => {
     if (diffInHours < 1) return 'Just now'
     if (diffInHours < 24) return `${diffInHours}h ago`
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`
+    
     return date.toLocaleDateString()
   }
 
@@ -304,10 +309,10 @@ const LibraryPage: React.FC = () => {
         prevItems.map((item) =>
           item.id === itemId
             ? {
-                ...item,
-                state: isArchived ? 'SUCCEEDED' : 'ARCHIVED',
-                folder: isArchived ? 'inbox' : 'archive',
-              }
+              ...item,
+              state: isArchived ? 'SUCCEEDED' : 'ARCHIVED',
+              folder: isArchived ? 'inbox' : 'archive',
+            }
             : item
         )
       )
@@ -359,6 +364,7 @@ const LibraryPage: React.FC = () => {
       } else {
         newSet.add(itemId)
       }
+      
       return newSet
     })
   }
@@ -382,10 +388,10 @@ const LibraryPage: React.FC = () => {
         prevItems.map((item) =>
           selectedItems.has(item.id)
             ? {
-                ...item,
-                state: archived ? 'ARCHIVED' : 'SUCCEEDED',
-                folder: archived ? 'archive' : 'inbox',
-              }
+              ...item,
+              state: archived ? 'ARCHIVED' : 'SUCCEEDED',
+              folder: archived ? 'archive' : 'inbox',
+            }
             : item
         )
       )
@@ -538,8 +544,10 @@ const LibraryPage: React.FC = () => {
           const updatedLabels = newLabelNames
             .map((name) => allLabels.find((l) => l.name === name))
             .filter((l): l is NonNullable<typeof l> => l !== undefined)
+          
           return { ...item, labels: updatedLabels }
         }
+        
         return item
       })
     )
@@ -614,9 +622,9 @@ const LibraryPage: React.FC = () => {
         prevItems.map((item) =>
           item.id === itemId
             ? {
-                ...item,
-                readAt: new Date().toISOString(),
-              }
+              ...item,
+              readAt: new Date().toISOString(),
+            }
             : item
         )
       )
@@ -642,9 +650,9 @@ const LibraryPage: React.FC = () => {
         prevItems.map((item) =>
           item.id === itemId
             ? {
-                ...item,
-                readAt: null,
-              }
+              ...item,
+              readAt: null,
+            }
             : item
         )
       )
@@ -701,9 +709,10 @@ const LibraryPage: React.FC = () => {
     setSelectedLabelFilters((prev) => {
       if (prev.includes(labelName)) {
         return prev.filter((l) => l !== labelName)
-      } else {
-        return [...prev, labelName]
       }
+      
+      return [...prev, labelName]
+      
     })
   }
 

@@ -1,11 +1,13 @@
 // Library item row component for list view
 // Horizontal layout matching legacy Omnivore UI
 
-import React, { useState, useRef, useEffect } from 'react'
+import '../styles/LibraryList.css'
+
+import React, { useEffect, useRef, useState } from 'react'
+
+import { calculateReadingTime, formatTimestamp } from '../lib/reading-time'
 import type { LibraryItem } from '../types/api'
 import type { CardAction } from './LibraryItemCard'
-import { calculateReadingTime, formatTimestamp } from '../lib/reading-time'
-import '../styles/LibraryList.css'
 
 interface LibraryItemRowProps {
   item: LibraryItem
@@ -47,6 +49,7 @@ const LibraryItemRow: React.FC<LibraryItemRowProps> = ({
 
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside)
+      
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showMenu])

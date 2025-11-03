@@ -1,10 +1,12 @@
 // Highlight Sidebar Component - Shows all highlights for an article
 // Allows editing, deleting, and navigating to highlights
 
+import '../styles/HighlightSidebar.css'
+
 import React, { useState } from 'react'
+
 import type { Highlight } from '../lib/graphql-client'
 import type { HighlightColor } from '../types/api'
-import '../styles/HighlightSidebar.css'
 
 interface HighlightSidebarProps {
   highlights: Highlight[]

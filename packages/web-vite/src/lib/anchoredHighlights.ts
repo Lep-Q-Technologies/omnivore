@@ -3,12 +3,13 @@
 // idempotent application, multi-node wrapping, and mutation observers
 
 import { useEffect, useRef } from 'react'
+
 import type {
-  HighlightColor,
   AnchorDomRange,
+  AnchoredSelectors,
   AnchorTextPosition,
   AnchorTextQuote,
-  AnchoredSelectors,
+  HighlightColor,
 } from '../types/api'
 
 export interface AnchoredHighlight {
@@ -38,14 +39,17 @@ function pathTo(node: Node, root: Node): string {
     parts.push(String(i))
     n = parent
   }
+  
   return parts.reverse().join('/')
 }
 
 function nodeFromPath(path: string, root: Node): Node | null {
   if (!path) return null
+  
   return path.split('/').reduce<Node | null>((curr, idx) => {
     if (!curr) return null
     const i = Number(idx)
+    
     return curr.childNodes[i] ?? null
   }, root)
 }
@@ -64,6 +68,7 @@ function buildIndex(root: HTMLElement) {
     slices.push({ node: t, start: offset, end: offset + len })
     offset += len
   }
+  
   return { slices, length: offset }
 }
 
@@ -80,8 +85,10 @@ function positionFromRange(range: Range, root: HTMLElement) {
     }
     const slice = slices.find((s) => s.node === n)
     if (!slice) throw new Error('Node not indexed')
+    
     return slice.start + off
   }
+  
   return {
     start: toAbs(range.startContainer, range.startOffset),
     end: toAbs(range.endContainer, range.endOffset),
@@ -109,6 +116,7 @@ function rangeFromPosition(pos: AnchorTextPosition, root: HTMLElement) {
   const r = document.createRange()
   r.setStart(startNode, startOff)
   r.setEnd(endNode, endOff)
+  
   return r
 }
 
@@ -164,14 +172,14 @@ function mapNormalizedToRawOffset(root: HTMLElement, target: number): number {
       const isSpace = /\s/.test(ch)
       if (!isSpace) {
         if (normCount === target)
-          return buildIndex(root).slices.find((s) => s.node === t)!.start + i
+        { return buildIndex(root).slices.find((s) => s.node === t)!.start + i }
         normCount++
       } else {
         // collapse sequences of whitespace to a single space
         // count one normalized space when encountering the first of a run
         if (i === 0 || !/\s/.test(raw[i - 1])) {
           if (normCount === target)
-            return buildIndex(root).slices.find((s) => s.node === t)!.start + i
+          { return buildIndex(root).slices.find((s) => s.node === t)!.start + i }
           normCount++
         }
       }
@@ -213,7 +221,7 @@ function rangeFromDomSelector(
   const eNode = nodeFromPath(sel.endPath, root)
   if (!sNode || !eNode) return null
   if (sNode.nodeType !== Node.TEXT_NODE || eNode.nodeType !== Node.TEXT_NODE)
-    return null
+  { return null }
   const r = document.createRange()
   try {
     r.setStart(sNode as Text, sel.startOffset)
@@ -221,6 +229,7 @@ function rangeFromDomSelector(
   } catch {
     return null
   }
+  
   return r
 }
 
@@ -297,6 +306,7 @@ function wrapRange(root: HTMLElement, range: Range, cls: string, id: string) {
     if (t === endT) break
   }
   console.log('[wrapRange] Finished, created', marks.length, 'marks')
+  
   return marks
 }
 
@@ -350,18 +360,19 @@ export function useAnchoredHighlights(
           if (marks.length) {
             applied.push({ id: h.id, marks })
             console.log(`[AnchoredHighlights] Applied highlight ${h.id} with color ${h.color} (class: ${cls})`)
-            console.log(`[AnchoredHighlights] Mark textContent:`, marks[0].textContent)
-            console.log(`[AnchoredHighlights] Mark innerHTML:`, marks[0].innerHTML)
-            console.log(`[AnchoredHighlights] Mark offsetWidth:`, marks[0].offsetWidth)
-            console.log(`[AnchoredHighlights] Mark offsetHeight:`, marks[0].offsetHeight)
-            console.log(`[AnchoredHighlights] Mark isConnected:`, marks[0].isConnected)
-            console.log(`[AnchoredHighlights] Mark computed style:`, window.getComputedStyle(marks[0]).backgroundColor)
+            console.log('[AnchoredHighlights] Mark textContent:', marks[0].textContent)
+            console.log('[AnchoredHighlights] Mark innerHTML:', marks[0].innerHTML)
+            console.log('[AnchoredHighlights] Mark offsetWidth:', marks[0].offsetWidth)
+            console.log('[AnchoredHighlights] Mark offsetHeight:', marks[0].offsetHeight)
+            console.log('[AnchoredHighlights] Mark isConnected:', marks[0].isConnected)
+            console.log('[AnchoredHighlights] Mark computed style:', window.getComputedStyle(marks[0]).backgroundColor)
           }
         } else {
           console.warn(`[AnchoredHighlights] Could not find range for highlight ${h.id}`)
         }
       }
       console.log(`[AnchoredHighlights] Applied ${applied.length} highlights total`)
+      
       return applied
     }
 

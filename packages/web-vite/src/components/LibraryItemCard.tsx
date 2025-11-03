@@ -1,12 +1,13 @@
 // Enhanced library item card component for grid view
 // Features: thumbnail, reading time, progress bar, site attribution
 
-import React from 'react'
-import type { LibraryItem, Label } from '../types/api'
-import { calculateReadingTime, formatTimestamp } from '../lib/reading-time'
-
-import CardSkeleton from './CardSkeleton'
 import '../styles/LibraryCard.css'
+
+import React from 'react'
+
+import { calculateReadingTime, formatTimestamp } from '../lib/reading-time'
+import type { Label, LibraryItem } from '../types/api'
+import CardSkeleton from './CardSkeleton'
 
 export type CardDensity = 'compact' | 'comfortable' | 'spacious'
 
@@ -62,6 +63,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
     }
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside)
+      
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showMenu])
@@ -527,6 +529,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
 function getProgressColor(percent: number): string {
   if (percent < 34) return '#4a9eff' // Blue: 0-33% (started)
   if (percent < 67) return '#ffd700' // Yellow: 34-66% (in progress)
+  
   return '#10b981' // Green: 67-100% (almost done)
 }
 

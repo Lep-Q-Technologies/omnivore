@@ -78,5 +78,6 @@ export async function generateContentHashWithFallback(
   if (isCryptoAvailable()) {
     return generateContentHash(html)
   }
+  
   return generateContentHashSync(html)
 }

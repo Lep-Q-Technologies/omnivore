@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -101,6 +101,7 @@ export default defineConfig({
           if (/woff2?|eot|ttf|otf/i.test(ext)) {
             return 'assets/fonts/[name]-[hash][extname]'
           }
+          
           return 'assets/[name]-[hash][extname]'
         },
       },
