@@ -64,7 +64,7 @@ import { ReadingProgressEntity } from '../reading-progress/entities/reading-prog
 
           
           synchronize: false, 
-          logging: isDevelopment,
+          logging: ['query', 'warn', 'error'],
           // Use QueryPerformanceLogger to track slow queries
           logger: new QueryPerformanceLogger(structuredLogger, isDevelopment),
           // Log queries slower than 1 second (QueryPerformanceLogger handles >500ms as "slow")
