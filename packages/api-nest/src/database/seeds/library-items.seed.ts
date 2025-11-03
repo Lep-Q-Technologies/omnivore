@@ -132,7 +132,7 @@ export async function seedLibraryItems(
   }
 
   console.log(
-    `✅ [Seed] Completed: ${createdItems.length}/${sampleItems.length} items created for user ${userId}`,
+    `✅ [Seed] Completed: ${createdItems.length}/${sampleItems.length} items created for user ${userId}`
   )
 
   return createdItems
