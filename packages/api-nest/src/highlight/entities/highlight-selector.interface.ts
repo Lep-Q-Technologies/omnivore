@@ -16,5 +16,5 @@ export interface HighlightSelector {
   /** Optional end position (for range/text-position selectors) */
   end?: number
   /** Additional type-specific fields */
-  [key: string]: any
+  [key: string]: unknown
 }
