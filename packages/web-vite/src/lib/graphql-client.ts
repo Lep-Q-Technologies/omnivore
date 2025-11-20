@@ -1106,6 +1106,7 @@ export interface UpdateReadingProgressInput {
   contentVersion?: string
   lastSeenSentinel: number
   highestSeenSentinel: number
+  totalSentinels?: number
 }
 
 // ==================== READING PROGRESS QUERIES ====================

@@ -91,7 +91,9 @@ const CreateHighlightPopup: React.FC<{
           <button
             key={color.name}
             type="button"
-            className={`color-button ${selectedColor === color.name ? 'active' : ''}`}
+            className={`color-button ${
+              selectedColor === color.name ? 'active' : ''
+            }`}
             style={{ backgroundColor: color.bg }}
             onClick={() => setSelectedColor(color.name)}
             title={color.label}
@@ -125,7 +127,8 @@ const CreateHighlightPopup: React.FC<{
       )}
 
       <div className="selected-text-preview">
-        "{selectedText.substring(0, 100)}{selectedText.length > 100 ? '...' : ''}"
+        "{selectedText.substring(0, 100)}
+        {selectedText.length > 100 ? '...' : ''}"
       </div>
 
       <button
@@ -165,23 +168,25 @@ const ReaderPage: React.FC = () => {
   const { updateHighlight } = useUpdateHighlight()
   const { deleteHighlight } = useDeleteHighlight()
   const { updateNotebook } = useUpdateNotebook()
-  
+
   // Sentinel-based reading progress state
   const [contentHash, setContentHash] = useState<string | null>(null)
   const [currentSentinel, setCurrentSentinel] = useState(0)
   const [highestSentinel, setHighestSentinel] = useState(0)
+  const [totalSentinels, setTotalSentinels] = useState(0)
   const [hasRestoredPosition, setHasRestoredPosition] = useState(false)
   const sentinelUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const sentinelsInjectedRef = useRef(false)
   const lastObserverUpdateRef = useRef<number>(0)
-  
-  const {
-    data: readingProgress,
-    fetchProgress,
-  } = useReadingProgress(id || '', contentHash || undefined)
-  const { updateProgress: updateReadingProgress } = useUpdateReadingProgressMutation()
-  
+
+  const { data: readingProgress, fetchProgress } = useReadingProgress(
+    id || '',
+    contentHash || undefined,
+  )
+  const { updateProgress: updateReadingProgress } =
+    useUpdateReadingProgressMutation()
+
   const [showLabelModal, setShowLabelModal] = useState(false)
   const [showEditInfoModal, setShowEditInfoModal] = useState(false)
   const [showHighlightSidebar, setShowHighlightSidebar] = useState(false)
@@ -197,10 +202,7 @@ const ReaderPage: React.FC = () => {
   useEffect(() => {
     if (id) {
       // Fire both requests simultaneously
-      Promise.all([
-        fetchLibraryItem(),
-        fetchHighlights(),
-      ]).catch(err => {
+      Promise.all([fetchLibraryItem(), fetchHighlights()]).catch((err) => {
         console.error('[ReaderPage] Failed to fetch data:', err)
       })
     }
@@ -227,7 +229,7 @@ const ReaderPage: React.FC = () => {
   const anchoredHighlights = useMemo<AnchoredHighlight[]>(() => {
     const parsed = JSON.parse(highlightsJson || '[]')
     if (!parsed || parsed.length === 0) return []
-    
+
     return parsed.map((h: any) => {
       // Parse selectors from backend (GraphQLJSON returns object), fallback to legacy quote/prefix/suffix
       let selectors: AnchoredSelectors
@@ -269,7 +271,10 @@ const ReaderPage: React.FC = () => {
   }, [highlightsJson])
 
   // Apply anchored highlights to content
-  const { jumpTo, reapply } = useAnchoredHighlights(contentRef, anchoredHighlights)
+  const { jumpTo, reapply } = useAnchoredHighlights(
+    contentRef,
+    anchoredHighlights,
+  )
 
   // Generate content hash when content loads
   useEffect(() => {
@@ -296,44 +301,59 @@ const ReaderPage: React.FC = () => {
   // Inject sentinels into content - DEFERRED: Uses requestIdleCallback to prevent blocking
   useEffect(() => {
     // Don't inject sentinels while still loading data
-    if (loading || !contentRef.current || !item?.content || sentinelsInjectedRef.current) return
+    if (
+      loading ||
+      !contentRef.current ||
+      !item?.content ||
+      sentinelsInjectedRef.current
+    ) {
+      return
+    }
 
     const container = contentRef.current
 
     // Defer sentinel injection until browser is idle (don't block interaction)
-    const idleCallback = window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 100))
+    const idleCallback =
+      window.requestIdleCallback || ((cb: () => void) => setTimeout(cb, 100))
 
-    const handle = idleCallback(() => {
-      if (!container || sentinelsInjectedRef.current) return
+    const handle = idleCallback(
+      () => {
+        if (!container || sentinelsInjectedRef.current) return
 
-      // Find all block elements where we can inject sentinels
-      const blockElements = container.querySelectorAll(
-        'p, h1, h2, h3, h4, h5, h6, blockquote, pre, li, div.article-content > div'
-      )
+        // Find all block elements where we can inject sentinels
+        const blockElements = container.querySelectorAll(
+          'p, h1, h2, h3, h4, h5, h6, blockquote, pre, li, div.article-content > div',
+        )
 
-      let sentinelIndex = 0
+        let sentinelIndex = 0
 
-      blockElements.forEach((element) => {
-        // Skip if this element already has a sentinel after it
-        if (element.nextElementSibling?.hasAttribute('data-sentinel')) {
+        blockElements.forEach((element) => {
+          // Skip if this element already has a sentinel after it
+          if (element.nextElementSibling?.hasAttribute('data-sentinel')) {
+            sentinelIndex++
+
+            return
+          }
+
+          // Create invisible sentinel marker (must have height for IntersectionObserver)
+          const sentinel = document.createElement('div')
+          sentinel.setAttribute('data-sentinel', String(sentinelIndex))
+          sentinel.style.cssText =
+            'height:1px;overflow:hidden;pointer-events:none;visibility:hidden;'
+
+          // Insert after the block element
+          element.after(sentinel)
           sentinelIndex++
-          
-          return
-        }
+        })
 
-        // Create invisible sentinel marker
-        const sentinel = document.createElement('div')
-        sentinel.setAttribute('data-sentinel', String(sentinelIndex))
-        sentinel.style.cssText = 'height:0;overflow:hidden;pointer-events:none;'
-
-        // Insert after the block element
-        element.after(sentinel)
-        sentinelIndex++
-      })
-
-      sentinelsInjectedRef.current = true
-      console.log(`[ReadingProgress] Injected ${sentinelIndex} sentinels (deferred, non-blocking)`)
-    }, { timeout: 3000 }) // Longer timeout - let page become interactive first
+        sentinelsInjectedRef.current = true
+        setTotalSentinels(sentinelIndex)
+        console.log(
+          `[ReadingProgress] Injected ${sentinelIndex} sentinels (deferred, non-blocking)`,
+        )
+      },
+      { timeout: 3000 },
+    ) // Longer timeout - let page become interactive first
 
     return () => {
       if (window.cancelIdleCallback) {
@@ -342,19 +362,25 @@ const ReaderPage: React.FC = () => {
         clearTimeout(handle)
       }
     }
-     
   }, [item?.content, contentHash, loading]) // Re-run when content or loading state changes
 
   // Setup IntersectionObserver to track sentinel visibility - OPTIMIZED
   useEffect(() => {
-    if (!contentRef.current || !id || !contentHash || !sentinelsInjectedRef.current) return
+    if (
+      !contentRef.current ||
+      !id ||
+      !contentHash ||
+      !sentinelsInjectedRef.current
+    ) {
+      return
+    }
 
     // Only create observer once, reuse across re-renders
     if (observerRef.current) {
       // Re-attach to new sentinels if content changed
       const sentinels = contentRef.current.querySelectorAll('[data-sentinel]')
       sentinels.forEach((sentinel) => observerRef.current!.observe(sentinel))
-      
+
       return
     }
 
@@ -368,10 +394,21 @@ const ReaderPage: React.FC = () => {
 
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const sentinelId = Number(entry.target.getAttribute('data-sentinel'))
+            const sentinelId = Number(
+              entry.target.getAttribute('data-sentinel'),
+            )
             if (!isNaN(sentinelId)) {
               setCurrentSentinel(sentinelId)
-              setHighestSentinel((prev) => Math.max(prev, sentinelId))
+              setHighestSentinel((prev) => {
+                const newHighest = Math.max(prev, sentinelId)
+                if (newHighest > prev) {
+                  console.log(
+                    `[ReadingProgress] New highest sentinel: ${newHighest}`,
+                  )
+                }
+
+                return newHighest
+              })
             }
           }
         })
@@ -380,7 +417,7 @@ const ReaderPage: React.FC = () => {
         // Trigger when sentinel enters top 10% of viewport
         threshold: 0,
         rootMargin: '-10% 0px -90% 0px',
-      }
+      },
     )
 
     // Observe all sentinels
@@ -388,7 +425,6 @@ const ReaderPage: React.FC = () => {
     sentinels.forEach((sentinel) => observer.observe(sentinel))
 
     observerRef.current = observer
-    console.log(`[ReadingProgress] Observer attached to ${sentinels.length} sentinels`)
 
     return () => {
       observer.disconnect()
@@ -398,7 +434,9 @@ const ReaderPage: React.FC = () => {
 
   // Debounced update of reading progress
   useEffect(() => {
-    if (!id || !contentHash || currentSentinel === 0) return
+    if (!id || !contentHash || currentSentinel === 0) {
+      return
+    }
 
     // Clear existing timeout
     if (sentinelUpdateTimeoutRef.current) {
@@ -412,8 +450,7 @@ const ReaderPage: React.FC = () => {
         contentVersion: contentHash,
         lastSeenSentinel: currentSentinel,
         highestSeenSentinel: highestSentinel,
-      }).catch((error) => {
-        console.error('[ReadingProgress] Failed to update:', error)
+        totalSentinels: totalSentinels > 0 ? totalSentinels : undefined,
       })
     }, 2000)
 
@@ -422,7 +459,14 @@ const ReaderPage: React.FC = () => {
         clearTimeout(sentinelUpdateTimeoutRef.current)
       }
     }
-  }, [id, contentHash, currentSentinel, highestSentinel, updateReadingProgress])
+  }, [
+    id,
+    contentHash,
+    currentSentinel,
+    highestSentinel,
+    updateReadingProgress,
+    totalSentinels,
+  ])
 
   // Restore scroll position from saved progress
   useEffect(() => {
@@ -436,7 +480,7 @@ const ReaderPage: React.FC = () => {
     }
 
     const targetSentinel = contentRef.current.querySelector(
-      `[data-sentinel="${readingProgress.lastSeenSentinel}"]`
+      `[data-sentinel="${readingProgress.lastSeenSentinel}"]`,
     )
 
     if (targetSentinel) {
@@ -445,7 +489,7 @@ const ReaderPage: React.FC = () => {
         targetSentinel.scrollIntoView({ behavior: 'smooth', block: 'start' })
         setHasRestoredPosition(true)
         console.log(
-          `[ReadingProgress] Restored position to sentinel ${readingProgress.lastSeenSentinel}`
+          `[ReadingProgress] Restored position to sentinel ${readingProgress.lastSeenSentinel}`,
         )
       }, 100)
     } else {
@@ -500,7 +544,7 @@ const ReaderPage: React.FC = () => {
     }
 
     document.addEventListener('click', handleClickOutside)
-    
+
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
@@ -527,9 +571,12 @@ const ReaderPage: React.FC = () => {
         if (selection.rangeCount > 0) {
           savedSelectionRef.current = {
             range: selection.getRangeAt(0).cloneRange(),
-            text: text
+            text: text,
           }
-          console.log('[ReaderPage] Saved selection:', `${text.substring(0, 50) }...`)
+          console.log(
+            '[ReaderPage] Saved selection:',
+            `${text.substring(0, 50)}...`,
+          )
         }
 
         if (text.length < 3) {
@@ -538,7 +585,9 @@ const ReaderPage: React.FC = () => {
 
         // Check if selection is within the content area
         const range = selection.getRangeAt(0)
-        const isInContent = contentElement.contains(range.commonAncestorContainer)
+        const isInContent = contentElement.contains(
+          range.commonAncestorContainer,
+        )
 
         if (!isInContent) {
           return
@@ -564,7 +613,7 @@ const ReaderPage: React.FC = () => {
   // Create highlight handler
   const handleCreateHighlight = async (
     color: HighlightColor,
-    annotation: string
+    annotation: string,
   ) => {
     if (!id || !contentRef.current) return
 
@@ -578,23 +627,32 @@ const ReaderPage: React.FC = () => {
         return
       }
 
-      console.log('[ReaderPage] Using saved selection:', `${savedSelection.text.substring(0, 50) }...`)
+      console.log(
+        '[ReaderPage] Using saved selection:',
+        `${savedSelection.text.substring(0, 50)}...`,
+      )
 
       // Create a temporary selection object to pass to buildSelectorsFromSelection
       const tempSelection = {
         rangeCount: 1,
         getRangeAt: (index: number) => savedSelection.range,
-        toString: () => savedSelection.text
+        toString: () => savedSelection.text,
       } as Selection
 
       // Build robust anchored selectors (DOM Range, TextPosition, TextQuote)
-      const selectors = buildSelectorsFromSelection(tempSelection, contentRef.current)
+      const selectors = buildSelectorsFromSelection(
+        tempSelection,
+        contentRef.current,
+      )
 
       // Calculate position percentage (0-100)
       const docHeight = document.documentElement.scrollHeight
       const range = savedSelection.range
       const selectionTop = range.getBoundingClientRect().top + window.scrollY
-      const positionPercent = docHeight > 0 ? Math.min(100, Math.max(0, (selectionTop / docHeight) * 100)) : 0
+      const positionPercent =
+        docHeight > 0
+          ? Math.min(100, Math.max(0, (selectionTop / docHeight) * 100))
+          : 0
 
       const input: CreateHighlightInput = {
         libraryItemId: id,
@@ -612,7 +670,7 @@ const ReaderPage: React.FC = () => {
       console.log('[ReaderPage] Creating highlight with input:', {
         annotation: input.annotation,
         color: input.color,
-        quoteLength: input.quote.length
+        quoteLength: input.quote.length,
       })
 
       const result = await createHighlight(input)
@@ -643,7 +701,7 @@ const ReaderPage: React.FC = () => {
   const handleUpdateHighlight = async (
     highlightId: string,
     annotation: string,
-    color: HighlightColor
+    color: HighlightColor,
   ) => {
     try {
       await updateHighlight(highlightId, { annotation, color })
@@ -710,7 +768,15 @@ const ReaderPage: React.FC = () => {
 
     const result = DOMPurify.sanitize(item.content, {
       ADD_TAGS: ['iframe'],
-      ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'loading', 'decoding', 'onerror'],
+      ADD_ATTR: [
+        'allow',
+        'allowfullscreen',
+        'frameborder',
+        'scrolling',
+        'loading',
+        'decoding',
+        'onerror',
+      ],
     })
 
     // Clean up hooks after use
@@ -736,34 +802,62 @@ const ReaderPage: React.FC = () => {
       }
 
       // 'l' key to open labels modal
-      if (e.key === 'l' && !showLabelModal && !showEditInfoModal && !showHighlightSidebar && !showNotebookModal) {
+      if (
+        e.key === 'l' &&
+        !showLabelModal &&
+        !showEditInfoModal &&
+        !showHighlightSidebar &&
+        !showNotebookModal
+      ) {
         e.preventDefault()
         setShowLabelModal(true)
       }
 
       // 'e' key to open edit info modal
-      if (e.key === 'e' && !showEditInfoModal && !showLabelModal && !showHighlightSidebar && !showNotebookModal) {
+      if (
+        e.key === 'e' &&
+        !showEditInfoModal &&
+        !showLabelModal &&
+        !showHighlightSidebar &&
+        !showNotebookModal
+      ) {
         e.preventDefault()
         setShowEditInfoModal(true)
       }
 
       // 'h' key to toggle highlight sidebar
-      if (e.key === 'h' && !showEditInfoModal && !showLabelModal && !showNotebookModal) {
+      if (
+        e.key === 'h' &&
+        !showEditInfoModal &&
+        !showLabelModal &&
+        !showNotebookModal
+      ) {
         e.preventDefault()
         setShowHighlightSidebar(!showHighlightSidebar)
       }
 
       // 'n' key to open notebook modal
-      if (e.key === 'n' && !showEditInfoModal && !showLabelModal && !showHighlightSidebar && !showNotebookModal) {
+      if (
+        e.key === 'n' &&
+        !showEditInfoModal &&
+        !showLabelModal &&
+        !showHighlightSidebar &&
+        !showNotebookModal
+      ) {
         e.preventDefault()
         setShowNotebookModal(true)
       }
     }
 
     window.addEventListener('keydown', handleKeyPress)
-    
+
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [showLabelModal, showEditInfoModal, showHighlightSidebar, showNotebookModal])
+  }, [
+    showLabelModal,
+    showEditInfoModal,
+    showHighlightSidebar,
+    showNotebookModal,
+  ])
 
   // Loading state
   if (loading) {
@@ -930,7 +1024,12 @@ const ReaderPage: React.FC = () => {
               <path d="M12 20 h9" />
               <path d="M16.5 3.5 a2.121 2.121 0 0 1 3 3 L7 19 l-4 1 l1 -4 L16.5 3.5 z" />
             </svg>
-            <span>Highlights {highlights && highlights.length > 0 ? `(${highlights.length})` : ''}</span>
+            <span>
+              Highlights{' '}
+              {highlights && highlights.length > 0
+                ? `(${highlights.length})`
+                : ''}
+            </span>
           </button>
           <button
             type="button"

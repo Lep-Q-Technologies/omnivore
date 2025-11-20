@@ -101,6 +101,16 @@ export class ReadingProgressService {
       )
     }
 
+    // Update library item's total_sentinels if provided
+    if (input.totalSentinels !== undefined && input.totalSentinels > 0) {
+      await this.libraryItemRepository.update(input.libraryItemId, userId, {
+        totalSentinels: input.totalSentinels,
+      })
+      this.logger.debug(
+        `Updated total_sentinels to ${input.totalSentinels} for item ${input.libraryItemId}`,
+      )
+    }
+
     // Upsert progress (create or update) with normalized values
     const progress = await this.progressRepository.upsertProgress(
       userId,

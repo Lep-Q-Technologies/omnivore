@@ -106,4 +106,35 @@ export class ReadingProgressRepository implements IReadingProgressRepository {
 
     return this.save(progress)
   }
+
+  /**
+   * Batch find latest reading progress for multiple library items
+   * Optimized for DataLoader to prevent N+1 queries
+   */
+  async findByLibraryItemIds(
+    libraryItemIds: string[],
+    userId: string,
+  ): Promise<Map<string, ReadingProgressEntity>> {
+    if (libraryItemIds.length === 0) {
+      return new Map()
+    }
+
+    // Fetch all progress records for these items in one query
+    const progressRecords = await this.repository
+      .createQueryBuilder('rp')
+      .where('rp.library_item_id IN (:...itemIds)', { itemIds: libraryItemIds })
+      .andWhere('rp.user_id = :userId', { userId })
+      .orderBy('rp.updated_at', 'DESC')
+      .getMany()
+
+    // Group by library_item_id, keeping only the most recent for each
+    const progressMap = new Map<string, ReadingProgressEntity>()
+    for (const progress of progressRecords) {
+      if (!progressMap.has(progress.libraryItemId)) {
+        progressMap.set(progress.libraryItemId, progress)
+      }
+    }
+
+    return progressMap
+  }
 }

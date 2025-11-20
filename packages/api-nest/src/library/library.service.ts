@@ -19,6 +19,7 @@ import { EventBusService } from '../queue/event-bus.service'
 import { EVENT_NAMES } from '../queue/events.constants'
 import { JOB_PRIORITY } from '../queue/queue.constants'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
+import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
 import { FOLDERS, VALID_FOLDERS } from '../constants/folders.constants'
 import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
@@ -29,6 +30,8 @@ export class LibraryService {
   constructor(
     @Inject(REPOSITORY_TOKENS.ILibraryItemRepository)
     private readonly libraryRepository: ILibraryItemRepository,
+    @Inject(REPOSITORY_TOKENS.IReadingProgressRepository)
+    private readonly readingProgressRepository: IReadingProgressRepository,
     private readonly eventBus: EventBusService,
   ) {}
 
@@ -311,8 +314,32 @@ export class LibraryService {
       )
     }
 
-    // Delegate to repository
-    return this.libraryRepository.bulkMarkAsRead(userId, itemIds)
+    // First, mark items as read in library_item table
+    const result = await this.libraryRepository.bulkMarkAsRead(userId, itemIds)
+
+    // Then, update reading progress to 100% for items that have sentinels
+    // Fetch all items in a single query using findByIds
+    const items = await this.libraryRepository.findByIds(itemIds, userId)
+
+    // Update reading progress for each item that has sentinels
+    await Promise.all(
+      items.map(async (item) => {
+        if (!item.totalSentinels || item.totalSentinels === 0) {
+          return // Skip items without sentinels
+        }
+
+        // Set reading progress to 100% (highestSeenSentinel = totalSentinels)
+        await this.readingProgressRepository.upsertProgress(
+          userId,
+          item.id,
+          null, // contentVersion - null means applies to any version
+          item.totalSentinels, // lastSeenSentinel
+          item.totalSentinels, // highestSeenSentinel (100% completion)
+        )
+      }),
+    )
+
+    return result
   }
 
   /**

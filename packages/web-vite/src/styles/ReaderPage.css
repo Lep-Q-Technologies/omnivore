@@ -408,12 +408,16 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin-bottom: 0;
 }
 
 .popup-title {
@@ -448,6 +452,10 @@
   min-height: fit-content;
   margin: 0;
   flex-shrink: 0;
+  box-sizing: border-box;
+  /* Fallback for older browsers that don't support gap */
+  grid-row-gap: 10px;
+  grid-column-gap: 10px;
 }
 
 .color-button {
@@ -463,6 +471,10 @@
   justify-content: center;
   position: relative;
   z-index: 0;
+  box-sizing: border-box;
+  min-height: 40px;
+  /* Ensure text doesn't wrap */
+  white-space: nowrap;
 }
 
 .color-button:hover {
@@ -509,7 +521,10 @@
   margin: 0;
   display: block;
   flex-shrink: 0;
-  position: static;
+  position: relative;
+  box-sizing: border-box;
+  /* Ensure it doesn't overlap with color buttons */
+  clear: both;
 }
 
 .annotation-textarea {

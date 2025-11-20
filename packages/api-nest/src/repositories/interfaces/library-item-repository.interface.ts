@@ -46,6 +46,14 @@ export interface ILibraryItemRepository {
   findById(id: string, userId: string): Promise<LibraryItemEntity | null>
 
   /**
+   * Find multiple library items by IDs and user ID
+   * @param ids - Array of library item IDs
+   * @param userId - User ID who owns the items
+   * @returns Array of library items (items not found are omitted)
+   */
+  findByIds(ids: string[], userId: string): Promise<LibraryItemEntity[]>
+
+  /**
    * Find a library item by URL and user ID (for duplicate detection)
    * @param url - Original URL
    * @param userId - User ID who owns the item
@@ -81,6 +89,19 @@ export interface ILibraryItemRepository {
    * @returns Library item instance
    */
   create(data: Partial<LibraryItemEntity>): LibraryItemEntity
+
+  /**
+   * Update specific fields of a library item
+   * @param id - Library item ID
+   * @param userId - User ID who owns the item
+   * @param data - Partial data to update
+   * @returns Updated library item
+   */
+  update(
+    id: string,
+    userId: string,
+    data: Partial<LibraryItemEntity>,
+  ): Promise<LibraryItemEntity>
 
   /**
    * Bulk archive or unarchive library items

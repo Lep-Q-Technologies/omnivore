@@ -72,6 +72,7 @@ export const LIBRARY_ITEM_BASIC_FRAGMENT = `
     itemType
     note
     noteUpdatedAt
+    readingProgressPercent
   }
 `
 

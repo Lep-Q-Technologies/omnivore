@@ -114,7 +114,8 @@ export interface Article {
   publishedAt?: string
   savedAt: string
   readAt?: string
-  readingProgress?: number
+  readingProgress?: number // Deprecated: use readingProgressPercent
+  readingProgressPercent?: number | null // Reading progress 0-100 based on sentinels
   state: 'UNREAD' | 'READING' | 'READ' | 'ARCHIVED'
   labels?: Label[]
   highlights?: Highlight[]
@@ -233,6 +234,8 @@ export interface LibraryItem {
   // ARC-010: Notebook feature
   note?: string | null
   noteUpdatedAt?: string | null
+  // Sentinel-based reading progress percentage (0-100)
+  readingProgressPercent?: number | null
 }
 
 export interface DeleteResult {

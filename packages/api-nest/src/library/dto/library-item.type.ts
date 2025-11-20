@@ -127,6 +127,12 @@ export class LibraryItem {
   get pageType(): string {
     return this.itemType
   }
+
+  @Field(() => Float, {
+    nullable: true,
+    description: 'Reading progress percentage (0-100) based on sentinel tracking',
+  })
+  readingProgressPercent?: number | null
 }
 
 @ObjectType()

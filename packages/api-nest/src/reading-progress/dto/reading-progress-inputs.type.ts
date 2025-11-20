@@ -33,4 +33,14 @@ export class UpdateReadingProgressInput {
   @IsInt()
   @Min(0)
   highestSeenSentinel!: number
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      'Total number of sentinels in the article (for progress percentage calculation)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  totalSentinels?: number
 }

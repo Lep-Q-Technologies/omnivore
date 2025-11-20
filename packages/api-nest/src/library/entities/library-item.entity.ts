@@ -8,8 +8,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
-import { User } from '../../user/entities/user.entity'
+
 import { EntityLabel } from '../../label/entities/entity-label.entity'
+import { User } from '../../user/entities/user.entity'
 
 export enum LibraryItemState {
   FAILED = 'FAILED',
@@ -90,6 +91,13 @@ export class LibraryItemEntity {
    */
   @Column({ name: 'content_hash', type: 'varchar', length: 64, nullable: true })
   contentHash?: string | null
+
+  /**
+   * Total number of sentinel markers in the article content
+   * Used to calculate reading progress percentage
+   */
+  @Column({ name: 'total_sentinels', type: 'integer', default: 0 })
+  totalSentinels!: number
 
   @Column({ type: 'text', nullable: true })
   thumbnail?: string | null

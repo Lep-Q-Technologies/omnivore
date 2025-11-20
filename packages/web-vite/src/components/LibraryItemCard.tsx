@@ -51,8 +51,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
   const isRead = !!item.readAt
 
   // Calculate reading progress percentage (0-100) for progress bar
-  // TODO: This will be populated from reading_progress table once we fetch it
-  const readingProgressPercent = 0 // Placeholder for sentinel-based progress
+  const readingProgressPercent = item.readingProgressPercent ?? 0
 
   // Close menu when clicking outside
   React.useEffect(() => {
@@ -200,7 +199,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
             className="card-menu-item"
             onClick={() =>
               handleMenuAction(
-                item.state === 'ARCHIVED' ? 'unarchive' : 'archive'
+                item.state === 'ARCHIVED' ? 'unarchive' : 'archive',
               )
             }
           >
@@ -503,7 +502,9 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
       </div>
 
       {/* Reading progress bar - positioned absolutely at bottom */}
-      {readingProgressPercent > 0 && readingProgressPercent < 100 && (
+      {/* Show progress bar for any article with progress (1-100%) */}
+      {/* Color indicates status: blue (0-33%), yellow (34-66%), orange (67-99%), green (100%) */}
+      {readingProgressPercent > 0 && (
         <div className="card-progress-bar">
           <div
             className="progress-bar-fill"
@@ -512,13 +513,6 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
               backgroundColor: getProgressColor(readingProgressPercent),
             }}
           />
-        </div>
-      )}
-
-      {/* Read badge at bottom of card */}
-      {isRead && (
-        <div className="card-read-badge">
-          <span className="read-badge-text">✓ Read</span>
         </div>
       )}
     </div>

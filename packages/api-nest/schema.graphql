@@ -158,6 +158,9 @@ type LibraryItem {
   pageType: String!
   publishedAt: DateTime
   readAt: DateTime
+
+  """Reading progress percentage (0-100) based on sentinel tracking"""
+  readingProgressPercent: Float
   savedAt: DateTime!
 
   """Site favicon/icon URL"""
@@ -507,6 +510,11 @@ input UpdateReadingProgressInput {
 
   """Library item ID"""
   libraryItemId: String!
+
+  """
+  Total number of sentinels in the article (for progress percentage calculation)
+  """
+  totalSentinels: Int
 }
 
 type User {

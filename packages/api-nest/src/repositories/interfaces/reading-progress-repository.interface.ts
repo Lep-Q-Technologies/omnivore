@@ -61,4 +61,16 @@ export interface IReadingProgressRepository {
     lastSeenSentinel: number,
     highestSeenSentinel: number,
   ): Promise<ReadingProgressEntity>
+
+  /**
+   * Batch find latest reading progress for multiple library items
+   * Used by DataLoader to prevent N+1 queries
+   * @param libraryItemIds - Array of library item IDs
+   * @param userId - User ID who owns the progress
+   * @returns Map of library item ID to reading progress
+   */
+  findByLibraryItemIds(
+    libraryItemIds: string[],
+    userId: string,
+  ): Promise<Map<string, ReadingProgressEntity>>
 }

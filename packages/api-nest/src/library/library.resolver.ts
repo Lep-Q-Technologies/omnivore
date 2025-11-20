@@ -50,7 +50,40 @@ export class LibraryResolver {
     @Context('dataLoaders') dataLoaders: DataLoaderService,
   ): Promise<Label[] | null> {
     // Use DataLoader to batch label queries and prevent N+1 problems
-    return dataLoaders.labels.load(libraryItem.id)
+    const labels = await dataLoaders.labels.load(libraryItem.id)
+    return labels.length > 0 ? labels : null
+  }
+
+  @ResolveField(() => Number, { nullable: true })
+  @UseGuards(JwtAuthGuard)
+  async readingProgressPercent(
+    @Parent() libraryItem: any, // Use any to access entity fields
+    @CurrentUser() user: User,
+    @Context('dataLoaders') dataLoaders: DataLoaderService,
+  ): Promise<number | null> {
+    // Get total sentinels from the library item
+    const totalSentinels = libraryItem.totalSentinels || 0
+
+    if (totalSentinels === 0) {
+      return null // No sentinels injected yet
+    }
+
+    // Use DataLoader to batch reading progress queries
+    const progress = await dataLoaders.readingProgress.load(libraryItem.id)
+
+    if (!progress || progress.highestSeenSentinel === 0) {
+      return null // No reading progress yet
+    }
+
+    // Calculate percentage: (highest_seen_sentinel / total_sentinels) * 100
+    let percent = Math.min(100, Math.round((progress.highestSeenSentinel / totalSentinels) * 100))
+
+    // Round up to 100% if >= 95% (accounts for sentinels not being at the very end)
+    if (percent >= 95 && percent < 100) {
+      percent = 100
+    }
+
+    return percent
   }
 
   // ==================== QUERIES ====================
@@ -374,6 +407,7 @@ function mapEntityToGraph(entity: any): LibraryItem {
     siteName: entity.siteName ?? null,
     siteIcon: entity.siteIcon ?? null,
     itemType,
+    totalSentinels: entity.totalSentinels ?? 0, // For reading progress calculation
     // Legacy field aliases (TypeScript doesn't know about getters, so we set them directly)
     image: thumbnail,
     wordsCount: wordCount,

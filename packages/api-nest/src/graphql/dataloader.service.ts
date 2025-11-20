@@ -2,8 +2,10 @@ import { Inject, Injectable } from '@nestjs/common'
 import DataLoader from 'dataloader'
 import { IEntityLabelRepository } from '../repositories/interfaces/entity-label-repository.interface'
 import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
+import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
 import { Label } from '../label/entities/label.entity'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
+import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
 import { User } from '../user/entities/user.entity'
 import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
@@ -19,9 +21,12 @@ export class DataLoaderService {
 
   public readonly highlights: DataLoader<string, HighlightEntity[]>
 
+  public readonly readingProgress: DataLoader<string, ReadingProgressEntity | null>
+
   constructor(
     entityLabelRepository: IEntityLabelRepository,
     highlightRepository: IHighlightRepository,
+    readingProgressRepository: IReadingProgressRepository,
     user: User | undefined
   ) {
     const userId = user?.id
@@ -73,6 +78,27 @@ export class DataLoaderService {
         cacheKeyFn: (key: string) => key,
       }
     )
+
+    // Initialize DataLoader for reading progress
+    // This batches multiple reading progress queries into a single query
+    this.readingProgress = new DataLoader<string, ReadingProgressEntity | null>(
+      async (libraryItemIds: readonly string[]) => {
+        const ids = libraryItemIds as string[]
+
+        if (!userId || ids.length === 0) {
+          return libraryItemIds.map(() => null)
+        }
+
+        // Batch fetch reading progress for the given library item IDs
+        const progressMap = await readingProgressRepository.findByLibraryItemIds(ids, userId)
+
+        // Map to array of progress entities (or null if not found)
+        return libraryItemIds.map(libraryItemId => progressMap.get(libraryItemId) || null)
+      },
+      {
+        cacheKeyFn: (key: string) => key,
+      }
+    )
   }
 }
 
@@ -85,10 +111,17 @@ export class DataLoaderFactory {
     @Inject(REPOSITORY_TOKENS.IEntityLabelRepository)
     private readonly entityLabelRepository: IEntityLabelRepository,
     @Inject(REPOSITORY_TOKENS.IHighlightRepository)
-    private readonly highlightRepository: IHighlightRepository
+    private readonly highlightRepository: IHighlightRepository,
+    @Inject(REPOSITORY_TOKENS.IReadingProgressRepository)
+    private readonly readingProgressRepository: IReadingProgressRepository
   ) {}
 
   create(user: User | undefined): DataLoaderService {
-    return new DataLoaderService(this.entityLabelRepository, this.highlightRepository, user)
+    return new DataLoaderService(
+      this.entityLabelRepository,
+      this.highlightRepository,
+      this.readingProgressRepository,
+      user
+    )
   }
 }
