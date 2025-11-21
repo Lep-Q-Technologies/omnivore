@@ -51,7 +51,7 @@ input CreateHighlightInput {
   """Quoted text from the document"""
   quote: String!
 
-  """Anchored selectors for robust text positioning"""
+  """Web Annotation selectors for robust text positioning (W3C standard)"""
   selectors: JSON
 
   """Text after the quote (for context)"""
@@ -98,7 +98,7 @@ type Highlight {
   quote: String
   representation: RepresentationType!
 
-  """Anchored selectors for robust text positioning"""
+  """Web Annotation selectors for robust text positioning (W3C standard)"""
   selectors: JSON!
   sharedAt: DateTime
   shortId: String!

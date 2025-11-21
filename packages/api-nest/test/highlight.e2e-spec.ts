@@ -172,8 +172,6 @@ describe('Highlight GraphQL (e2e)', () => {
       .send({ query, variables })
       .expect(200) as Promise<request.Response>
 
-  console.log('executeQuery', executeQuery)
-
   describe('Query highlights', () => {
     beforeAll(async () => {
       const shortTimestamp = Date.now().toString().slice(-8)
@@ -250,8 +248,6 @@ describe('Highlight GraphQL (e2e)', () => {
       const response = await executeQuery(HIGHLIGHTS_QUERY, {
         libraryItemId: testLibraryItemId,
       })
-
-      console.log('response', response.body)
 
       expect(response.body.errors).toBeUndefined()
       expect(response.body.data.highlights).toHaveLength(4)
@@ -834,18 +830,16 @@ describe('Highlight GraphQL (e2e)', () => {
           quote: 'highlighted text',
           color: HighlightColor.YELLOW,
           highlightPositionPercent: 30,
-          selectors: JSON.stringify(selectors),
+          selectors: selectors,
         },
       })
 
       expect(response.body.errors).toBeUndefined()
       expect(response.body.data.createHighlight.selectors).toBeTruthy()
 
-      // Verify selectors are stored as JSON
-      const parsedSelectors = JSON.parse(
-        response.body.data.createHighlight.selectors,
+      expect(response.body.data.createHighlight.selectors).toMatchObject(
+        selectors,
       )
-      expect(parsedSelectors).toMatchObject(selectors)
 
       // Verify in database
       const highlight = await highlightRepository.findOneBy({
@@ -896,10 +890,8 @@ describe('Highlight GraphQL (e2e)', () => {
       expect(response.body.data.createHighlight.selectors).toBeTruthy()
 
       // Verify fallback to textQuote selector from quote/prefix/suffix
-      const parsedSelectors = JSON.parse(
-        response.body.data.createHighlight.selectors,
-      )
-      expect(parsedSelectors.textQuote).toMatchObject({
+      // GraphQL returns selectors as object, not string
+      expect(response.body.data.createHighlight.selectors.textQuote).toMatchObject({
         exact: 'simple highlight',
         prefix: 'before ',
         suffix: ' after',

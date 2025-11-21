@@ -25,18 +25,27 @@ import { BaseFactory, getTestRepository } from './base.factory'
 class HighlightFactoryClass extends BaseFactory<HighlightEntity> {
   protected generateDefaults(): Partial<HighlightEntity> {
     const shortTimestamp = Date.now().toString().slice(-8)
+    const quote = faker.lorem.sentence()
 
     return {
       id: faker.string.uuid(),
       shortId: `h${shortTimestamp}${faker.string.alphanumeric(2)}`,
-      quote: faker.lorem.sentence(),
+      quote,
       prefix: faker.lorem.words(3),
       suffix: faker.lorem.words(3),
       highlightPositionPercent: faker.number.int({ min: 10, max: 90 }),
       highlightPositionAnchorIndex: faker.number.int({ min: 0, max: 100 }),
       color: HighlightColor.YELLOW,
       highlightType: HighlightType.HIGHLIGHT,
-      selectors: { textQuote: { exact: faker.lorem.sentence() } },
+      // Selectors format: JSON object with textQuote.exact required by database constraint
+      // Match the format from highlight.service.ts
+      selectors: {
+        textQuote: {
+          exact: quote,
+          prefix: faker.lorem.words(3),
+          suffix: faker.lorem.words(3),
+        },
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
       // These will be set by the caller

@@ -12,7 +12,7 @@ import {
 import { GraphQLJSON } from 'graphql-scalars'
 
 import { HighlightColor } from '../entities/highlight.entity'
-import { HighlightSelector } from '../entities/highlight-selector.interface'
+import { HighlightSelectors } from '../entities/highlight-selector.interface'
 
 // Note: HighlightColor enum is registered in highlight.type.ts to avoid duplicate registration
 
@@ -93,11 +93,12 @@ export class CreateHighlightInput {
 
   @Field(() => GraphQLJSON, {
     nullable: true,
-    description: 'Anchored selectors for robust text positioning',
+    description:
+      'Web Annotation selectors for robust text positioning (W3C standard)',
   })
   @IsOptional()
   @IsObject()
-  selectors?: Record<string, HighlightSelector | HighlightSelector[]>
+  selectors?: HighlightSelectors
 
   @Field(() => String, {
     nullable: true,

@@ -11,7 +11,7 @@ import {
   HighlightColor,
   RepresentationType,
 } from './entities/highlight.entity'
-import { HighlightSelector } from './entities/highlight-selector.interface'
+import { HighlightSelectors } from './entities/highlight-selector.interface'
 import {
   CreateHighlightInput,
   UpdateHighlightInput,
@@ -84,13 +84,21 @@ export class HighlightService {
     const shortId = this.generateShortId()
 
     // Build selectors from input - prefer explicit selectors, fallback to quote/prefix/suffix
-    let selectors: Record<string, HighlightSelector | HighlightSelector[]>
+    let selectors: HighlightSelectors
     if (input.selectors) {
       // Use selectors directly (GraphQLJSON scalar provides object)
-      selectors = input.selectors
+      selectors = input.selectors as HighlightSelectors
     } else {
-      // Build TextQuote selector from legacy fields
-      selectors = {}
+      // Build TextQuote selector from quote/prefix/suffix fields
+      // Following W3C Web Annotation Data Model specification
+      // Database constraint enforces: selectors ? 'textQuote' AND selectors->'textQuote' ? 'exact'
+      selectors = {
+        textQuote: {
+          exact: input.quote || '',
+          prefix: input.prefix,
+          suffix: input.suffix,
+        },
+      }
     }
 
     const highlight = this.highlightRepository.create({

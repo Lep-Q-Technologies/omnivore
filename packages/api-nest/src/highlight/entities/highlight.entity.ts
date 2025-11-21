@@ -10,7 +10,7 @@ import {
 
 import { LibraryItemEntity } from '../../library/entities/library-item.entity'
 import { User } from '../../user/entities/user.entity'
-import { HighlightSelector } from './highlight-selector.interface'
+import { HighlightSelectors } from './highlight-selector.interface'
 
 export enum HighlightType {
   HIGHLIGHT = 'HIGHLIGHT',
@@ -111,11 +111,13 @@ export class HighlightEntity {
   representation!: RepresentationType
 
   // Robust anchored selectors for multi-strategy text positioning
+  // Uses W3C Web Annotation Data Model selector format
+  // @see https://www.w3.org/TR/annotation-model/#selectors
   @Column({
     type: 'jsonb',
     default: {},
   })
-  selectors!: Record<string, HighlightSelector | HighlightSelector[]>
+  selectors!: HighlightSelectors
 
   // Optional content version/hash for tracking
   @Column({

@@ -13,7 +13,7 @@ import {
   HighlightType,
   RepresentationType,
 } from '../entities/highlight.entity'
-import { HighlightSelector } from '../entities/highlight-selector.interface'
+import { HighlightSelectors } from '../entities/highlight-selector.interface'
 
 registerEnumType(HighlightType, {
   name: 'HighlightType',
@@ -82,9 +82,10 @@ export class Highlight {
   representation!: RepresentationType
 
   @Field(() => GraphQLJSON, {
-    description: 'Anchored selectors for robust text positioning',
+    description:
+      'Web Annotation selectors for robust text positioning (W3C standard)',
   })
-  selectors!: Record<string, HighlightSelector | HighlightSelector[]>
+  selectors!: HighlightSelectors
 
   @Field(() => String, {
     nullable: true,
