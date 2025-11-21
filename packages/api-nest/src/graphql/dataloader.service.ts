@@ -10,6 +10,13 @@ import { User } from '../user/entities/user.entity'
 import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
 /**
+ * Authenticated request object with user populated by JwtAuthGuard
+ */
+export interface AuthenticatedRequest {
+  user?: User
+}
+
+/**
  * DataLoader service for batching GraphQL queries
  * Prevents N+1 query problems by batching multiple individual requests
  * into single database queries
@@ -21,33 +28,41 @@ export class DataLoaderService {
 
   public readonly highlights: DataLoader<string, HighlightEntity[]>
 
-  public readonly readingProgress: DataLoader<string, ReadingProgressEntity | null>
+  public readonly readingProgress: DataLoader<
+    string,
+    ReadingProgressEntity | null
+  >
 
   constructor(
     entityLabelRepository: IEntityLabelRepository,
     highlightRepository: IHighlightRepository,
     readingProgressRepository: IReadingProgressRepository,
-    user: User | undefined
+    request: AuthenticatedRequest,
   ) {
-    const userId = user?.id
+    // Access user lazily from request (set by JwtAuthGuard after context is created)
+    const getUserId = (): string | undefined => request.user?.id
 
     // Initialize DataLoader for labels
     // This batches multiple getLibraryItemLabels calls into a single query
     this.labels = new DataLoader<string, Label[]>(
       async (libraryItemIds: readonly string[]) => {
         const ids = libraryItemIds as string[]
+        const userId = getUserId()
 
         if (!userId || ids.length === 0) {
           return libraryItemIds.map(() => [])
         }
 
         // Batch fetch all entity labels for the given library item IDs
-        const entityLabelsMap = await entityLabelRepository.findByLibraryItemIds(ids)
+        const entityLabelsMap =
+          await entityLabelRepository.findByLibraryItemIds(ids)
 
         // Map to array of label arrays, filtering by user ID and sorting by position
-        return libraryItemIds.map(libraryItemId => {
+        return libraryItemIds.map((libraryItemId) => {
           const entityLabels = entityLabelsMap.get(libraryItemId) || []
-          const labels = entityLabels.map(el => el.label).filter(label => label.userId === userId)
+          const labels = entityLabels
+            .map((el) => el.label)
+            .filter((label) => label.userId === userId)
 
           // Sort by position
           return labels.sort((a, b) => a.position - b.position)
@@ -55,7 +70,7 @@ export class DataLoaderService {
       },
       {
         cacheKeyFn: (key: string) => key,
-      }
+      },
     )
 
     // Initialize DataLoader for highlights
@@ -63,20 +78,26 @@ export class DataLoaderService {
     this.highlights = new DataLoader<string, HighlightEntity[]>(
       async (libraryItemIds: readonly string[]) => {
         const ids = libraryItemIds as string[]
+        const userId = getUserId()
 
         if (!userId || ids.length === 0) {
           return libraryItemIds.map(() => [])
         }
 
         // Batch fetch all highlights for the given library item IDs
-        const highlightsMap = await highlightRepository.findByLibraryItemIds(ids, userId)
+        const highlightsMap = await highlightRepository.findByLibraryItemIds(
+          ids,
+          userId,
+        )
 
         // Map to array of highlight arrays
-        return libraryItemIds.map(libraryItemId => highlightsMap.get(libraryItemId) || [])
+        return libraryItemIds.map(
+          (libraryItemId) => highlightsMap.get(libraryItemId) || [],
+        )
       },
       {
         cacheKeyFn: (key: string) => key,
-      }
+      },
     )
 
     // Initialize DataLoader for reading progress
@@ -84,20 +105,24 @@ export class DataLoaderService {
     this.readingProgress = new DataLoader<string, ReadingProgressEntity | null>(
       async (libraryItemIds: readonly string[]) => {
         const ids = libraryItemIds as string[]
+        const userId = getUserId()
 
         if (!userId || ids.length === 0) {
           return libraryItemIds.map(() => null)
         }
 
         // Batch fetch reading progress for the given library item IDs
-        const progressMap = await readingProgressRepository.findByLibraryItemIds(ids, userId)
+        const progressMap =
+          await readingProgressRepository.findByLibraryItemIds(ids, userId)
 
         // Map to array of progress entities (or null if not found)
-        return libraryItemIds.map(libraryItemId => progressMap.get(libraryItemId) || null)
+        return libraryItemIds.map(
+          (libraryItemId) => progressMap.get(libraryItemId) || null,
+        )
       },
       {
         cacheKeyFn: (key: string) => key,
-      }
+      },
     )
   }
 }
@@ -113,15 +138,15 @@ export class DataLoaderFactory {
     @Inject(REPOSITORY_TOKENS.IHighlightRepository)
     private readonly highlightRepository: IHighlightRepository,
     @Inject(REPOSITORY_TOKENS.IReadingProgressRepository)
-    private readonly readingProgressRepository: IReadingProgressRepository
+    private readonly readingProgressRepository: IReadingProgressRepository,
   ) {}
 
-  create(user: User | undefined): DataLoaderService {
+  create(request: AuthenticatedRequest): DataLoaderService {
     return new DataLoaderService(
       this.entityLabelRepository,
       this.highlightRepository,
       this.readingProgressRepository,
-      user
+      request,
     )
   }
 }

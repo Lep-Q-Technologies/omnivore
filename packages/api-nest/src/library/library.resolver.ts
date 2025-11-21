@@ -32,6 +32,15 @@ import {
 } from './dto/library-inputs.type'
 import { LabelService } from '../label/label.service'
 import { Label } from '../label/dto/label.type'
+import { LibraryItemEntity } from './entities/library-item.entity'
+
+/**
+ * Library item with entity fields for field resolvers
+ * Extends the GraphQL type to include database entity fields
+ */
+interface LibraryItemWithEntityFields extends LibraryItem {
+  totalSentinels?: number
+}
 
 @Resolver(() => LibraryItem)
 export class LibraryResolver {
@@ -57,7 +66,7 @@ export class LibraryResolver {
   @ResolveField(() => Number, { nullable: true })
   @UseGuards(JwtAuthGuard)
   async readingProgressPercent(
-    @Parent() libraryItem: any, // Use any to access entity fields
+    @Parent() libraryItem: LibraryItemWithEntityFields,
     @CurrentUser() user: User,
     @Context('dataLoaders') dataLoaders: DataLoaderService,
   ): Promise<number | null> {
@@ -378,7 +387,7 @@ export class LibraryResolver {
  * Map LibraryItemEntity to GraphQL LibraryItem type
  * Handles field name differences and null coalescing
  */
-function mapEntityToGraph(entity: any): LibraryItem {
+function mapEntityToGraph(entity: LibraryItemEntity): LibraryItem {
   const thumbnail = entity.thumbnail ?? null
   const wordCount = entity.wordCount ?? null
   const itemType = entity.itemType ?? 'ARTICLE'

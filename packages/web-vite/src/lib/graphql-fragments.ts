@@ -22,6 +22,7 @@ export const LABEL_BASIC_FRAGMENT = `
     name
     color
     description
+    internal
   }
 `
 
