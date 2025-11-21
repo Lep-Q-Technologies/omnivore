@@ -26,7 +26,12 @@ import {
   useUpdateNotebook,
   useUpdateReadingProgress as useUpdateReadingProgressMutation,
 } from '../lib/graphql-client'
-import type { AnchoredSelectors, HighlightColor, Label } from '../types/api'
+import type {
+  AnchoredSelectors,
+  HighlightColor,
+  HighlightLike,
+  Label,
+} from '../types/api'
 // CSS imported via consolidated bundle in main.tsx
 
 // Popup component for creating new highlights
@@ -142,6 +147,8 @@ const CreateHighlightPopup: React.FC<{
   )
 }
 
+let domPurifyImagesHookRegistered = false
+
 const ReaderPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -227,10 +234,10 @@ const ReaderPage: React.FC = () => {
   const highlightsJson = useMemo(() => JSON.stringify(highlights), [highlights])
 
   const anchoredHighlights = useMemo<AnchoredHighlight[]>(() => {
-    const parsed = JSON.parse(highlightsJson || '[]')
+    const parsed = JSON.parse(highlightsJson || '[]') as HighlightLike[]
     if (!parsed || parsed.length === 0) return []
 
-    return parsed.map((h: any) => {
+    return parsed.map((h) => {
       // Parse selectors from backend (GraphQLJSON returns object), fallback to legacy quote/prefix/suffix
       let selectors: AnchoredSelectors
       if (h.selectors && typeof h.selectors === 'object') {
@@ -348,9 +355,6 @@ const ReaderPage: React.FC = () => {
 
         sentinelsInjectedRef.current = true
         setTotalSentinels(sentinelIndex)
-        console.log(
-          `[ReadingProgress] Injected ${sentinelIndex} sentinels (deferred, non-blocking)`,
-        )
       },
       { timeout: 3000 },
     ) // Longer timeout - let page become interactive first
@@ -402,12 +406,10 @@ const ReaderPage: React.FC = () => {
               setHighestSentinel((prev) => {
                 const newHighest = Math.max(prev, sentinelId)
                 if (newHighest > prev) {
-                  console.log(
-                    `[ReadingProgress] New highest sentinel: ${newHighest}`,
-                  )
+                  return newHighest
                 }
 
-                return newHighest
+                return prev
               })
             }
           }
@@ -488,9 +490,6 @@ const ReaderPage: React.FC = () => {
       setTimeout(() => {
         targetSentinel.scrollIntoView({ behavior: 'smooth', block: 'start' })
         setHasRestoredPosition(true)
-        console.log(
-          `[ReadingProgress] Restored position to sentinel ${readingProgress.lastSeenSentinel}`,
-        )
       }, 100)
     } else {
       setHasRestoredPosition(true)
@@ -504,7 +503,7 @@ const ReaderPage: React.FC = () => {
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return null
     const date = new Date(dateString)
-    
+
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -512,9 +511,7 @@ const ReaderPage: React.FC = () => {
     })
   }
 
-  const handleLabelsUpdate = async (newLabelNames: string[]) => {
-    console.log('[ReaderPage] handleLabelsUpdate called with:', newLabelNames)
-
+  const handleLabelsUpdate = async () => {
     // NOTE: The LabelPickerModal has already called setLibraryItemLabels() successfully
     // We just need to update the local UI state and refetch to get the latest data
 
@@ -523,8 +520,6 @@ const ReaderPage: React.FC = () => {
     // Refetch both labels and the item to ensure we have the latest data
     await fetchLabels()
     await fetchLibraryItem()
-
-    console.log('[ReaderPage] Refetched item after label update')
   }
 
   const handleInfoUpdate = async () => {
@@ -548,9 +543,9 @@ const ReaderPage: React.FC = () => {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  // Text selection detection
+  // Text selection detection (supports mouse, touch, and pointer interactions)
   useEffect(() => {
-    const handleMouseUp = () => {
+    const handleSelectionEnd = () => {
       // Small delay to ensure selection is complete
       setTimeout(() => {
         const selection = window.getSelection()
@@ -573,10 +568,6 @@ const ReaderPage: React.FC = () => {
             range: selection.getRangeAt(0).cloneRange(),
             text: text,
           }
-          console.log(
-            '[ReaderPage] Saved selection:',
-            `${text.substring(0, 50)}...`,
-          )
         }
 
         if (text.length < 3) {
@@ -605,9 +596,16 @@ const ReaderPage: React.FC = () => {
       }, 10)
     }
 
-    document.addEventListener('mouseup', handleMouseUp)
-    
-    return () => document.removeEventListener('mouseup', handleMouseUp)
+    // Add listeners for mouse, touch, and pointer events
+    document.addEventListener('mouseup', handleSelectionEnd)
+    document.addEventListener('touchend', handleSelectionEnd)
+    document.addEventListener('pointerup', handleSelectionEnd)
+
+    return () => {
+      document.removeEventListener('mouseup', handleSelectionEnd)
+      document.removeEventListener('touchend', handleSelectionEnd)
+      document.removeEventListener('pointerup', handleSelectionEnd)
+    }
   }, [])
 
   // Create highlight handler
@@ -623,14 +621,9 @@ const ReaderPage: React.FC = () => {
       const savedSelection = savedSelectionRef.current
       if (!savedSelection) {
         console.error('[ReaderPage] No saved selection found')
-        
+
         return
       }
-
-      console.log(
-        '[ReaderPage] Using saved selection:',
-        `${savedSelection.text.substring(0, 50)}...`,
-      )
 
       // Create a temporary selection object to pass to buildSelectorsFromSelection
       const tempSelection = {
@@ -667,14 +660,7 @@ const ReaderPage: React.FC = () => {
         selectors,
       }
 
-      console.log('[ReaderPage] Creating highlight with input:', {
-        annotation: input.annotation,
-        color: input.color,
-        quoteLength: input.quote.length,
-      })
-
-      const result = await createHighlight(input)
-      console.log('[ReaderPage] Highlight created:', result)
+      await createHighlight(input)
 
       // Refetch highlights to update UI
       await fetchHighlights()
@@ -754,17 +740,16 @@ const ReaderPage: React.FC = () => {
   const sanitizedContent = useMemo(() => {
     if (!item?.content) return ''
 
-    // Configure DOMPurify to add lazy loading and async decoding to ALL images
-    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-      if (node.tagName === 'IMG') {
-        // Add lazy loading (prevents immediate loading)
-        node.setAttribute('loading', 'lazy')
-        // Add async decoding (prevents main thread blocking)
-        node.setAttribute('decoding', 'async')
-        // Hide broken images
-        node.setAttribute('onerror', 'this.style.display="none"')
-      }
-    })
+    if (!domPurifyImagesHookRegistered) {
+      DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (node.tagName === 'IMG') {
+          node.setAttribute('loading', 'lazy')
+          node.setAttribute('decoding', 'async')
+          node.setAttribute('onerror', 'this.style.display="none"')
+        }
+      })
+      domPurifyImagesHookRegistered = true
+    }
 
     const result = DOMPurify.sanitize(item.content, {
       ADD_TAGS: ['iframe'],
@@ -778,9 +763,6 @@ const ReaderPage: React.FC = () => {
         'onerror',
       ],
     })
-
-    // Clean up hooks after use
-    DOMPurify.removeAllHooks()
 
     return result
   }, [item?.content])

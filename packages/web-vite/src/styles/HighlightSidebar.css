@@ -324,7 +324,7 @@
 }
 
 .btn-save:hover {
-  background: #5aa3ff;
+  background: var(--color-action-blue);
 }
 
 .btn-cancel {
@@ -376,7 +376,7 @@
 }
 
 .btn-delete-confirm:hover {
-  background: #b00000;
+  background: var(--color-state-danger);
 }
 
 .btn-delete-cancel {

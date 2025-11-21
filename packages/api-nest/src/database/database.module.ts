@@ -61,9 +61,7 @@ import { ReadingProgressEntity } from '../reading-progress/entities/reading-prog
             ReadingProgressEntity,
           ],
           migrationsRun: false,
-
-          
-          synchronize: false, 
+          synchronize: false,
           logging: ['query', 'warn', 'error'],
           // Use QueryPerformanceLogger to track slow queries
           logger: new QueryPerformanceLogger(structuredLogger, isDevelopment),
@@ -74,7 +72,7 @@ import { ReadingProgressEntity } from '../reading-progress/entities/reading-prog
           extra: {
             max: 20, // Maximum number of connections
             min: 5, // Minimum number of connections
-            idle_timeout: 30000,
+            idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
           },
 

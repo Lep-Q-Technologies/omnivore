@@ -9,8 +9,7 @@
     "prettier --write",
     "eslint --rule 'simple-import-sort/imports: error' --rule 'simple-import-sort/exports: error' --fix"
   ],
-  "*.js": ["eslint --fix", "prettier --write"],
-  "*.jsx": ["eslint --fix", "prettier --write"],
+  "*.js, *.jsx": ["eslint --fix", "prettier --write"],
   "!(package-lock)*.{json,yaml,yml}": ["prettier --write"],
   "*.md": ["prettier --write"]
 }

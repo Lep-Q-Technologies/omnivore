@@ -39,17 +39,17 @@ function pathTo(node: Node, root: Node): string {
     parts.push(String(i))
     n = parent
   }
-  
+
   return parts.reverse().join('/')
 }
 
 function nodeFromPath(path: string, root: Node): Node | null {
   if (!path) return null
-  
+
   return path.split('/').reduce<Node | null>((curr, idx) => {
     if (!curr) return null
     const i = Number(idx)
-    
+
     return curr.childNodes[i] ?? null
   }, root)
 }
@@ -68,7 +68,7 @@ function buildIndex(root: HTMLElement) {
     slices.push({ node: t, start: offset, end: offset + len })
     offset += len
   }
-  
+
   return { slices, length: offset }
 }
 
@@ -85,10 +85,10 @@ function positionFromRange(range: Range, root: HTMLElement) {
     }
     const slice = slices.find((s) => s.node === n)
     if (!slice) throw new Error('Node not indexed')
-    
+
     return slice.start + off
   }
-  
+
   return {
     start: toAbs(range.startContainer, range.startOffset),
     end: toAbs(range.endContainer, range.endOffset),
@@ -116,7 +116,7 @@ function rangeFromPosition(pos: AnchorTextPosition, root: HTMLElement) {
   const r = document.createRange()
   r.setStart(startNode, startOff)
   r.setEnd(endNode, endOff)
-  
+
   return r
 }
 
@@ -153,7 +153,7 @@ function findByQuote(root: HTMLElement, q: AnchorTextQuote): Range | null {
       start: mapNormalizedToRawOffset(root, absStart),
       end: mapNormalizedToRawOffset(root, absEnd),
     },
-    root
+    root,
   )
 }
 
@@ -171,15 +171,17 @@ function mapNormalizedToRawOffset(root: HTMLElement, target: number): number {
       const ch = raw[i]
       const isSpace = /\s/.test(ch)
       if (!isSpace) {
-        if (normCount === target)
-        { return buildIndex(root).slices.find((s) => s.node === t)!.start + i }
+        if (normCount === target) {
+          return buildIndex(root).slices.find((s) => s.node === t)!.start + i
+        }
         normCount++
       } else {
         // collapse sequences of whitespace to a single space
         // count one normalized space when encountering the first of a run
         if (i === 0 || !/\s/.test(raw[i - 1])) {
-          if (normCount === target)
-          { return buildIndex(root).slices.find((s) => s.node === t)!.start + i }
+          if (normCount === target) {
+            return buildIndex(root).slices.find((s) => s.node === t)!.start + i
+          }
           normCount++
         }
       }
@@ -215,13 +217,14 @@ function serializeRange(range: Range, root: HTMLElement): AnchorDomRange {
 
 function rangeFromDomSelector(
   sel: AnchorDomRange,
-  root: HTMLElement
+  root: HTMLElement,
 ): Range | null {
   const sNode = nodeFromPath(sel.startPath, root)
   const eNode = nodeFromPath(sel.endPath, root)
   if (!sNode || !eNode) return null
-  if (sNode.nodeType !== Node.TEXT_NODE || eNode.nodeType !== Node.TEXT_NODE)
-  { return null }
+  if (sNode.nodeType !== Node.TEXT_NODE || eNode.nodeType !== Node.TEXT_NODE) {
+    return null
+  }
   const r = document.createRange()
   try {
     r.setStart(sNode as Text, sel.startOffset)
@@ -229,7 +232,7 @@ function rangeFromDomSelector(
   } catch {
     return null
   }
-  
+
   return r
 }
 
@@ -244,14 +247,6 @@ function wrapRange(root: HTMLElement, range: Range, cls: string, id: string) {
   const startT = range.startContainer as Text
   const endT = range.endContainer as Text
 
-  console.log('[wrapRange] Starting wrap:', {
-    startContainer: range.startContainer,
-    startOffset: range.startOffset,
-    endContainer: range.endContainer,
-    endOffset: range.endOffset,
-    selectedText: range.toString()
-  })
-
   let active = false
   for (const t of texts) {
     if (!active && t === startT) active = true
@@ -259,13 +254,6 @@ function wrapRange(root: HTMLElement, range: Range, cls: string, id: string) {
 
     const sOff = t === startT ? range.startOffset : 0
     const eOff = t === endT ? range.endOffset : t.data.length
-    console.log('[wrapRange] Processing text node:', {
-      textData: t.data,
-      textLength: t.data.length,
-      sOff,
-      eOff,
-      willWrap: eOff > sOff
-    })
     if (eOff > sOff) {
       // Split the text node to isolate the highlighted portion
       // If sOff > 0: split to separate text before highlight
@@ -279,17 +267,7 @@ function wrapRange(root: HTMLElement, range: Range, cls: string, id: string) {
 
       // Split off text after the highlight (if any)
       if (eOff < t.data.length) {
-        const after = targetNode.splitText(eOff - sOff) as Text
-        console.log('[wrapRange] Split result:', {
-          targetText: targetNode.data,
-          targetLength: targetNode.data.length,
-          afterText: after.data
-        })
-      } else {
-        console.log('[wrapRange] No split needed, using entire node:', {
-          targetText: targetNode.data,
-          targetLength: targetNode.data.length
-        })
+        targetNode.splitText(eOff - sOff) as Text
       }
 
       // Wrap the target node in a mark element
@@ -300,13 +278,11 @@ function wrapRange(root: HTMLElement, range: Range, cls: string, id: string) {
       mark.setAttribute('aria-label', 'Highlight')
       mark.textContent = targetNode.data
       targetNode.parentNode!.replaceChild(mark, targetNode)
-      console.log('[wrapRange] Created mark with content:', mark.textContent)
       marks.push(mark)
     }
     if (t === endT) break
   }
-  console.log('[wrapRange] Finished, created', marks.length, 'marks')
-  
+
   return marks
 }
 
@@ -326,7 +302,7 @@ function clearExistingMarks(root: HTMLElement) {
 
 export function useAnchoredHighlights(
   contentRef: React.RefObject<HTMLElement>,
-  highlights: AnchoredHighlight[]
+  highlights: AnchoredHighlight[],
 ) {
   const reapply = useRef<() => void>(() => {})
 
@@ -359,20 +335,14 @@ export function useAnchoredHighlights(
           const marks = wrapRange(root, r, cls, h.id)
           if (marks.length) {
             applied.push({ id: h.id, marks })
-            console.log(`[AnchoredHighlights] Applied highlight ${h.id} with color ${h.color} (class: ${cls})`)
-            console.log('[AnchoredHighlights] Mark textContent:', marks[0].textContent)
-            console.log('[AnchoredHighlights] Mark innerHTML:', marks[0].innerHTML)
-            console.log('[AnchoredHighlights] Mark offsetWidth:', marks[0].offsetWidth)
-            console.log('[AnchoredHighlights] Mark offsetHeight:', marks[0].offsetHeight)
-            console.log('[AnchoredHighlights] Mark isConnected:', marks[0].isConnected)
-            console.log('[AnchoredHighlights] Mark computed style:', window.getComputedStyle(marks[0]).backgroundColor)
           }
         } else {
-          console.warn(`[AnchoredHighlights] Could not find range for highlight ${h.id}`)
+          console.warn(
+            `[AnchoredHighlights] Could not find range for highlight ${h.id}`,
+          )
         }
       }
-      console.log(`[AnchoredHighlights] Applied ${applied.length} highlights total`)
-      
+
       return applied
     }
 
@@ -424,7 +394,7 @@ export function useAnchoredHighlights(
 export function buildSelectorsFromSelection(
   selection: Selection,
   contentEl: HTMLElement,
-  textQuoteContextWords = 5
+  textQuoteContextWords = 5,
 ): AnchoredSelectors {
   if (!selection.rangeCount) throw new Error('No selection range')
   const range = selection.getRangeAt(0)

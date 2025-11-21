@@ -180,6 +180,11 @@ export interface Highlight {
   selectors?: AnchoredSelectors
 }
 
+export type HighlightLike = Pick<
+  Highlight,
+  'id' | 'color' | 'annotation' | 'selectors' | 'quote' | 'prefix' | 'suffix'
+>
+
 export interface PaginatedResponse<T> {
   items: T[]
   totalCount: number
@@ -295,7 +300,7 @@ export const ErrorCode = {
   RATE_LIMIT_ERROR: 'RATE_LIMIT_ERROR',
 } as const
 
-export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode]
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
 
 export interface FormError {
   field: string
@@ -307,11 +312,21 @@ export interface ValidationResult {
   errors: FormError[]
 }
 
+// Library search sort options
+export type LibrarySortBy =
+  | 'SAVED_AT'
+  | 'UPDATED_AT'
+  | 'PUBLISHED_AT'
+  | 'TITLE'
+  | 'AUTHOR'
+
+export type LibrarySortOrder = 'ASC' | 'DESC'
+
 export interface LibrarySearchInput {
   query?: string
   folder?: string
   labels?: string[]
-  sortBy?: string
-  sortOrder?: string
-  state?: string
+  sortBy?: LibrarySortBy
+  sortOrder?: LibrarySortOrder
+  state?: LibraryItemState
 }

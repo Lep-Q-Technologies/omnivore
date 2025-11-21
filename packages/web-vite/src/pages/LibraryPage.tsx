@@ -34,6 +34,8 @@ import type {
   LibraryItemsConnection,
   LibraryItemState,
   LibrarySearchInput,
+  LibrarySortBy,
+  LibrarySortOrder,
 } from '../types/api'
 // CSS imported via consolidated bundle in main.tsx
 
@@ -64,8 +66,8 @@ const LibraryPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFolder, setActiveFolder] = useState<string>('inbox')
-  const [sortBy, setSortBy] = useState<string>('SAVED_AT')
-  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC')
+  const [sortBy, setSortBy] = useState<LibrarySortBy>('SAVED_AT')
+  const [sortOrder, setSortOrder] = useState<LibrarySortOrder>('DESC')
   const [toast, setToast] = useState<{
     message: string
     type: 'success' | 'error'
@@ -927,7 +929,7 @@ const LibraryPage: React.FC = () => {
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => setSortBy(e.target.value as LibrarySortBy)}
               className="sort-select"
             >
               <option value="SAVED_AT">Recent</option>

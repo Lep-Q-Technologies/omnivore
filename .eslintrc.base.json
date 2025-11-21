@@ -102,8 +102,8 @@
     "vars-on-top": "error",
     "yoda": "error",
     "class-methods-use-this": "off",
-    "@typescript-eslint/no-empty-interface": 0,
-    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-empty-interface": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-unused-vars": "error"
   },
   "overrides": [
