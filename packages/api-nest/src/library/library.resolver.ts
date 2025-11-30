@@ -72,7 +72,7 @@ export class LibraryResolver {
   ): Promise<RssFeed | null> {
     // If subscription is already loaded (via eager loading), return it
     if (libraryItem.subscription) {
-      return libraryItem.subscription as any
+      return mapRssFeedEntityToGraph(libraryItem.subscription)
     }
     return null
   }
@@ -99,7 +99,10 @@ export class LibraryResolver {
     }
 
     // Calculate percentage: (highest_seen_sentinel / total_sentinels) * 100
-    let percent = Math.min(100, Math.round((progress.highestSeenSentinel / totalSentinels) * 100))
+    let percent = Math.min(
+      100,
+      Math.round((progress.highestSeenSentinel / totalSentinels) * 100),
+    )
 
     // Round up to 100% if >= 95% (accounts for sentinels not being at the very end)
     if (percent >= 95 && percent < 100) {
@@ -415,7 +418,7 @@ function mapEntityToGraph(entity: LibraryItemEntity): LibraryItem {
     case ContentType.VIDEO:
       itemType = 'VIDEO'
       break
-    case ContentType.TWITTER_THREAD:
+    case ContentType.TWITTER:
       itemType = 'TWEET'
       break
     case ContentType.RSS_FEED:
@@ -458,4 +461,23 @@ function mapEntityToGraph(entity: LibraryItemEntity): LibraryItem {
     wordsCount: wordCount,
     pageType: itemType,
   } as LibraryItem
+}
+
+function mapRssFeedEntityToGraph(subscription: RssFeedEntity): RssFeed {
+  return {
+    id: subscription.id,
+    userId: subscription.userId,
+    feedUrl: subscription.feedUrl,
+    itemCount: subscription.itemCount,
+    title: subscription.title ?? null,
+    description: subscription.description ?? null,
+    siteUrl: subscription.siteUrl ?? null,
+    siteIcon: subscription.siteIcon ?? null,
+    lastFetchedAt: subscription.lastFetchedAt ?? null,
+    lastError: subscription.lastError ?? null,
+    failureCount: subscription.failureCount,
+    createdAt: subscription.createdAt ?? null,
+    updatedAt: subscription.updatedAt ?? null,
+    active: subscription.active ?? false,
+  }
 }

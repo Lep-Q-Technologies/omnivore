@@ -223,9 +223,19 @@ export type ContentType =
 
 export interface RssFeed {
   id: string
-  title?: string | null
-  siteIcon?: string | null
   feedUrl: string
+  title?: string | null
+  description?: string | null
+  siteUrl?: string | null
+  siteIcon?: string | null
+  lastFetchedAt?: string | null
+  itemCount: number
+  unreadCount?: number | null
+  active: boolean
+  lastError?: string | null
+  failureCount: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface LibraryItem {

@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from 'react'
 
-import type { DeleteResult, HighlightColor, LibraryItem } from '../types/api'
+import type { DeleteResult, HighlightColor, LibraryItem, RssFeed } from '../types/api'
 import {
   HIGHLIGHT_FRAGMENT,
   LABEL_BASIC_FRAGMENT,
@@ -1209,23 +1209,7 @@ export function useUpdateReadingProgress() {
 }
 
 // ==================== RSS FEED TYPES ====================
-
-export interface RssFeed {
-  id: string
-  feedUrl: string
-  title?: string | null
-  description?: string | null
-  siteUrl?: string | null
-  siteIcon?: string | null
-  lastFetchedAt?: string | null
-  itemCount: number
-  unreadCount?: number | null
-  active: boolean
-  lastError?: string | null
-  failureCount: number
-  createdAt: string
-  updatedAt: string
-}
+// RssFeed interface imported from '../types/api'
 
 export interface UpdateRssFeedSettingsInput {
   title?: string

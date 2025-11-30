@@ -736,8 +736,15 @@
 }
 
 /* PDF Content */
-.reader-content-pdf {
-  /* PDF-specific styles if needed */
+.reader-content-pdf p {
+  line-height: 1.7;
+  margin: 12px 0;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.reader-content-pdf article {
+  margin-bottom: 24px;
 }
 
 /* Video Content */

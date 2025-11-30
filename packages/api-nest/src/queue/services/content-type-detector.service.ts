@@ -195,7 +195,7 @@ export class ContentTypeDetectorService {
         const tweetId = statusIndex >= 0 ? parts[statusIndex + 1] : null
 
         return {
-          contentType: ContentType.TWITTER_THREAD,
+          contentType: ContentType.TWITTER,
           confidence: 1.0,
           reason: 'Twitter/X status URL pattern',
           metadata: { tweetId },

@@ -25,7 +25,8 @@ registerEnumType(ContentReaderType, {
 
 registerEnumType(ContentType, {
   name: 'ContentType',
-  description: 'Type of content detected from URL for appropriate extraction and rendering',
+  description:
+    'Type of content detected from URL for appropriate extraction and rendering',
 })
 
 @ObjectType()
@@ -77,7 +78,8 @@ export class LibraryItem {
 
   @Field(() => RssFeed, {
     nullable: true,
-    description: 'RSS feed subscription if this item was imported from an RSS feed',
+    description:
+      'RSS feed subscription if this item was imported from an RSS feed',
   })
   subscription?: RssFeed | null
 
@@ -112,7 +114,8 @@ export class LibraryItem {
   siteIcon?: string | null
 
   @Field(() => ContentType, {
-    description: 'Content type detected from URL (article, pdf, video, rss_feed, twitter)',
+    description:
+      'Content type detected from URL (article, pdf, video, rss_feed, twitter)',
     defaultValue: ContentType.ARTICLE,
   })
   contentType!: ContentType
@@ -129,10 +132,11 @@ export class LibraryItem {
         return 'FILE'
       case ContentType.VIDEO:
         return 'VIDEO'
-      case ContentType.TWITTER_THREAD:
+      case ContentType.TWITTER:
         return 'TWEET'
       case ContentType.RSS_FEED:
         return 'RSS'
+      case ContentType.UNKNOWN:
       case ContentType.ARTICLE:
       default:
         return 'ARTICLE'
@@ -163,7 +167,8 @@ export class LibraryItem {
 
   @Field(() => Float, {
     nullable: true,
-    description: 'Reading progress percentage (0-100) based on sentinel tracking',
+    description:
+      'Reading progress percentage (0-100) based on sentinel tracking',
   })
   readingProgressPercent?: number | null
 }

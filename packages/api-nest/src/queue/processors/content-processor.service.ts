@@ -177,7 +177,7 @@ export class ContentProcessorService
         case ContentType.VIDEO:
           result = await this.fetchVideoTranscript(url, job, detection.metadata)
           break
-        case ContentType.TWITTER_THREAD:
+        case ContentType.TWITTER:
           result = await this.fetchTwitterThread(url, job, detection.metadata)
           break
         case ContentType.ARTICLE:
@@ -578,7 +578,7 @@ export class ContentProcessorService
         thumbnail: thread.author.profileImageUrl,
         publishedDate: thread.mainTweet.createdAt,
         wordCount,
-        contentType: ContentType.TWITTER_THREAD,
+        contentType: ContentType.TWITTER,
       }
     } catch (error) {
       this.logger.error(`Failed to extract Twitter thread ${url}:`, error)

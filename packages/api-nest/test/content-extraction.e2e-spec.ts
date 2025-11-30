@@ -1,10 +1,9 @@
 import { INestApplication } from '@nestjs/common'
 import { Queue } from 'bullmq'
 import request from 'supertest'
-import { createE2EApp } from './helpers/create-e2e-app'
 import { FactoryRegistry } from './factories/base.factory'
+import { createE2EApp } from './helpers/create-e2e-app'
 import { QUEUE_NAMES } from '../src/queue/queue.constants'
-import { LibraryItemState } from '../src/library/entities/library-item.entity'
 
 /**
  * Content Extraction E2E Tests (ARC-013)
@@ -22,7 +21,6 @@ import { LibraryItemState } from '../src/library/entities/library-item.entity'
 describe('Content Extraction E2E Tests', () => {
   let app: INestApplication
   let authToken: string
-  let userId: string
   let contentQueue: Queue
 
   beforeAll(async () => {
@@ -46,7 +44,6 @@ describe('Content Extraction E2E Tests', () => {
       .expect(201)
 
     authToken = registerResponse.body.accessToken
-    userId = registerResponse.body.user.id
   })
 
   afterAll(async () => {
