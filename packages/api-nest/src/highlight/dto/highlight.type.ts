@@ -14,6 +14,7 @@ import {
   RepresentationType,
 } from '../entities/highlight.entity'
 import { HighlightSelectors } from '../entities/highlight-selector.interface'
+import { LibraryItem } from '../../library/dto/library-item.type'
 
 registerEnumType(HighlightType, {
   name: 'HighlightType',
@@ -92,4 +93,16 @@ export class Highlight {
     description: 'Optional content version/hash for tracking',
   })
   contentVersion?: string | null
+
+  @Field(() => LibraryItem, { nullable: true })
+  libraryItem?: LibraryItem | null
+}
+
+@ObjectType()
+export class HighlightsConnection {
+  @Field(() => [Highlight])
+  highlights!: Highlight[]
+
+  @Field(() => String, { nullable: true })
+  nextCursor?: string | null
 }

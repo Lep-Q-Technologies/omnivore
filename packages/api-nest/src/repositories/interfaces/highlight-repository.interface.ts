@@ -5,7 +5,6 @@ import { HighlightEntity } from '../../highlight/entities/highlight.entity'
  * Separates data access layer from business logic
  */
 export interface IHighlightRepository {
-
   /**
    * Find a highlight by ID and user ID
    * @param id - Highlight ID
@@ -56,4 +55,17 @@ export interface IHighlightRepository {
     libraryItemIds: string[],
     userId: string,
   ): Promise<Map<string, HighlightEntity[]>>
+
+  /**
+   * Find all highlights for a user with pagination
+   * @param userId - User ID who owns the highlights
+   * @param first - Number of highlights to return
+   * @param after - Cursor for pagination
+   * @returns Highlights and next cursor
+   */
+  findAllForUser(
+    userId: string,
+    first: number,
+    after?: string,
+  ): Promise<{ highlights: HighlightEntity[]; nextCursor: string | null }>
 }

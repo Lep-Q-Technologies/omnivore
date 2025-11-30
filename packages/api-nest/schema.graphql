@@ -23,6 +23,18 @@ enum ContentReaderType {
   WEB
 }
 
+"""
+Type of content detected from URL for appropriate extraction and rendering
+"""
+enum ContentType {
+  ARTICLE
+  PDF
+  RSS_FEED
+  TWITTER_THREAD
+  UNKNOWN
+  VIDEO
+}
+
 input CreateHighlightInput {
   """User annotation/note on the highlight"""
   annotation: String
@@ -92,6 +104,7 @@ type Highlight {
   highlightType: HighlightType!
   html: String
   id: ID!
+  libraryItem: LibraryItem
   libraryItemId: String!
   patch: String
   prefix: String
@@ -119,6 +132,11 @@ enum HighlightType {
   REDACTION
 }
 
+type HighlightsConnection {
+  highlights: [Highlight!]!
+  nextCursor: String
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
@@ -139,6 +157,11 @@ type LibraryItem {
   author: String
   content: String
   contentReader: ContentReaderType!
+
+  """
+  Content type detected from URL (article, pdf, video, rss_feed, twitter)
+  """
+  contentType: ContentType!
   createdAt: DateTime!
   description: String
   folder: String!
@@ -147,8 +170,8 @@ type LibraryItem {
   """Legacy alias for thumbnail"""
   image: String
 
-  """Item type (ARTICLE, FILE, VIDEO, etc.)"""
-  itemType: String!
+  """Legacy alias for contentType (ARTICLE, FILE, VIDEO, etc.)"""
+  itemType: String! @deprecated(reason: "Use contentType instead")
   labels: [Label!]
   note: String
   noteUpdatedAt: DateTime
@@ -201,6 +224,9 @@ input LibrarySearchInput {
   """Filter by folder (inbox, archive, trash, all)"""
   folder: String
 
+  """Filter items that have highlights/annotations"""
+  hasHighlights: Boolean
+
   """Filter by label names (items with ANY of these labels)"""
   labels: [String!]
 
@@ -217,6 +243,9 @@ input LibrarySearchInput {
 
   """Filter by item state"""
   state: LibraryItemState
+
+  """Filter by RSS feed subscription ID"""
+  subscriptionId: String
 }
 
 """Available fields to sort library items by"""
@@ -302,12 +331,19 @@ type Mutation {
     """Library item ID"""
     id: String!
   ): LibraryItem!
+  refreshRssFeed(feedId: ID!): RssFeedResult!
 
   """Save a URL to the library with content extraction"""
   saveUrl(input: SaveUrlInput!): LibraryItem!
 
   """Set labels for a library item (replaces existing labels)"""
   setLibraryItemLabels(itemId: String!, labelIds: [String!]!): [Label!]!
+  subscribeToRssFeed(feedUrl: String!, importItems: Boolean! = true): RssFeedResult!
+  unsubscribeFromRssFeed(
+    """Whether to delete library items from this feed (default: true)"""
+    deleteItems: Boolean = true
+    feedId: ID!
+  ): RssFeedResult!
 
   """Update a highlight (annotation and/or color)"""
   updateHighlight(
@@ -344,6 +380,7 @@ type Mutation {
     """Reading progress data with sentinels"""
     input: UpdateReadingProgressInput!
   ): ReadingProgress!
+  updateRssFeedSettings(feedId: ID!, settings: UpdateRssFeedSettingsInput!): RssFeedResult!
 }
 
 type Query {
@@ -376,10 +413,20 @@ type Query {
     """Library item ID"""
     libraryItemId: String!
   ): ReadingProgress
+  rssFeeds(activeOnly: Boolean! = true): [RssFeed!]!
 
   """Legacy search query for backward compatibility"""
   search(after: String, first: Int = 20, includeContent: Boolean = false, query: String): SearchResult!
   session: AuthPayload
+
+  """Get all highlights for the current user across all library items"""
+  userHighlights(
+    """Cursor for pagination"""
+    after: String
+
+    """Number of highlights to return"""
+    first: Int = 50
+  ): HighlightsConnection!
   viewer: User!
 }
 
@@ -416,6 +463,33 @@ enum RegistrationType {
 enum RepresentationType {
   CONTENT
   FEED_CONTENT
+}
+
+type RssFeed {
+  active: Boolean!
+  createdAt: DateTime!
+  description: String
+  failureCount: Int!
+  feedUrl: String!
+  id: ID!
+  itemCount: Int!
+  lastError: String
+  lastFetchedAt: DateTime
+  siteIcon: String
+  siteUrl: String
+  title: String
+
+  """Number of unread feed items (computed via field resolver)"""
+  unreadCount: Int
+  updatedAt: DateTime!
+  userId: String!
+}
+
+type RssFeedResult {
+  errors: [String!]
+  feed: RssFeed
+  message: String
+  success: Boolean!
 }
 
 input SaveUrlInput {
@@ -515,6 +589,17 @@ input UpdateReadingProgressInput {
   Total number of sentinels in the article (for progress percentage calculation)
   """
   totalSentinels: Int
+}
+
+input UpdateRssFeedSettingsInput {
+  """Whether to auto-add new items to library"""
+  autoAddToLibrary: Boolean
+
+  """Default folder for new items"""
+  folder: String
+
+  """Feed title override"""
+  title: String
 }
 
 type User {

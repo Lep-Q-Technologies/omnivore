@@ -27,4 +27,5 @@
 /* Page-specific styles */
 @import './ReaderPage.css';
 @import './HighlightSidebar.css';
+@import './HighlightsPage.css';
 @import './LabelsPage.css';

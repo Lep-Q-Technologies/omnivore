@@ -8,6 +8,7 @@
  */
 
 import { HighlightColor } from '../src/highlight/entities/highlight.entity'
+import { LibraryItemState } from '../src/library/entities/library-item.entity'
 import { StatusType } from '../src/user/entities/user.entity'
 import { UserRole } from '../src/user/enums/user-role.enum'
 import {
@@ -87,8 +88,8 @@ describe('Factory Pattern Example (e2e)', () => {
     // No database call was made
 
     const item = LibraryItemFactory.buildArchived(user.id)
-    expect(item.folder).toBe('archive')
-    expect(item.state).toBe('ARCHIVED')
+    expect(item.state).toBe('ARCHIVED') // state is stored, folder is computed from state
+    // NOTE: folder is a computed getter and not directly accessible on built entities
     // No database call was made
   })
 
@@ -103,7 +104,7 @@ describe('Factory Pattern Example (e2e)', () => {
     expect(pendingUser.status).toBe(StatusType.PENDING)
 
     const archivedItem = await LibraryItemFactory.archived(user.id)
-    expect(archivedItem.folder).toBe('archive')
+    expect(archivedItem.state).toBe(LibraryItemState.ARCHIVED) // folder is computed from state
 
     const itemWithProgress = await LibraryItemFactory.withProgress(user.id, 100)
     expect(itemWithProgress.readAt).toBeDefined() // 100% progress marks as read

@@ -32,7 +32,7 @@ import {
 } from './dto/library-inputs.type'
 import { LabelService } from '../label/label.service'
 import { Label } from '../label/dto/label.type'
-import { LibraryItemEntity } from './entities/library-item.entity'
+import { LibraryItemEntity, ContentType } from './entities/library-item.entity'
 
 /**
  * Library item with entity fields for field resolvers
@@ -390,7 +390,28 @@ export class LibraryResolver {
 function mapEntityToGraph(entity: LibraryItemEntity): LibraryItem {
   const thumbnail = entity.thumbnail ?? null
   const wordCount = entity.wordCount ?? null
-  const itemType = entity.itemType ?? 'ARTICLE'
+  const contentType = entity.contentType ?? ContentType.ARTICLE
+
+  // Map contentType to legacy itemType format for backward compatibility
+  let itemType: string
+  switch (contentType) {
+    case ContentType.PDF:
+      itemType = 'FILE'
+      break
+    case ContentType.VIDEO:
+      itemType = 'VIDEO'
+      break
+    case ContentType.TWITTER_THREAD:
+      itemType = 'TWEET'
+      break
+    case ContentType.RSS_FEED:
+      itemType = 'RSS'
+      break
+    case ContentType.ARTICLE:
+    default:
+      itemType = 'ARTICLE'
+      break
+  }
 
   return {
     id: entity.id,
@@ -415,7 +436,8 @@ function mapEntityToGraph(entity: LibraryItemEntity): LibraryItem {
     wordCount,
     siteName: entity.siteName ?? null,
     siteIcon: entity.siteIcon ?? null,
-    itemType,
+    contentType, // New field - primary content type
+    itemType, // Legacy field - computed from contentType
     totalSentinels: entity.totalSentinels ?? 0, // For reading progress calculation
     // Legacy field aliases (TypeScript doesn't know about getters, so we set them directly)
     image: thumbnail,

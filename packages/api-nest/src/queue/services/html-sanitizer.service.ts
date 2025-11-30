@@ -38,7 +38,7 @@ export class HtmlSanitizerService {
   /**
    * Default safe HTML tags for article content
    * Based on common article formatting needs while preventing XSS
-   */
+   */unkn
   private readonly DEFAULT_ALLOWED_TAGS = [
     // Paragraphs and text formatting
     'p',

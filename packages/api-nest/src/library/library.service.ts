@@ -9,6 +9,7 @@ import {
 import {
   LibraryItemEntity,
   LibraryItemState,
+  ContentType,
 } from './entities/library-item.entity'
 import {
   LibrarySearchInput,
@@ -84,11 +85,11 @@ export class LibraryService {
       throw new NotFoundException(`Library item with ID ${itemId} not found`)
     }
 
-    // Update state and folder based on archive status
+    // Update state based on archive status
+    // Note: folder is now a computed property derived from state
     item.state = archived
       ? LibraryItemState.ARCHIVED
       : LibraryItemState.SUCCEEDED
-    item.folder = archived ? FOLDERS.ARCHIVE : FOLDERS.INBOX
 
     return await this.libraryRepository.save(item)
   }
@@ -120,8 +121,8 @@ export class LibraryService {
       }
     }
 
-    // Otherwise, soft delete by moving to trash
-    item.folder = FOLDERS.TRASH
+    // Otherwise, soft delete by marking as deleted
+    // Note: folder will be automatically computed as 'trash' from DELETED state
     item.state = LibraryItemState.DELETED
     await this.libraryRepository.save(item)
 
@@ -157,10 +158,8 @@ export class LibraryService {
       )
     }
 
-    // Update folder and corresponding state
-    item.folder = folder
-
     // Update state based on folder
+    // Note: folder is now a computed property derived from state
     if (folder === FOLDERS.ARCHIVE) {
       item.state = LibraryItemState.ARCHIVED
     } else if (folder === FOLDERS.TRASH) {
@@ -378,10 +377,9 @@ export class LibraryService {
       slug,
       title: url, // Temporary title until content is fetched
       state: LibraryItemState.CONTENT_NOT_FETCHED,
-      folder,
       savedAt: new Date(),
-      contentReader: 'WEB' as any,
-      itemType: 'ARTICLE',
+      contentType: ContentType.ARTICLE, // Default type, will be updated by content processor
+      // Note: folder and contentReader are computed properties
     })
 
     const savedItem = await this.libraryRepository.save(libraryItem)

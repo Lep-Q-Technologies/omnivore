@@ -5,11 +5,10 @@ import request from 'supertest'
 import { Repository } from 'typeorm'
 import { createE2EAppWithModule } from './helpers/create-e2e-app'
 import {
-  ContentReaderType,
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
 } from '../src/library/entities/library-item.entity'
-import { FOLDERS } from '../src/constants/folders.constants'
 
 const LIBRARY_ITEM_QUERY = `
   query LibraryItem($id: String!) {
@@ -92,9 +91,7 @@ describe('Notebook GraphQL (e2e)', () => {
         originalUrl: `https://example.com/notebook-test-${timestamp}`,
         savedAt: new Date(),
         state: LibraryItemState.SUCCEEDED,
-        contentReader: ContentReaderType.WEB,
-        folder: FOLDERS.INBOX,
-        itemType: 'ARTICLE',
+        contentType: ContentType.ARTICLE,
       })
 
       const saved = await libraryRepository.save(testItem)

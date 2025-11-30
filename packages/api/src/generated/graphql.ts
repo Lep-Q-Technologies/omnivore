@@ -2369,7 +2369,7 @@ export enum PageType {
   Tweet = 'TWEET',
   Unknown = 'UNKNOWN',
   Video = 'VIDEO',
-  Website = 'WEBSITE',
+Website = 'WEBSITE',
 }
 
 export type ParseResult = {

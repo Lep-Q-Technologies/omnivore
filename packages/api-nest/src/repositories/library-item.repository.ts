@@ -93,9 +93,18 @@ export class LibraryItemRepository implements ILibraryItemRepository {
       .createQueryBuilder('item')
       .where('item.userId = :userId', { userId })
 
-    // Apply folder filter
+    // Apply folder filter by mapping folder to state
+    // Note: folder is now a computed property derived from state
     if (search?.folder && search.folder !== FOLDERS.ALL) {
-      query.andWhere('item.folder = :folder', { folder: search.folder })
+      if (search.folder === FOLDERS.ARCHIVE) {
+        query.andWhere('item.state = :state', { state: LibraryItemState.ARCHIVED })
+      } else if (search.folder === FOLDERS.TRASH) {
+        query.andWhere('item.state = :state', { state: LibraryItemState.DELETED })
+      } else if (search.folder === FOLDERS.INBOX) {
+        query.andWhere('item.state IN (:...states)', {
+          states: [LibraryItemState.SUCCEEDED, LibraryItemState.CONTENT_NOT_FETCHED]
+        })
+      }
     }
 
     // Apply state filter
@@ -223,6 +232,7 @@ export class LibraryItemRepository implements ILibraryItemRepository {
         const batch = itemIds.slice(i, i + batchSize)
 
         // Update items that belong to the user
+        // Note: folder is now a computed property derived from state
         const result = await queryRunner.manager
           .createQueryBuilder()
           .update(LibraryItemEntity)
@@ -230,7 +240,6 @@ export class LibraryItemRepository implements ILibraryItemRepository {
             state: archived
               ? LibraryItemState.ARCHIVED
               : LibraryItemState.SUCCEEDED,
-            folder: archived ? FOLDERS.ARCHIVE : FOLDERS.INBOX,
           })
           .where('id IN (:...ids)', { ids: batch })
           .andWhere('userId = :userId', { userId })
@@ -287,12 +296,12 @@ export class LibraryItemRepository implements ILibraryItemRepository {
         const batch = itemIds.slice(i, i + batchSize)
 
         // Mark items as deleted (soft delete)
+        // Note: folder is now a computed property derived from state
         const result = await queryRunner.manager
           .createQueryBuilder()
           .update(LibraryItemEntity)
           .set({
             state: LibraryItemState.DELETED,
-            folder: FOLDERS.TRASH,
           })
           .where('id IN (:...ids)', { ids: batch })
           .andWhere('userId = :userId', { userId })
@@ -356,11 +365,11 @@ export class LibraryItemRepository implements ILibraryItemRepository {
       for (let i = 0; i < itemIds.length; i += batchSize) {
         const batch = itemIds.slice(i, i + batchSize)
 
+        // Note: folder is now a computed property derived from state
         const result = await queryRunner.manager
           .createQueryBuilder()
           .update(LibraryItemEntity)
           .set({
-            folder,
             state,
           })
           .where('id IN (:...ids)', { ids: batch })

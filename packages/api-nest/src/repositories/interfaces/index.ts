@@ -1,0 +1,6 @@
+export * from './entity-label-repository.interface'
+export * from './highlight-repository.interface'
+export * from './label-repository.interface'
+export * from './library-item-repository.interface'
+export * from './reading-progress-repository.interface'
+export * from './rss-feed-repository.interface'

@@ -11,6 +11,7 @@ import { LabelModule } from '../label/label.module'
 import { HighlightModule } from '../highlight/highlight.module'
 import { ReadingProgressModule } from '../reading-progress/reading-progress.module'
 import { QueueModule } from '../queue/queue.module'
+import { SchedulerModule } from '../scheduler/scheduler.module'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { configValidationSchema } from '../config/config.schema'
@@ -60,6 +61,9 @@ import { configValidationSchema } from '../config/config.schema'
 
     // Queue and Background Processing
     QueueModule,
+
+    // Scheduled Jobs (RSS refresh, etc.)
+    SchedulerModule,
 
     // GraphQL API
     GraphqlModule,

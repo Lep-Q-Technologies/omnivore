@@ -671,3 +671,217 @@
     font-size: 12px;
   }
 }
+
+/* ============================================================================
+   Content Type-Specific Styles - ARC-014
+   ============================================================================ */
+
+/* PDF Notice Banner */
+.pdf-notice,
+.video-notice,
+.rss-notice,
+.twitter-notice {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pdf-notice p,
+.video-notice p,
+.rss-notice p,
+.twitter-notice p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.pdf-notice strong,
+.video-notice strong,
+.rss-notice strong,
+.twitter-notice strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.view-original-pdf-button,
+.view-original-video-button,
+.view-original-feed-button,
+.view-original-tweet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--color-action-blue);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.view-original-pdf-button:hover,
+.view-original-video-button:hover,
+.view-original-feed-button:hover,
+.view-original-tweet-button:hover {
+  background: #5aa3ff;
+}
+
+/* PDF Content */
+.reader-content-pdf {
+  /* PDF-specific styles if needed */
+}
+
+/* Video Content */
+.reader-content-video {
+  /* Video transcript styles */
+}
+
+.reader-content-video .timestamp {
+  display: inline-block;
+  color: var(--color-action-blue);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 8px;
+  min-width: 45px;
+  user-select: none;
+}
+
+.reader-content-video p {
+  line-height: 1.8;
+  margin: 12px 0;
+}
+
+/* RSS Feed Content */
+.reader-content-rss article {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.reader-content-rss article:last-child {
+  border-bottom: none;
+}
+
+.reader-content-rss h2 {
+  font-size: 22px;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.reader-content-rss h2 a {
+  color: var(--color-text-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.reader-content-rss h2 a:hover {
+  color: var(--color-action-blue);
+}
+
+.reader-content-rss p {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+/* Twitter/X Content */
+.reader-content-twitter article {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.reader-content-twitter img[alt="Tweet media"] {
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.reader-content-twitter header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--color-border-primary);
+}
+
+.reader-content-twitter header img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+/* Content Type Badges (for library grid/list) */
+.content-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.content-type-badge-article {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-action-blue);
+}
+
+.content-type-badge-pdf {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.content-type-badge-video {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+}
+
+.content-type-badge-rss {
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+}
+
+.content-type-badge-twitter {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+/* Responsive adjustments for new content types */
+@media (max-width: 768px) {
+  .pdf-notice,
+  .video-notice,
+  .rss-notice,
+  .twitter-notice {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 16px;
+  }
+
+  .reader-content-video .timestamp {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .reader-content-rss h2 {
+    font-size: 18px;
+  }
+
+  .reader-content-twitter article {
+    padding: 16px 18px;
+  }
+}

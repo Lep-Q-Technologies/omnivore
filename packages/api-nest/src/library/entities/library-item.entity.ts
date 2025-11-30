@@ -10,6 +10,7 @@ import {
 } from 'typeorm'
 
 import { EntityLabel } from '../../label/entities/entity-label.entity'
+import { RssFeedEntity } from './rss-feed.entity'
 import { User } from '../../user/entities/user.entity'
 
 export enum LibraryItemState {
@@ -27,6 +28,19 @@ export enum ContentReaderType {
   EPUB = 'EPUB',
 }
 
+/**
+ * Content type enum for different content sources
+ * Used to determine which extractor to use during content processing
+ */
+export enum ContentType {
+  ARTICLE = 'ARTICLE', // Web articles (default)
+  PDF = 'PDF', // PDF documents
+  RSS_FEED = 'RSS_FEED', // RSS/Atom feeds
+  VIDEO = 'VIDEO', // YouTube, Vimeo, etc.
+  TWITTER_THREAD = 'TWITTER', // Twitter/X threads
+  UNKNOWN = 'UNKNOWN', // Could not determine
+}
+
 @Entity({ name: 'library_item', schema: 'omnivore' })
 export class LibraryItemEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -38,6 +52,17 @@ export class LibraryItemEntity {
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId!: string
+
+  /**
+   * Optional link to RSS feed subscription
+   * Set when item is imported from an RSS feed
+   */
+  @ManyToOne(() => RssFeedEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'subscription_id' })
+  subscription?: RssFeedEntity | null
+
+  @Column({ name: 'subscription_id', type: 'uuid', nullable: true })
+  subscriptionId?: string | null
 
   @Column({
     type: 'enum',
@@ -102,19 +127,54 @@ export class LibraryItemEntity {
   @Column({ type: 'text', nullable: true })
   thumbnail?: string | null
 
-  @Column({ name: 'item_type', type: 'text', default: 'ARTICLE' })
-  itemType!: string
-
+  /**
+   * Content type detected from URL/source
+   * Single source of truth for content classification
+   * Used to route to appropriate extractor and determine reader display
+   */
   @Column({
-    name: 'content_reader',
-    type: 'enum',
-    enum: ContentReaderType,
-    default: ContentReaderType.WEB,
+    name: 'item_type', // Reuse existing column name for easier migration
+    type: 'varchar',
+    length: 50,
+    default: ContentType.ARTICLE,
   })
-  contentReader!: ContentReaderType
+  contentType!: ContentType
 
-  @Column({ type: 'text' })
-  folder!: string
+  /**
+   * Folder location derived from item state and source
+   * Computed property - not stored in database
+   *
+   * RSS feed items go to "following" folder by default
+   * User-saved items go to "inbox" folder
+   */
+  get folder(): string {
+    switch (this.state) {
+      case LibraryItemState.ARCHIVED:
+        return 'archive'
+      case LibraryItemState.DELETED:
+        return 'trash'
+      default:
+        // RSS feed items go to "following" folder
+        return this.subscriptionId ? 'following' : 'inbox'
+    }
+  }
+
+  /**
+   * Content reader type derived from content type
+   * Determines which UI component renders the content
+   * Computed property - not stored in database
+   */
+  get contentReader(): ContentReaderType {
+    switch (this.contentType) {
+      case ContentType.PDF:
+        return ContentReaderType.PDF
+      // Future: Add EPUB support
+      // case ContentType.EPUB:
+      //   return ContentReaderType.EPUB
+      default:
+        return ContentReaderType.WEB
+    }
+  }
 
   @Column({
     name: 'label_names',

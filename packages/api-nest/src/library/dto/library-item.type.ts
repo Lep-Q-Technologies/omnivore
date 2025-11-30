@@ -10,6 +10,7 @@ import {
 import {
   LibraryItemState,
   ContentReaderType,
+  ContentType,
 } from '../entities/library-item.entity'
 import { Label } from '../../label/dto/label.type'
 
@@ -19,6 +20,11 @@ registerEnumType(LibraryItemState, {
 
 registerEnumType(ContentReaderType, {
   name: 'ContentReaderType',
+})
+
+registerEnumType(ContentType, {
+  name: 'ContentType',
+  description: 'Type of content detected from URL for appropriate extraction and rendering',
 })
 
 @ObjectType()
@@ -98,13 +104,33 @@ export class LibraryItem {
   @Field({ nullable: true, description: 'Site favicon/icon URL' })
   siteIcon?: string | null
 
-  @Field({
-    description: 'Item type (ARTICLE, FILE, VIDEO, etc.)',
-    defaultValue: 'ARTICLE',
+  @Field(() => ContentType, {
+    description: 'Content type detected from URL (article, pdf, video, rss_feed, twitter)',
+    defaultValue: ContentType.ARTICLE,
   })
-  itemType!: string
+  contentType!: ContentType
 
   // Legacy field aliases for backward compatibility with frontend
+  @Field({
+    description: 'Legacy alias for contentType (ARTICLE, FILE, VIDEO, etc.)',
+    deprecationReason: 'Use contentType instead',
+  })
+  get itemType(): string {
+    // Map new ContentType enum to old itemType values for backward compatibility
+    switch (this.contentType) {
+      case ContentType.PDF:
+        return 'FILE'
+      case ContentType.VIDEO:
+        return 'VIDEO'
+      case ContentType.TWITTER_THREAD:
+        return 'TWEET'
+      case ContentType.RSS_FEED:
+        return 'RSS'
+      case ContentType.ARTICLE:
+      default:
+        return 'ARTICLE'
+    }
+  }
   @Field({
     nullable: true,
     name: 'image',

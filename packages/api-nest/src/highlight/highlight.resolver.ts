@@ -1,16 +1,17 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql'
+import { Args, Mutation, Query, Resolver, ResolveField, Parent, Int } from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
 import { HighlightService } from './highlight.service'
-import { Highlight } from './dto/highlight.type'
+import { Highlight, HighlightsConnection } from './dto/highlight.type'
 import {
   CreateHighlightInput,
   UpdateHighlightInput,
 } from './dto/highlight-inputs.type'
 import { DeleteResult } from '../library/dto/library-inputs.type'
 import { HighlightColor } from './entities/highlight.entity'
+import { LibraryItem } from '../library/dto/library-item.type'
 
 @Resolver(() => Highlight)
 export class HighlightResolver {
@@ -49,6 +50,45 @@ export class HighlightResolver {
   ): Promise<Highlight | null> {
     const entity = await this.highlightService.findById(user.id, id)
     return entity ? mapEntityToGraph(entity) : null
+  }
+
+  @Query(() => HighlightsConnection, {
+    description: 'Get all highlights for the current user across all library items',
+  })
+  @UseGuards(JwtAuthGuard)
+  async userHighlights(
+    @CurrentUser() user: User,
+    @Args('first', {
+      type: () => Int,
+      nullable: true,
+      defaultValue: 50,
+      description: 'Number of highlights to return',
+    })
+    first: number,
+    @Args('after', {
+      type: () => String,
+      nullable: true,
+      description: 'Cursor for pagination',
+    })
+    after?: string,
+  ): Promise<HighlightsConnection> {
+    const result = await this.highlightService.findAllForUser(
+      user.id,
+      first,
+      after,
+    )
+    return {
+      highlights: result.highlights.map(mapEntityToGraph),
+      nextCursor: result.nextCursor,
+    }
+  }
+
+  // ==================== FIELD RESOLVERS ====================
+
+  @ResolveField(() => LibraryItem, { nullable: true })
+  async libraryItem(@Parent() highlight: any): Promise<LibraryItem | null> {
+    // The libraryItem is already loaded via JOIN in the repository
+    return highlight.libraryItem ?? null
   }
 
   // ==================== MUTATIONS ====================
@@ -104,11 +144,12 @@ export class HighlightResolver {
   }
 }
 
-function mapEntityToGraph(entity: any): Highlight {
+function mapEntityToGraph(entity: any): any {
   return {
     id: entity.id,
     shortId: entity.shortId,
     libraryItemId: entity.libraryItemId,
+    libraryItem: entity.libraryItem,  // Pass through for field resolver
     quote: entity.quote ?? null,
     prefix: entity.prefix ?? null,
     suffix: entity.suffix ?? null,

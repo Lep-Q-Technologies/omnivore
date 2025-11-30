@@ -62,6 +62,17 @@ export class HighlightService {
   }
 
   /**
+   * Get all highlights for a user with pagination
+   */
+  async findAllForUser(
+    userId: string,
+    first: number,
+    after?: string,
+  ): Promise<{ highlights: HighlightEntity[]; nextCursor: string | null }> {
+    return this.highlightRepository.findAllForUser(userId, first, after)
+  }
+
+  /**
    * Create a new highlight
    */
   async createHighlight(

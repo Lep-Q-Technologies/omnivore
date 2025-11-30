@@ -145,7 +145,7 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
               setUrl('')
               setValidationError(null)
             }}
-            title="Coming soon in ARC-013"
+            title="Add PDF documents"
           >
             📄 PDF
           </button>
@@ -157,20 +157,11 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
               setUrl('')
               setValidationError(null)
             }}
-            title="Coming soon in future release"
+            title="Subscribe to RSS/Atom feeds"
           >
             📡 RSS
           </button>
         </div>
-
-        {contentType !== 'link' && (
-          <div className="coming-soon-notice">
-            <p>
-              📋 {contentType === 'pdf' ? 'PDF' : 'RSS'} support is coming soon!
-              For now, please use the Link tab to add web articles.
-            </p>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -187,7 +178,7 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
               }}
               placeholder={getPlaceholder()}
               className={`url-input ${validationError || error ? 'error' : ''}`}
-              disabled={loading || contentType !== 'link'}
+              disabled={loading}
               autoFocus
             />
             {validationError && (
@@ -205,7 +196,7 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
               value={folder}
               onChange={(e) => setFolder(e.target.value as 'inbox' | 'archive')}
               className="folder-select"
-              disabled={loading || contentType !== 'link'}
+              disabled={loading}
             >
               <option value="inbox">Inbox</option>
               <option value="archive">Archive</option>
@@ -224,9 +215,9 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loading || !url.trim() || contentType !== 'link'}
+              disabled={loading || !url.trim()}
             >
-              {loading ? 'Saving...' : contentType === 'link' ? 'Add Link' : 'Add'}
+              {loading ? 'Saving...' : getTitle()}
             </button>
           </div>
         </form>
@@ -234,7 +225,13 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
         {loading && (
           <div className="loading-indicator">
             <div className="spinner-small"></div>
-            <span>Saving link...</span>
+            <span>
+              {contentType === 'pdf'
+                ? 'Adding PDF...'
+                : contentType === 'rss'
+                ? 'Subscribing to feed...'
+                : 'Saving link...'}
+            </span>
           </div>
         )}
       </div>

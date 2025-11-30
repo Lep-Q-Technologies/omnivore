@@ -14,6 +14,11 @@ import { EventBusService } from './event-bus.service'
 import { QueueHealthIndicator } from './queue-health.indicator'
 import { ContentProcessorService } from './processors/content-processor.service'
 import { HtmlSanitizerService } from './services/html-sanitizer.service'
+import { ContentTypeDetectorService } from './services/content-type-detector.service'
+import { PdfExtractorService } from './services/pdf-extractor.service'
+import { RssFeedService } from './services/rss-feed.service'
+import { VideoExtractorService } from './services/video-extractor.service'
+import { TwitterExtractorService } from './services/twitter-extractor.service'
 import { LibraryItemEntity } from '../library/entities/library-item.entity'
 import { EnvVariables } from '../config/env-variables'
 
@@ -100,6 +105,11 @@ import { EnvVariables } from '../config/env-variables'
     QueueHealthIndicator,
     ContentProcessorService,
     HtmlSanitizerService,
+    ContentTypeDetectorService,
+    PdfExtractorService,
+    RssFeedService,
+    VideoExtractorService,
+    TwitterExtractorService,
   ],
   exports: [BullModule, EventBusService, QueueHealthIndicator],
 })

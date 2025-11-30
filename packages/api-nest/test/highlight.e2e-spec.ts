@@ -5,7 +5,7 @@ import request from 'supertest'
 import { Repository } from 'typeorm'
 import { createE2EAppWithModule } from './helpers/create-e2e-app'
 import {
-  ContentReaderType,
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
 } from '../src/library/entities/library-item.entity'
@@ -15,7 +15,6 @@ import {
   RepresentationType,
   HighlightType,
 } from '../src/highlight/entities/highlight.entity'
-import { FOLDERS } from '../src/constants/folders.constants'
 
 const HIGHLIGHTS_QUERY = `
   query Highlights($libraryItemId: String!) {
@@ -129,9 +128,7 @@ describe('Highlight GraphQL (e2e)', () => {
       originalUrl: `https://example.com/highlight-test-${Date.now()}`,
       savedAt: new Date(),
       state: LibraryItemState.SUCCEEDED,
-      contentReader: ContentReaderType.WEB,
-      folder: FOLDERS.INBOX,
-      itemType: 'ARTICLE',
+      contentType: ContentType.ARTICLE,
       readableContent:
         'This is the content of the article that can be highlighted.',
     })
@@ -295,9 +292,7 @@ describe('Highlight GraphQL (e2e)', () => {
         originalUrl: `https://example.com/empty-${Date.now()}`,
         savedAt: new Date(),
         state: LibraryItemState.SUCCEEDED,
-        contentReader: ContentReaderType.WEB,
-        folder: FOLDERS.INBOX,
-        itemType: 'ARTICLE',
+        contentType: ContentType.ARTICLE,
       })
 
       const saved = await libraryRepository.save(emptyItem)

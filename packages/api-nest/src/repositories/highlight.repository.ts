@@ -109,4 +109,43 @@ export class HighlightRepository implements IHighlightRepository {
 
     return result
   }
+
+  /**
+   * Find all highlights for a user with pagination
+   * Sorted by creation date (most recent first)
+   */
+  async findAllForUser(
+    userId: string,
+    first: number,
+    after?: string,
+  ): Promise<{ highlights: HighlightEntity[]; nextCursor: string | null }> {
+    const limit = Math.min(Math.max(first, 1), 100)
+
+    const query = this.repository
+      .createQueryBuilder('highlight')
+      .leftJoinAndSelect('highlight.libraryItem', 'libraryItem')
+      .where('highlight.userId = :userId', { userId })
+      .orderBy('highlight.createdAt', 'DESC')
+      .take(limit + 1)
+
+    // Handle cursor-based pagination
+    if (after) {
+      const cursorDate = new Date(after)
+      if (!Number.isNaN(cursorDate.getTime())) {
+        query.andWhere('highlight.createdAt < :cursor', { cursor: cursorDate })
+      }
+    }
+
+    const rows = await query.getMany()
+    const hasNext = rows.length > limit
+    const highlights = hasNext ? rows.slice(0, limit) : rows
+
+    // Generate next cursor
+    const nextCursor =
+      hasNext && highlights.length > 0
+        ? highlights[highlights.length - 1].createdAt.toISOString()
+        : null
+
+    return { highlights, nextCursor }
+  }
 }
