@@ -1,0 +1,36 @@
+import { BullModule } from '@nestjs/bullmq'
+import { Module } from '@nestjs/common'
+import { RssFeedSubscriptionService } from '../library/services/rss-feed-subscription.service'
+import { RssFeedService } from '../queue/services/rss-feed.service'
+
+import { QueueModule } from '../queue/queue.module'
+import { RepositoriesModule } from '../repositories/repositories.module'
+import { SchedulerService } from './scheduler.service'
+import { RssFeedRefreshService } from './services/rss-feed-refresh.service'
+
+/**
+ * SchedulerModule
+ *
+ * Handles periodic background tasks for content ingestion:
+ * - RSS feed refreshing
+ * - Newsletter polling (future)
+ * - YouTube channel updates (future)
+ * - Social media imports (future)
+ */
+@Module({
+  imports: [
+    RepositoriesModule,
+    QueueModule,
+    BullModule.registerQueue({
+      name: 'scheduler',
+    }),
+  ],
+  providers: [
+    SchedulerService,
+    RssFeedRefreshService,
+    RssFeedSubscriptionService,
+    RssFeedService,
+  ],
+  exports: [SchedulerService, RssFeedRefreshService],
+})
+export class SchedulerModule {}

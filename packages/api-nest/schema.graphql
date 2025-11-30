@@ -194,6 +194,9 @@ type LibraryItem {
   slug: String!
   state: LibraryItemState!
 
+  """RSS feed subscription if this item was imported from an RSS feed"""
+  subscription: RssFeed
+
   """Thumbnail/cover image URL for the library item"""
   thumbnail: String
   title: String!

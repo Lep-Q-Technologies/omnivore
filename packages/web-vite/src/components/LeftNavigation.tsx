@@ -61,19 +61,57 @@ const LeftNavigation: React.FC = () => {
     })
   }, [fetchFeeds])
 
-  const mainNavItems: NavItem[] = [
-    { id: 'library', label: 'Library', icon: <LibraryIcon />, path: '/home' },
-    { id: 'highlights', label: 'Highlights', icon: <HighlightsIcon />, path: '/highlights' },
-    { id: 'labels', label: 'Labels', icon: <LabelIcon />, path: '/labels' }
+  const mainNavItems = [
+    {
+      icon: <LibraryIcon className="nav-icon" />,
+      label: 'Library',
+      path: '/home',
+      id: 'library',
+    },
+    {
+      icon: <HighlightsIcon className="nav-icon" />,
+      label: 'Highlights',
+      path: '/highlights',
+      id: 'highlights',
+    },
+    {
+      icon: <LabelIcon className="nav-icon" />,
+      label: 'Labels',
+      path: '/labels',
+      id: 'labels',
+    },
+    {
+      icon: <FollowingIcon className="nav-icon" />,
+      label: 'Following',
+      path: '/home?filter=following',
+      id: 'following',
+    },
   ]
 
   const quickFilters: ShortcutItem[] = [
     { id: 'inbox', label: 'Inbox', icon: <InboxIcon />, filter: 'inbox' },
-    { id: 'archive', label: 'Archive', icon: <ArchiveIcon />, filter: 'archive' },
-    { id: 'trash', label: 'Trash', icon: <TrashIcon />, filter: 'trash' }
+    {
+      id: 'archive',
+      label: 'Archive',
+      icon: <ArchiveIcon />,
+      filter: 'archive',
+    },
+    { id: 'trash', label: 'Trash', icon: <TrashIcon />, filter: 'trash' },
   ]
 
   const isActive = (path: string): boolean => {
+    const [pathname, search] = path.split('?')
+    if (search) {
+      return location.pathname === pathname && location.search === `?${search}`
+    }
+    // Special case for Library (home without filter)
+    if (path === '/home') {
+      return (
+        location.pathname === '/home' &&
+        (!location.search || location.search === '')
+      )
+    }
+
     return location.pathname === path
   }
 
@@ -94,7 +132,7 @@ const LeftNavigation: React.FC = () => {
       navigate(`/home?filter=following&feedId=${feedId}`)
     } else {
       // Show all RSS items from all feeds
-      navigate(`/home?filter=following`)
+      navigate('/home?filter=following')
     }
     setIsMobileMenuOpen(false)
   }
@@ -127,7 +165,10 @@ const LeftNavigation: React.FC = () => {
         }
       } else {
         alert(
-          `Failed to unsubscribe: ${result.unsubscribeFromRssFeed.errors?.join(', ') || result.unsubscribeFromRssFeed.message}`,
+          `Failed to unsubscribe: ${
+            result.unsubscribeFromRssFeed.errors?.join(', ') ||
+            result.unsubscribeFromRssFeed.message
+          }`,
         )
       }
     } catch (error) {
@@ -189,8 +230,14 @@ const LeftNavigation: React.FC = () => {
             <h3 className="shortcuts-title">Subscriptions</h3>
             <button
               className="shortcuts-toggle"
-              onClick={() => setIsSubscriptionsExpanded(!isSubscriptionsExpanded)}
-              aria-label={isSubscriptionsExpanded ? 'Collapse subscriptions' : 'Expand subscriptions'}
+              onClick={() =>
+                setIsSubscriptionsExpanded(!isSubscriptionsExpanded)
+              }
+              aria-label={
+                isSubscriptionsExpanded
+                  ? 'Collapse subscriptions'
+                  : 'Expand subscriptions'
+              }
             >
               {isSubscriptionsExpanded ? '−' : '+'}
             </button>
@@ -198,64 +245,70 @@ const LeftNavigation: React.FC = () => {
 
           {isSubscriptionsExpanded && (
             <div className="shortcuts-list">
-              {/* Following - All RSS items from all feeds */}
-              <button
-                className="shortcut-item"
-                onClick={() => handleFeedClick()}
-                title="All RSS feed items"
-              >
-                <span className="shortcut-icon">
-                  <FollowingIcon />
-                </span>
-                <span className="shortcut-label">Following</span>
-                {feeds && feeds.length > 0 && (() => {
-                  const totalUnread = feeds.reduce((sum, feed) => {
-                    return sum + (feed.unreadCount || 0)
-                  }, 0)
-                  return totalUnread > 0 ? (
-                    <span className="feed-unread-count">{totalUnread}</span>
-                  ) : null
-                })()}
-              </button>
-
               {/* Individual feeds */}
-              {feeds && feeds.length > 0 && feeds.map((feed) => (
-                <div key={feed.id} className="feed-item-container">
-                  <button
-                    className="shortcut-item feed-item"
-                    onClick={() => handleFeedClick(feed.id)}
-                    title={feed.title || feed.feedUrl}
-                  >
-                    <span className="shortcut-icon">
-                      {feed.siteIcon ? (
-                        <img
-                          src={feed.siteIcon}
-                          alt=""
-                          className="shortcut-icon-img"
-                          style={{ width: '16px', height: '16px', borderRadius: '2px' }}
-                        />
-                      ) : (
-                        <FollowingIcon size={16} />
-                      )}
-                    </span>
-                    <span className="shortcut-label">{feed.title || 'Untitled Feed'}</span>
-                    {feed.unreadCount !== undefined && feed.unreadCount !== null && feed.unreadCount > 0 && (
-                      <span className="feed-unread-count">{feed.unreadCount}</span>
-                    )}
-                  </button>
-                  <button
-                    className="feed-delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleUnsubscribeFeed(feed.id, feed.title || feed.feedUrl)
-                    }}
-                    title="Unsubscribe from this feed"
-                    aria-label={`Unsubscribe from ${feed.title || 'feed'}`}
-                  >
-                    ✕
-                  </button>
+              {feeds && feeds.length > 0 ? (
+                feeds.map((feed) => (
+                  <div key={feed.id} className="feed-item-container">
+                    <button
+                      className="shortcut-item feed-item"
+                      onClick={() => handleFeedClick(feed.id)}
+                      title={feed.title || feed.feedUrl}
+                    >
+                      <span className="shortcut-icon">
+                        {feed.siteIcon ? (
+                          <img
+                            src={feed.siteIcon}
+                            alt=""
+                            className="shortcut-icon-img"
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '2px',
+                            }}
+                          />
+                        ) : (
+                          <FollowingIcon size={16} />
+                        )}
+                      </span>
+                      <span className="shortcut-label">
+                        {feed.title || 'Untitled Feed'}
+                      </span>
+                      {feed.unreadCount !== undefined &&
+                        feed.unreadCount !== null &&
+                        feed.unreadCount > 0 && (
+                          <span className="feed-unread-count">
+                            {feed.unreadCount}
+                          </span>
+                        )}
+                    </button>
+                    <button
+                      className="feed-delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleUnsubscribeFeed(
+                          feed.id,
+                          feed.title || feed.feedUrl,
+                        )
+                      }}
+                      title="Unsubscribe from this feed"
+                      aria-label={`Unsubscribe from ${feed.title || 'feed'}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div
+                  className="empty-feeds-message"
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    color: '#888',
+                  }}
+                >
+                  No subscriptions yet
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
@@ -267,7 +320,9 @@ const LeftNavigation: React.FC = () => {
             <button
               className="shortcuts-toggle"
               onClick={() => setIsShortcutsExpanded(!isShortcutsExpanded)}
-              aria-label={isShortcutsExpanded ? 'Collapse filters' : 'Expand filters'}
+              aria-label={
+                isShortcutsExpanded ? 'Collapse filters' : 'Expand filters'
+              }
             >
               {isShortcutsExpanded ? '−' : '+'}
             </button>
@@ -292,9 +347,7 @@ const LeftNavigation: React.FC = () => {
 
         {/* Footer info */}
         <div className="nav-footer">
-          <div className="nav-footer-text">
-            Omnivore
-          </div>
+          <div className="nav-footer-text">Omnivore</div>
         </div>
       </nav>
     </>

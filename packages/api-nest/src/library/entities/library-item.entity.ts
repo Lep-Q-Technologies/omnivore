@@ -57,9 +57,9 @@ export class LibraryItemEntity {
    * Optional link to RSS feed subscription
    * Set when item is imported from an RSS feed
    */
-  @ManyToOne(() => RssFeedEntity, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'subscription_id' })
-  subscription?: RssFeedEntity | null
+  // @ManyToOne('RssFeedEntity', { nullable: true, onDelete: 'SET NULL' })
+  // @JoinColumn({ name: 'subscription_id' })
+  // subscription?: RssFeedEntity | null
 
   @Column({ name: 'subscription_id', type: 'uuid', nullable: true })
   subscriptionId?: string | null

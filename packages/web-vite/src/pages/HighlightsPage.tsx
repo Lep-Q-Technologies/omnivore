@@ -60,7 +60,10 @@ const HighlightsPage: React.FC = () => {
 
   // Fetch highlights on mount and whenever we navigate to this page
   // Using location.key ensures refetch when navigating back via browser back button
+  // Fetch highlights on mount and when user changes
   useEffect(() => {
+    let isMounted = true
+    
     const fetchHighlights = async () => {
       if (!user) return
 
@@ -76,19 +79,30 @@ const HighlightsPage: React.FC = () => {
           first: INITIAL_PAGE_SIZE,
         })
 
-        setHighlights(data.userHighlights.highlights)
-        setError(null)
+        if (isMounted) {
+          setHighlights(data.userHighlights.highlights)
+          setError(null)
+        }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load highlights',
-        )
+        if (isMounted) {
+          console.error('Error fetching highlights:', err)
+          setError(
+            err instanceof Error ? err.message : 'Failed to load highlights',
+          )
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchHighlights()
-  }, [user, location.key]) // Refetch when user changes or when navigating to this route
+
+    return () => {
+      isMounted = false
+    }
+  }, [user]) // Removed location.key to prevent unnecessary refetches and potential race conditions
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
