@@ -147,4 +147,11 @@ export interface ILibraryItemRepository {
     userId: string,
     itemIds: string[],
   ): Promise<BulkOperationResult>
+
+  /**
+   * Delete all library items from a specific RSS feed subscription
+   * @param subscriptionId - RSS feed subscription ID
+   * @param userId - User ID (for safety check)
+   */
+  deleteBySubscription(subscriptionId: string, userId: string): Promise<void>
 }

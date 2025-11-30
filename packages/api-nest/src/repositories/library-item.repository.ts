@@ -93,14 +93,22 @@ export class LibraryItemRepository implements ILibraryItemRepository {
       .createQueryBuilder('item')
       .where('item.userId = :userId', { userId })
 
-    // Apply folder filter by mapping folder to state
-    // Note: folder is now a computed property derived from state
+    // Apply folder filter by mapping folder to state and subscriptionId
+    // Note: folder is now a computed property derived from state and subscriptionId
     if (search?.folder && search.folder !== FOLDERS.ALL) {
       if (search.folder === FOLDERS.ARCHIVE) {
         query.andWhere('item.state = :state', { state: LibraryItemState.ARCHIVED })
       } else if (search.folder === FOLDERS.TRASH) {
         query.andWhere('item.state = :state', { state: LibraryItemState.DELETED })
+      } else if (search.folder === FOLDERS.FOLLOWING) {
+        // Following folder: RSS feed items (with subscriptionId)
+        query.andWhere('item.subscriptionId IS NOT NULL')
+        query.andWhere('item.state NOT IN (:...excludedStates)', {
+          excludedStates: [LibraryItemState.ARCHIVED, LibraryItemState.DELETED]
+        })
       } else if (search.folder === FOLDERS.INBOX) {
+        // Inbox folder: user-saved items (without subscriptionId)
+        query.andWhere('item.subscriptionId IS NULL')
         query.andWhere('item.state IN (:...states)', {
           states: [LibraryItemState.SUCCEEDED, LibraryItemState.CONTENT_NOT_FETCHED]
         })
@@ -124,6 +132,28 @@ export class LibraryItemRepository implements ILibraryItemRepository {
     // Apply label filter
     if (search?.labels && search.labels.length > 0) {
       query.andWhere('item.labelNames && :labels', { labels: search.labels })
+    }
+
+    // Apply subscription filter
+    if (search?.subscriptionId) {
+      query.andWhere('item.subscriptionId = :subscriptionId', {
+        subscriptionId: search.subscriptionId,
+      })
+    }
+
+    // Apply highlights filter
+    if (search?.hasHighlights !== undefined && search?.hasHighlights !== null) {
+      if (search.hasHighlights) {
+        // Items WITH highlights: use EXISTS subquery for better performance
+        query.andWhere(
+          'EXISTS (SELECT 1 FROM omnivore.highlight h WHERE h.library_item_id = item.id)',
+        )
+      } else {
+        // Items WITHOUT highlights
+        query.andWhere(
+          'NOT EXISTS (SELECT 1 FROM omnivore.highlight h WHERE h.library_item_id = item.id)',
+        )
+      }
     }
 
     // Determine sort field and order
@@ -459,5 +489,24 @@ export class LibraryItemRepository implements ILibraryItemRepository {
     } finally {
       await queryRunner.release()
     }
+  }
+
+  /**
+   * Delete all library items from a specific RSS feed subscription
+   *
+   * @param subscriptionId - RSS feed subscription ID
+   * @param userId - User ID (for safety check)
+   */
+  async deleteBySubscription(
+    subscriptionId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.repository
+      .createQueryBuilder()
+      .delete()
+      .from(LibraryItemEntity)
+      .where('subscriptionId = :subscriptionId', { subscriptionId })
+      .andWhere('userId = :userId', { userId })
+      .execute()
   }
 }

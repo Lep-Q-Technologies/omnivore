@@ -16,6 +16,7 @@ import { Label } from '../../src/label/entities/label.entity'
 import { EntityLabel } from '../../src/label/entities/entity-label.entity'
 import { HighlightEntity } from '../../src/highlight/entities/highlight.entity'
 import { ReadingProgressEntity } from '../../src/reading-progress/entities/reading-progress.entity'
+import { RssFeedEntity } from '../../src/library/entities/rss-feed.entity'
 
 let container: StartedPostgreSqlContainer | null = null
 let dataSource: DataSource | null = null
@@ -56,6 +57,7 @@ export async function setupTestContainer(): Promise<{
       Group,
       Invite,
       GroupMembership,
+      RssFeedEntity,
       LibraryItemEntity,
       Label,
       EntityLabel,
@@ -151,6 +153,7 @@ export async function cleanDatabase(): Promise<void> {
     'omnivore.highlight',
     'omnivore.label',
     'omnivore.library_item',
+    'omnivore.rss_feed',
     'omnivore.group_membership',
     'omnivore.invite',
     'omnivore.group',

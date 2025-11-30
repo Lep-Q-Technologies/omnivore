@@ -1,10 +1,23 @@
-import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql'
+import {
+  Args,
+  ID,
+  Int,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../../user/decorators/current-user.decorator'
 import { User } from '../../user/entities/user.entity'
 import { RssFeedSubscriptionService } from '../services/rss-feed-subscription.service'
-import { RssFeed, RssFeedResult } from '../dto/rss-feed.type'
+import {
+  RssFeed,
+  RssFeedResult,
+  UpdateRssFeedSettingsInput,
+} from '../dto/rss-feed.type'
 
 @Resolver(() => RssFeed)
 @UseGuards(JwtAuthGuard)
@@ -52,14 +65,28 @@ export class RssFeedResolver {
   @Mutation(() => RssFeedResult)
   async unsubscribeFromRssFeed(
     @Args('feedId', { type: () => ID }) feedId: string,
+    @Args('deleteItems', {
+      type: () => Boolean,
+      nullable: true,
+      defaultValue: true,
+      description:
+        'Whether to delete library items from this feed (default: true)',
+    })
+    deleteItems: boolean,
     @CurrentUser() user: User,
   ): Promise<RssFeedResult> {
     try {
-      await this.rssFeedSubscriptionService.unsubscribe(feedId, user.id)
+      await this.rssFeedSubscriptionService.unsubscribe(
+        feedId,
+        user.id,
+        deleteItems,
+      )
 
       return {
         success: true,
-        message: 'Unsubscribed from feed',
+        message: deleteItems
+          ? 'Unsubscribed from feed and deleted items'
+          : 'Unsubscribed from feed (items kept)',
       }
     } catch (error) {
       return {
@@ -108,5 +135,46 @@ export class RssFeedResolver {
     @CurrentUser() user: User,
   ): Promise<RssFeed[]> {
     return this.rssFeedSubscriptionService.getUserFeeds(user.id, activeOnly)
+  }
+
+  /**
+   * Update RSS feed settings
+   */
+  @Mutation(() => RssFeedResult)
+  async updateRssFeedSettings(
+    @Args('feedId', { type: () => ID }) feedId: string,
+    @Args('settings') settings: UpdateRssFeedSettingsInput,
+    @CurrentUser() user: User,
+  ): Promise<RssFeedResult> {
+    try {
+      const feed = await this.rssFeedSubscriptionService.updateSettings(
+        feedId,
+        user.id,
+        settings,
+      )
+
+      return {
+        success: true,
+        message: 'Feed settings updated',
+        feed,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to update feed settings',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      }
+    }
+  }
+
+  /**
+   * Resolve unread count for a feed
+   */
+  @ResolveField(() => Int)
+  async unreadCount(
+    @Parent() feed: RssFeed,
+    @CurrentUser() user: User,
+  ): Promise<number> {
+    return this.rssFeedSubscriptionService.getUnreadCount(feed.id, user.id)
   }
 }
