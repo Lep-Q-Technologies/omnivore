@@ -2,7 +2,7 @@ import '../styles/AddLinkModal.css'
 
 import React, { useState } from 'react'
 
-import { useSaveUrl } from '../lib/graphql-client'
+import { useSaveUrl, useSubscribeToRssFeed } from '../lib/graphql-client'
 
 interface AddLinkModalProps {
   isOpen: boolean
@@ -21,7 +21,11 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
   const [url, setUrl] = useState('')
   const [folder, setFolder] = useState<'inbox' | 'archive'>('inbox')
   const [validationError, setValidationError] = useState<string | null>(null)
-  const { saveUrl, loading, error } = useSaveUrl()
+  const { saveUrl, loading: saveLoading, error: saveError } = useSaveUrl()
+  const { subscribe, loading: subscribeLoading, error: subscribeError } = useSubscribeToRssFeed()
+
+  const loading = saveLoading || subscribeLoading
+  const error = saveError || subscribeError
 
   const validateUrl = (urlString: string): boolean => {
     try {
@@ -65,11 +69,23 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
         formattedUrl = `https://${formattedUrl}`
       }
 
-      await saveUrl({ url: formattedUrl, folder })
+      if (contentType === 'rss') {
+        // Subscribe to RSS feed
+        const result = await subscribe(formattedUrl, true)
+        if (!result.success) {
+          const errorMsg = result.errors?.join(', ') || result.message || 'Failed to subscribe'
+          setValidationError(errorMsg)
+          return
+        }
+      } else {
+        // Save as library item (link or PDF)
+        await saveUrl({ url: formattedUrl, folder })
+      }
 
       // Reset form and close modal
       setUrl('')
       setFolder('inbox')
+      setContentType('link')
       setValidationError(null)
       onSuccess()
       onClose()
@@ -189,19 +205,27 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
             )}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="folder">Save to</label>
-            <select
-              id="folder"
-              value={folder}
-              onChange={(e) => setFolder(e.target.value as 'inbox' | 'archive')}
-              className="folder-select"
-              disabled={loading}
-            >
-              <option value="inbox">Inbox</option>
-              <option value="archive">Archive</option>
-            </select>
-          </div>
+          {contentType !== 'rss' && (
+            <div className="form-group">
+              <label htmlFor="folder">Save to</label>
+              <select
+                id="folder"
+                value={folder}
+                onChange={(e) => setFolder(e.target.value as 'inbox' | 'archive')}
+                className="folder-select"
+                disabled={loading}
+              >
+                <option value="inbox">Inbox</option>
+                <option value="archive">Archive</option>
+              </select>
+            </div>
+          )}
+
+          {contentType === 'rss' && (
+            <div className="form-help">
+              <p>📡 Subscribing will automatically import new articles from this feed to your Following folder.</p>
+            </div>
+          )}
 
           <div className="modal-actions">
             <button
@@ -217,7 +241,9 @@ const AddLinkModal: React.FC<AddLinkModalProps> = ({
               className="btn btn-primary"
               disabled={loading || !url.trim()}
             >
-              {loading ? 'Saving...' : getTitle()}
+              {loading
+                ? (contentType === 'rss' ? 'Subscribing...' : 'Saving...')
+                : (contentType === 'rss' ? 'Subscribe' : getTitle())}
             </button>
           </div>
         </form>

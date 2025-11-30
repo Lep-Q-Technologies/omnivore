@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
@@ -29,6 +30,9 @@ export class RssFeedEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   userId!: string
 
+  // Note: Removed @OneToMany relation to LibraryItemEntity to avoid circular dependency issues in tests
+  // The @ManyToOne side in LibraryItemEntity is sufficient for the foreign key relationship
+
   /**
    * The RSS/Atom feed URL
    */
@@ -38,19 +42,19 @@ export class RssFeedEntity {
   /**
    * Feed title extracted from feed metadata
    */
-  @Column({ type: 'varchar', length: 512, nullable: true })
+  @Column({ name: 'title', type: 'varchar', length: 512, nullable: true })
   title?: string | null
 
   /**
    * Feed description extracted from feed metadata
    */
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'description', type: 'text', nullable: true })
   description?: string | null
 
   /**
    * Feed site URL (usually the blog/website home page)
    */
-  @Column({ type: 'varchar', length: 2048, nullable: true })
+  @Column({ name: 'site_url', type: 'varchar', length: 2048, nullable: true })
   siteUrl?: string | null
 
   /**
@@ -75,7 +79,7 @@ export class RssFeedEntity {
    * Whether this feed subscription is active
    * Inactive feeds are not refreshed
    */
-  @Column({ type: 'boolean', default: true })
+  @Column({ name: 'active', type: 'boolean', default: true })
   active!: boolean
 
   /**

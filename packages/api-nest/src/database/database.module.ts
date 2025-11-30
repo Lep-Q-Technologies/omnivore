@@ -15,6 +15,7 @@ import { Label } from '../label/entities/label.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
+import { RssFeedEntity } from '../library/entities/rss-feed.entity'
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { ReadingProgressEntity } from '../reading-progress/entities/reading-prog
             Group,
             Invite,
             GroupMembership,
+            RssFeedEntity,
             LibraryItemEntity,
             Label,
             EntityLabel,

@@ -206,4 +206,58 @@ export class RssFeedRepository implements IRssFeedRepository {
       .limit(limit)
       .getMany()
   }
+
+  /**
+   * Get unread count for a feed
+   *
+   * Counts library items from this feed that haven't been read
+   *
+   * @param feedId - Feed ID
+   * @param userId - User ID
+   * @returns Number of unread items
+   */
+  async getUnreadCount(feedId: string, userId: string): Promise<number> {
+    const result = await this.repository
+      .createQueryBuilder('feed')
+      .leftJoin('feed.libraryItems', 'item')
+      .where('feed.id = :feedId', { feedId })
+      .andWhere('feed.user_id = :userId', { userId })
+      .andWhere('item.read_at IS NULL')
+      .andWhere("item.state != 'DELETED'")
+      .select('COUNT(item.id)', 'count')
+      .getRawOne()
+
+    return parseInt(result?.count || '0', 10)
+  }
+
+  /**
+   * Update feed settings
+   *
+   * @param feedId - Feed ID
+   * @param userId - User ID
+   * @param settings - Settings to update
+   */
+  async updateSettings(
+    feedId: string,
+    userId: string,
+    settings: Partial<{
+      title: string
+      autoAddToLibrary: boolean
+      folder: string
+    }>,
+  ): Promise<void> {
+    const updateData: any = {}
+
+    if (settings.title !== undefined) {
+      updateData.title = settings.title
+    }
+
+    await this.repository.update(
+      {
+        id: feedId,
+        userId,
+      },
+      updateData,
+    )
+  }
 }
