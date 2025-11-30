@@ -2,7 +2,7 @@
 // Uses the new NestJS GraphQL endpoint to fetch the user's library items
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import AddLinkModal from '../components/AddLinkModal'
 import EditInfoModal from '../components/EditInfoModal'
@@ -57,15 +57,24 @@ const LIBRARY_ITEMS_QUERY = `
 
 const INITIAL_PAGE_SIZE = 50
 
-const LibraryPage: React.FC = () => {
+interface LibraryPageProps {
+  highlightsOnly?: boolean
+}
+
+const LibraryPage: React.FC<LibraryPageProps> = ({ highlightsOnly = false }) => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
   const [items, setItems] = useState<LibraryItemType[]>([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
+
+  // Get filter and feedId from URL query params
+  const filterParam = searchParams.get('filter')
+  const feedIdParam = searchParams.get('feedId')
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFolder, setActiveFolder] = useState<string>('inbox')
+  const [activeFolder, setActiveFolder] = useState<string>(filterParam || (highlightsOnly ? 'all' : 'inbox'))
   const [sortBy, setSortBy] = useState<LibrarySortBy>('SAVED_AT')
   const [sortOrder, setSortOrder] = useState<LibrarySortOrder>('DESC')
   const [toast, setToast] = useState<{
@@ -112,6 +121,13 @@ const LibraryPage: React.FC = () => {
     localStorage.setItem('omnivore-view-mode', viewMode)
   }, [viewMode])
 
+  // Update activeFolder when URL filter param changes
+  useEffect(() => {
+    if (filterParam) {
+      setActiveFolder(filterParam)
+    }
+  }, [filterParam])
+
   // Polling for processing items
   useEffect(() => {
     const processingItems = items.filter(
@@ -130,8 +146,14 @@ const LibraryPage: React.FC = () => {
         if (activeFolder) {
           searchParams.folder = activeFolder
         }
+        if (feedIdParam) {
+          searchParams.subscriptionId = feedIdParam
+        }
         if (selectedLabelFilters.length > 0) {
           searchParams.labels = selectedLabelFilters
+        }
+        if (highlightsOnly) {
+          searchParams.hasHighlights = true
         }
         searchParams.sortBy = sortBy
         searchParams.sortOrder = sortOrder
@@ -171,6 +193,8 @@ const LibraryPage: React.FC = () => {
     items,
     searchQuery,
     activeFolder,
+    feedIdParam,
+    highlightsOnly,
     selectedLabelFilters,
     sortBy,
     sortOrder,
@@ -197,8 +221,14 @@ const LibraryPage: React.FC = () => {
         if (activeFolder) {
           searchParams.folder = activeFolder
         }
+        if (feedIdParam) {
+          searchParams.subscriptionId = feedIdParam
+        }
         if (selectedLabelFilters.length > 0) {
           searchParams.labels = selectedLabelFilters
+        }
+        if (highlightsOnly) {
+          searchParams.hasHighlights = true
         }
         searchParams.sortBy = sortBy
         searchParams.sortOrder = sortOrder
@@ -225,12 +255,15 @@ const LibraryPage: React.FC = () => {
 
     // Debounce search query - shorter for better UX
     const debounceTimer = setTimeout(fetchItems, searchQuery ? 300 : 0)
-    
+
     return () => clearTimeout(debounceTimer)
   }, [
     user,
     searchQuery,
     activeFolder,
+    filterParam,
+    feedIdParam,
+    highlightsOnly,
     sortBy,
     sortOrder,
     selectedLabelFilters,
@@ -594,8 +627,14 @@ const LibraryPage: React.FC = () => {
       if (activeFolder) {
         searchParams.folder = activeFolder
       }
+      if (feedIdParam) {
+        searchParams.subscriptionId = feedIdParam
+      }
       if (selectedLabelFilters.length > 0) {
         searchParams.labels = selectedLabelFilters
+      }
+      if (highlightsOnly) {
+        searchParams.hasHighlights = true
       }
       searchParams.sortBy = sortBy
       searchParams.sortOrder = sortOrder
@@ -787,8 +826,14 @@ const LibraryPage: React.FC = () => {
       if (activeFolder) {
         searchParams.folder = activeFolder
       }
+      if (feedIdParam) {
+        searchParams.subscriptionId = feedIdParam
+      }
       if (selectedLabelFilters.length > 0) {
         searchParams.labels = selectedLabelFilters
+      }
+      if (highlightsOnly) {
+        searchParams.hasHighlights = true
       }
       searchParams.sortBy = sortBy
       searchParams.sortOrder = sortOrder

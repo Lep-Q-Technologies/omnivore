@@ -10,6 +10,7 @@ import {
   LABEL_FRAGMENT,
   LIBRARY_ITEM_FULL_FRAGMENT,
   READING_PROGRESS_FRAGMENT,
+  RSS_FEED_FRAGMENT,
 } from './graphql-fragments'
 
 const DEFAULT_GRAPHQL_PATH = '/api/graphql'
@@ -1205,4 +1206,264 @@ export function useUpdateReadingProgress() {
   )
 
   return { ...state, updateProgress }
+}
+
+// ==================== RSS FEED TYPES ====================
+
+export interface RssFeed {
+  id: string
+  feedUrl: string
+  title?: string | null
+  description?: string | null
+  siteUrl?: string | null
+  siteIcon?: string | null
+  lastFetchedAt?: string | null
+  itemCount: number
+  unreadCount?: number | null
+  active: boolean
+  lastError?: string | null
+  failureCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpdateRssFeedSettingsInput {
+  title?: string
+  autoAddToLibrary?: boolean
+  folder?: string
+}
+
+export interface RssFeedResult {
+  success: boolean
+  message?: string | null
+  feed?: RssFeed | null
+  errors?: string[] | null
+}
+
+// ==================== RSS FEED QUERIES ====================
+
+const GET_RSS_FEEDS_QUERY = `
+  ${RSS_FEED_FRAGMENT}
+  query GetRssFeeds($activeOnly: Boolean = true) {
+    rssFeeds(activeOnly: $activeOnly) {
+      ...RssFeedFields
+    }
+  }
+`
+
+// ==================== RSS FEED MUTATIONS ====================
+
+const SUBSCRIBE_TO_RSS_FEED_MUTATION = `
+  ${RSS_FEED_FRAGMENT}
+  mutation SubscribeToRssFeed($feedUrl: String!, $importItems: Boolean = true) {
+    subscribeToRssFeed(feedUrl: $feedUrl, importItems: $importItems) {
+      success
+      message
+      feed {
+        ...RssFeedFields
+      }
+      errors
+    }
+  }
+`
+
+const UNSUBSCRIBE_FROM_RSS_FEED_MUTATION = `
+  mutation UnsubscribeFromRssFeed($feedId: ID!) {
+    unsubscribeFromRssFeed(feedId: $feedId) {
+      success
+      message
+      errors
+    }
+  }
+`
+
+const REFRESH_RSS_FEED_MUTATION = `
+  mutation RefreshRssFeed($feedId: ID!) {
+    refreshRssFeed(feedId: $feedId) {
+      success
+      message
+      errors
+    }
+  }
+`
+
+const UPDATE_RSS_FEED_SETTINGS_MUTATION = `
+  ${RSS_FEED_FRAGMENT}
+  mutation UpdateRssFeedSettings($feedId: ID!, $settings: UpdateRssFeedSettingsInput!) {
+    updateRssFeedSettings(feedId: $feedId, settings: $settings) {
+      success
+      message
+      feed {
+        ...RssFeedFields
+      }
+      errors
+    }
+  }
+`
+
+// ==================== RSS FEED HOOKS ====================
+
+export function useRssFeeds(activeOnly = true) {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: RssFeed[] | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const fetchFeeds = useCallback(async () => {
+    setState({ loading: true, error: null, data: null })
+    try {
+      const result = await graphqlRequest<{ rssFeeds: RssFeed[] }>(
+        GET_RSS_FEEDS_QUERY,
+        { activeOnly },
+      )
+      setState({ loading: false, error: null, data: result.rssFeeds })
+
+      return result.rssFeeds
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error('Failed to fetch RSS feeds')
+      setState({ loading: false, error: err, data: null })
+      throw err
+    }
+  }, [activeOnly])
+
+  return { ...state, fetchFeeds, refetch: fetchFeeds }
+}
+
+export function useSubscribeToRssFeed() {
+  const [state, setState] = useState<MutationState<RssFeedResult>>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const subscribe = useCallback(
+    async (feedUrl: string, importItems = true) => {
+      setState({ loading: true, error: null, data: null })
+      try {
+        const result = await graphqlRequest<{
+          subscribeToRssFeed: RssFeedResult
+        }>(SUBSCRIBE_TO_RSS_FEED_MUTATION, { feedUrl, importItems })
+        setState({
+          loading: false,
+          error: null,
+          data: result.subscribeToRssFeed,
+        })
+
+        return result.subscribeToRssFeed
+      } catch (error) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error('Failed to subscribe to RSS feed')
+        setState({ loading: false, error: err, data: null })
+        throw err
+      }
+    },
+    [],
+  )
+
+  return { ...state, subscribe }
+}
+
+export function useUnsubscribeFromRssFeed() {
+  const [state, setState] = useState<MutationState<RssFeedResult>>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const unsubscribe = useCallback(async (feedId: string) => {
+    setState({ loading: true, error: null, data: null })
+    try {
+      const result = await graphqlRequest<{
+        unsubscribeFromRssFeed: RssFeedResult
+      }>(UNSUBSCRIBE_FROM_RSS_FEED_MUTATION, { feedId })
+      setState({
+        loading: false,
+        error: null,
+        data: result.unsubscribeFromRssFeed,
+      })
+
+      return result.unsubscribeFromRssFeed
+    } catch (error) {
+      const err =
+        error instanceof Error
+          ? error
+          : new Error('Failed to unsubscribe from RSS feed')
+      setState({ loading: false, error: err, data: null })
+      throw err
+    }
+  }, [])
+
+  return { ...state, unsubscribe }
+}
+
+export function useRefreshRssFeed() {
+  const [state, setState] = useState<MutationState<RssFeedResult>>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const refresh = useCallback(async (feedId: string) => {
+    setState({ loading: true, error: null, data: null })
+    try {
+      const result = await graphqlRequest<{ refreshRssFeed: RssFeedResult }>(
+        REFRESH_RSS_FEED_MUTATION,
+        { feedId },
+      )
+      setState({ loading: false, error: null, data: result.refreshRssFeed })
+
+      return result.refreshRssFeed
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error('Failed to refresh RSS feed')
+      setState({ loading: false, error: err, data: null })
+      throw err
+    }
+  }, [])
+
+  return { ...state, refresh }
+}
+
+export function useUpdateRssFeedSettings() {
+  const [state, setState] = useState<MutationState<RssFeedResult>>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const updateSettings = useCallback(
+    async (feedId: string, settings: UpdateRssFeedSettingsInput) => {
+      setState({ loading: true, error: null, data: null })
+      try {
+        const result = await graphqlRequest<{
+          updateRssFeedSettings: RssFeedResult
+        }>(UPDATE_RSS_FEED_SETTINGS_MUTATION, { feedId, settings })
+        setState({
+          loading: false,
+          error: null,
+          data: result.updateRssFeedSettings,
+        })
+
+        return result.updateRssFeedSettings
+      } catch (error) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error('Failed to update RSS feed settings')
+        setState({ loading: false, error: err, data: null })
+        throw err
+      }
+    },
+    [],
+  )
+
+  return { ...state, updateSettings }
 }
