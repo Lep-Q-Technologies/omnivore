@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { RssFeedService } from 'src/queue/services/rss-feed.service'
+import { RssFeedService } from '../queue/services/rss-feed.service'
 
 import { LabelModule } from '../label/label.module'
 import { QueueModule } from '../queue/queue.module'

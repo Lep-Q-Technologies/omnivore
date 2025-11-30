@@ -184,6 +184,21 @@ form {
   font-size: 0.85rem;
 }
 
+.form-help {
+  background-color: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-help p {
+  margin: 0;
+  color: #1e40af;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Modal Actions */
 .modal-actions {
   display: flex;

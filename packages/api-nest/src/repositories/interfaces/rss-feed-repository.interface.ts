@@ -20,4 +20,14 @@ export interface IRssFeedRepository {
     limit?: number,
   ): Promise<RssFeedEntity[]>
   findByUser(userId: string, activeOnly?: boolean): Promise<RssFeedEntity[]>
+  getUnreadCount(feedId: string, userId: string): Promise<number>
+  updateSettings(
+    feedId: string,
+    userId: string,
+    settings: Partial<{
+      title: string
+      autoAddToLibrary: boolean
+      folder: string
+    }>,
+  ): Promise<void>
 }
