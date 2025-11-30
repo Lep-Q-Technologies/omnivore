@@ -339,4 +339,6 @@ export interface LibrarySearchInput {
   sortBy?: LibrarySortBy
   sortOrder?: LibrarySortOrder
   state?: LibraryItemState
+  subscriptionId?: string
+  hasHighlights?: boolean
 }
