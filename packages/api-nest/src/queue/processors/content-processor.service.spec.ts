@@ -16,6 +16,11 @@ import {
 } from '../../library/entities/library-item.entity'
 import { EventBusService } from '../event-bus.service'
 import { HtmlSanitizerService } from '../services/html-sanitizer.service'
+import { ContentTypeDetectorService } from '../services/content-type-detector.service'
+import { PdfExtractorService } from '../services/pdf-extractor.service'
+import { RssFeedService } from '../services/rss-feed.service'
+import { VideoExtractorService } from '../services/video-extractor.service'
+import { TwitterExtractorService } from '../services/twitter-extractor.service'
 import { JOB_TYPES } from '../queue.constants'
 
 // Mock logger to suppress console output during tests
@@ -56,6 +61,11 @@ describe('ContentProcessorService', () => {
           useValue: mockEventBus,
         },
         HtmlSanitizerService,
+        ContentTypeDetectorService,
+        PdfExtractorService,
+        RssFeedService,
+        VideoExtractorService,
+        TwitterExtractorService,
       ],
     })
       .setLogger(mockLogger)
@@ -153,9 +163,10 @@ describe('ContentProcessorService', () => {
       expect(result.title).toBeDefined()
       expect(result.content).toBeDefined()
 
-      // Verify state updates
+      // Verify state updates (now includes contentType)
       expect(repository.update).toHaveBeenCalledWith('item-123', {
         state: LibraryItemState.PROCESSING,
+        contentType: 'ARTICLE', // Content type is now detected and set
       })
       expect(repository.update).toHaveBeenCalledWith('item-123', {
         state: LibraryItemState.SUCCEEDED,
@@ -218,9 +229,9 @@ describe('ContentProcessorService', () => {
         attempts: 3,
       })
 
-      // Mock fetchContent to throw error
+      // Mock fetchWebArticle to throw error
       jest
-        .spyOn(service as any, 'fetchContent')
+        .spyOn(service as any, 'fetchWebArticle')
         .mockRejectedValueOnce(new Error('Network error'))
 
       await expect(service['handleFetchContent'](mockJob)).rejects.toThrow(
@@ -256,9 +267,9 @@ describe('ContentProcessorService', () => {
         attempts: 3,
       })
 
-      // Mock fetchContent to throw error
+      // Mock fetchWebArticle to throw error
       jest
-        .spyOn(service as any, 'fetchContent')
+        .spyOn(service as any, 'fetchWebArticle')
         .mockRejectedValueOnce(new Error('Final error'))
 
       await expect(service['handleFetchContent'](mockJob)).rejects.toThrow(

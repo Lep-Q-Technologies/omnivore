@@ -22,9 +22,15 @@ import { createHash } from 'crypto'
 import {
   LibraryItemEntity,
   LibraryItemState,
+  ContentType,
 } from '../../library/entities/library-item.entity'
 import { EventBusService } from '../event-bus.service'
 import { HtmlSanitizerService } from '../services/html-sanitizer.service'
+import { ContentTypeDetectorService } from '../services/content-type-detector.service'
+import { PdfExtractorService } from '../services/pdf-extractor.service'
+import { RssFeedService } from '../services/rss-feed.service'
+import { VideoExtractorService } from '../services/video-extractor.service'
+import { TwitterExtractorService } from '../services/twitter-extractor.service'
 import { EVENT_NAMES } from '../events.constants'
 import { QUEUE_NAMES, JOB_TYPES, JOB_CONFIG } from '../queue.constants'
 
@@ -73,6 +79,11 @@ export class ContentProcessorService
     private readonly libraryItemRepository: Repository<LibraryItemEntity>,
     private readonly eventBus: EventBusService,
     private readonly htmlSanitizer: HtmlSanitizerService,
+    private readonly contentTypeDetector: ContentTypeDetectorService,
+    private readonly pdfExtractor: PdfExtractorService,
+    private readonly rssFeedService: RssFeedService,
+    private readonly videoExtractor: VideoExtractorService,
+    private readonly twitterExtractor: TwitterExtractorService,
   ) {
     super()
   }
@@ -140,15 +151,42 @@ export class ContentProcessorService
       // Update job progress
       await job.updateProgress(10)
 
-      // Update library item state to PROCESSING
-      await this.updateLibraryItemState(
-        libraryItemId,
-        LibraryItemState.PROCESSING,
+      // Detect content type from URL
+      const detection = await this.contentTypeDetector.detectContentType(url)
+      this.logger.log(
+        `Detected content type: ${detection.contentType} (confidence: ${detection.confidence}) for ${url}`,
       )
+      await job.updateProgress(15)
+
+      // Update library item state to PROCESSING and set content type
+      await this.libraryItemRepository.update(libraryItemId, {
+        state: LibraryItemState.PROCESSING,
+        contentType: detection.contentType,
+      })
       await job.updateProgress(20)
 
-      // Fetch and process content
-      const result = await this.fetchContent(url, job)
+      // Route to appropriate content extractor based on type
+      let result: ContentFetchResult
+      switch (detection.contentType) {
+        case ContentType.PDF:
+          result = await this.fetchPdfContent(url, job)
+          break
+        case ContentType.RSS_FEED:
+          result = await this.fetchRssFeed(url, job)
+          break
+        case ContentType.VIDEO:
+          result = await this.fetchVideoTranscript(url, job, detection.metadata)
+          break
+        case ContentType.TWITTER_THREAD:
+          result = await this.fetchTwitterThread(url, job, detection.metadata)
+          break
+        case ContentType.ARTICLE:
+        case ContentType.UNKNOWN:
+        default:
+          // Default to web article extraction
+          result = await this.fetchWebArticle(url, job)
+          break
+      }
 
       if (!result.success) {
         throw new Error(result.error || 'Content fetch failed')
@@ -230,11 +268,333 @@ export class ContentProcessorService
   }
 
   /**
-   * Fetch content from URL using two-phase extraction:
+   * Fetch PDF document content
+   * Extracts text and metadata from PDF files
+   */
+  private async fetchPdfContent(
+    url: string,
+    job: Job<FetchContentJobData>,
+  ): Promise<ContentFetchResult> {
+    this.logger.log(`Extracting PDF content from ${url}`)
+
+    try {
+      await job.updateProgress(30)
+
+      // Extract PDF using PdfExtractorService
+      const pdfResult = await this.pdfExtractor.extractPdf(url)
+      await job.updateProgress(70)
+
+      if (!pdfResult.success) {
+        return {
+          success: false,
+          error: pdfResult.error || 'PDF extraction failed',
+        }
+      }
+
+      // Convert PDF text to HTML format for storage
+      const htmlContent = this.convertPdfTextToHtml(
+        pdfResult.content || '',
+        pdfResult.pageCount,
+      )
+
+      // Generate description from first 200 characters
+      const description = pdfResult.content
+        ? pdfResult.content.substring(0, 200).trim() + '...'
+        : undefined
+
+      this.logger.log(
+        `Successfully extracted PDF: ${pdfResult.pageCount} pages, ${pdfResult.wordCount} words`,
+      )
+
+      // Log warnings if any
+      if (pdfResult.warnings && pdfResult.warnings.length > 0) {
+        pdfResult.warnings.forEach((warning) =>
+          this.logger.warn(`PDF warning: ${warning}`),
+        )
+      }
+
+      return {
+        success: true,
+        title: pdfResult.title || 'Untitled PDF',
+        content: htmlContent,
+        contentType: 'application/pdf',
+        author: pdfResult.author,
+        description,
+        wordCount: pdfResult.wordCount,
+        contentHash: pdfResult.contentHash,
+        publishedDate: pdfResult.createdDate,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to extract PDF from ${url}: ${errorMessage}`)
+
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Convert PDF plain text to HTML format for consistent storage
+   */
+  private convertPdfTextToHtml(text: string, pageCount?: number): string {
+    if (!text) return ''
+
+    // Split into paragraphs (double newline = paragraph break)
+    const paragraphs = text.split('\n\n').filter((p) => p.trim().length > 0)
+
+    // Wrap each paragraph in <p> tags
+    const htmlParagraphs = paragraphs
+      .map((para) => {
+        // Replace single newlines with <br> within paragraphs
+        const withBreaks = para.replace(/\n/g, '<br>')
+        return `<p>${withBreaks}</p>`
+      })
+      .join('\n')
+
+    // Wrap in a div with metadata
+    let html = '<div class="pdf-content">\n'
+
+    if (pageCount) {
+      html += `<div class="pdf-metadata">Pages: ${pageCount}</div>\n`
+    }
+
+    html += htmlParagraphs
+    html += '\n</div>'
+
+    return html
+  }
+
+  /**
+   * Fetch RSS feed content
+   * TODO: Implement in Phase 3
+   */
+  /**
+   * Fetch and parse RSS/Atom feed
+   */
+  private async fetchRssFeed(
+    url: string,
+    job: Job<FetchContentJobData>,
+  ): Promise<ContentFetchResult> {
+    this.logger.log(`Fetching RSS feed: ${url}`)
+    await job.updateProgress(30)
+
+    try {
+      // Parse RSS feed
+      const feed = await this.rssFeedService.parseFeed(url)
+      await job.updateProgress(50)
+
+      // Generate HTML content showing feed metadata and items
+      const feedHtml = this.generateFeedHtml(feed)
+      await job.updateProgress(60)
+
+      // Calculate word count from all item descriptions
+      const wordCount = this.calculateWordCount(
+        feed.items.map((item) => item.description || '').join(' '),
+      )
+
+      this.logger.log(
+        `Successfully parsed RSS feed "${feed.title}" with ${feed.items.length} items`,
+      )
+
+      return {
+        success: true,
+        title: feed.title,
+        content: feedHtml,
+        description: feed.description,
+        siteName: feed.title,
+        thumbnail: feed.image?.url,
+        siteIcon: feed.image?.url,
+        wordCount,
+        contentType: ContentType.RSS_FEED,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to parse RSS feed ${url}:`, error)
+      return {
+        success: false,
+        error: `RSS feed parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }
+    }
+  }
+
+  /**
+   * Generate HTML representation of RSS feed
+   */
+  private generateFeedHtml(feed: any): string {
+    const items = feed.items
+      .slice(0, 50) // Limit to 50 most recent items
+      .map(
+        (item: any) => `
+      <article style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0 0 0.5rem 0;">
+          <a href="${this.escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">
+            ${this.escapeHtml(item.title)}
+          </a>
+        </h2>
+        ${item.author ? `<p style="color: #6b7280; margin: 0.25rem 0;">By ${this.escapeHtml(item.author)}</p>` : ''}
+        ${item.publishedAt ? `<p style="color: #9ca3af; font-size: 0.875rem; margin: 0.25rem 0;">${new Date(item.publishedAt).toLocaleDateString()}</p>` : ''}
+        ${item.description ? `<p style="margin: 0.75rem 0 0 0;">${this.escapeHtml(item.description)}</p>` : ''}
+      </article>
+    `,
+      )
+      .join('\n')
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>${this.escapeHtml(feed.title)}</title>
+        </head>
+        <body style="font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem;">
+          <header style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
+            <h1 style="margin: 0 0 0.5rem 0;">${this.escapeHtml(feed.title)}</h1>
+            ${feed.description ? `<p style="color: #6b7280; margin: 0.5rem 0;">${this.escapeHtml(feed.description)}</p>` : ''}
+            <p style="color: #9ca3af; font-size: 0.875rem; margin: 0.5rem 0;">
+              ${feed.items.length} ${feed.items.length === 1 ? 'item' : 'items'}
+              ${feed.lastBuildDate ? ` • Last updated: ${new Date(feed.lastBuildDate).toLocaleString()}` : ''}
+            </p>
+            ${feed.link ? `<p style="margin: 0.5rem 0;"><a href="${this.escapeHtml(feed.link)}" target="_blank" rel="noopener noreferrer">Visit website →</a></p>` : ''}
+          </header>
+          <main>
+            ${items}
+          </main>
+        </body>
+      </html>
+    `.trim()
+  }
+
+  /**
+   * Escape HTML special characters to prevent XSS
+   */
+  private escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }
+    return text.replace(/[&<>"']/g, (char) => map[char])
+  }
+
+  /**
+   * Fetch video transcript content
+   */
+  private async fetchVideoTranscript(
+    url: string,
+    job: Job<FetchContentJobData>,
+    metadata?: Record<string, any>,
+  ): Promise<ContentFetchResult> {
+    this.logger.log(`Fetching video transcript: ${url}`)
+    await job.updateProgress(30)
+
+    try {
+      // Currently only YouTube is supported
+      if (metadata?.platform !== 'youtube') {
+        return {
+          success: false,
+          error: `Unsupported video platform: ${metadata?.platform || 'unknown'}. Only YouTube is currently supported.`,
+        }
+      }
+
+      // Extract video data
+      const video = await this.videoExtractor.extractYoutubeVideo(url)
+      await job.updateProgress(50)
+
+      // Format transcript as HTML
+      const transcriptHtml = this.videoExtractor.formatTranscriptHtml(
+        video.transcript,
+        video.title,
+        true, // Include timestamps
+      )
+      await job.updateProgress(60)
+
+      // Calculate word count from transcript
+      const transcriptText = video.transcript
+        .map((segment) => segment.text)
+        .join(' ')
+      const wordCount = this.calculateWordCount(transcriptText)
+
+      this.logger.log(
+        `Successfully extracted video "${video.title}" (${video.transcript.length} transcript segments)`,
+      )
+
+      return {
+        success: true,
+        title: video.title,
+        content: transcriptHtml,
+        author: video.author,
+        description: video.description,
+        thumbnail: video.thumbnailUrl,
+        publishedDate: video.publishedAt,
+        wordCount,
+        contentType: ContentType.VIDEO,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to extract video transcript ${url}:`, error)
+      return {
+        success: false,
+        error: `Video transcript extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }
+    }
+  }
+
+  /**
+   * Fetch Twitter thread content
+   */
+  private async fetchTwitterThread(
+    url: string,
+    job: Job<FetchContentJobData>,
+    metadata?: Record<string, any>,
+  ): Promise<ContentFetchResult> {
+    this.logger.log(`Fetching Twitter thread: ${url}`)
+    await job.updateProgress(30)
+
+    try {
+      // Extract thread
+      const thread = await this.twitterExtractor.extractThread(url)
+      await job.updateProgress(50)
+
+      // Format thread as HTML
+      const threadHtml = this.twitterExtractor.formatThreadHtml(thread)
+      await job.updateProgress(60)
+
+      // Calculate word count from all tweets
+      const allText = thread.tweets.map((tweet) => tweet.text).join(' ')
+      const wordCount = this.calculateWordCount(allText)
+
+      this.logger.log(
+        `Successfully extracted Twitter thread by @${thread.author.username} (${thread.tweets.length} tweets)`,
+      )
+
+      return {
+        success: true,
+        title: `Tweet by @${thread.author.username}`,
+        content: threadHtml,
+        author: `@${thread.author.username} (${thread.author.name})`,
+        thumbnail: thread.author.profileImageUrl,
+        publishedDate: thread.mainTweet.createdAt,
+        wordCount,
+        contentType: ContentType.TWITTER_THREAD,
+      }
+    } catch (error) {
+      this.logger.error(`Failed to extract Twitter thread ${url}:`, error)
+      return {
+        success: false,
+        error: `Twitter thread extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}. Note: Full thread unrolling requires Twitter API access which may be limited.`,
+      }
+    }
+  }
+
+  /**
+   * Fetch web article content using two-phase extraction:
    * 1. Open Graph metadata (fast preview)
    * 2. Mozilla Readability (full content)
    */
-  private async fetchContent(
+  private async fetchWebArticle(
     url: string,
     job: Job<FetchContentJobData>,
   ): Promise<ContentFetchResult> {

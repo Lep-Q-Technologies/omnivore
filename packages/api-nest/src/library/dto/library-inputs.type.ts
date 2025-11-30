@@ -1,24 +1,8 @@
-import {
-  InputType,
-  Field,
-  Int,
-  Float,
-  ObjectType,
-  registerEnumType,
-} from '@nestjs/graphql'
-import {
-  IsNumber,
-  Min,
-  Max,
-  IsInt,
-  IsString,
-  IsIn,
-  IsOptional,
-  IsEnum,
-  IsUrl,
-} from 'class-validator'
+import { Field, InputType, ObjectType, registerEnumType } from '@nestjs/graphql'
+import { IsEnum, IsIn, IsOptional, IsString, IsUrl } from 'class-validator'
+
+import { ALL_FOLDERS, FOLDERS } from '../../constants/folders.constants'
 import { LibraryItemState } from '../entities/library-item.entity'
-import { FOLDERS, ALL_FOLDERS } from '../../constants/folders.constants'
 
 /**
  * Sort field options for library items
@@ -136,6 +120,14 @@ export class LibrarySearchInput {
   })
   @IsOptional()
   labels?: string[]
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Filter by RSS feed subscription ID',
+  })
+  @IsOptional()
+  @IsString()
+  subscriptionId?: string
 }
 
 /**

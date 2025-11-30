@@ -5,7 +5,7 @@ import request from 'supertest'
 import { Repository } from 'typeorm'
 import { createE2EAppWithModule } from './helpers/create-e2e-app'
 import {
-  ContentReaderType,
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
 } from '../src/library/entities/library-item.entity'
@@ -194,9 +194,7 @@ describe('Library GraphQL (e2e)', () => {
       originalUrl: 'https://example.com/first',
       savedAt: new Date(Date.now() - 2000),
       state: LibraryItemState.SUCCEEDED,
-      contentReader: ContentReaderType.WEB,
-      folder: FOLDERS.INBOX,
-      itemType: 'ARTICLE',
+      contentType: ContentType.ARTICLE,
       labelNames: ['news'],
     })
 
@@ -208,10 +206,8 @@ describe('Library GraphQL (e2e)', () => {
       slug: 'second-article',
       originalUrl: 'https://example.com/second',
       savedAt: new Date(),
-      state: LibraryItemState.SUCCEEDED,
-      contentReader: ContentReaderType.WEB,
-      folder: FOLDERS.ARCHIVE,
-      itemType: 'ARTICLE',
+      state: LibraryItemState.ARCHIVED, // This will compute folder as 'archive'
+      contentType: ContentType.ARTICLE,
       labelNames: ['tech'],
     })
 
@@ -224,8 +220,8 @@ describe('Library GraphQL (e2e)', () => {
     expect(firstPage.body.data.libraryItems.items[0]).toMatchObject({
       title: 'Second article',
       slug: 'second-article',
-      folder: FOLDERS.ARCHIVE,
-      state: 'SUCCEEDED',
+      folder: 'archive', // computed from state ARCHIVED
+      state: 'ARCHIVED', // changed from SUCCEEDED
     })
 
     const nextCursor = firstPage.body.data.libraryItems.nextCursor
@@ -241,7 +237,7 @@ describe('Library GraphQL (e2e)', () => {
     expect(secondPage.body.data.libraryItems.items[0]).toMatchObject({
       title: 'First article',
       slug: 'first-article',
-      folder: FOLDERS.INBOX,
+      folder: 'inbox', // computed from state SUCCEEDED
       state: 'SUCCEEDED',
     })
     expect(secondPage.body.data.libraryItems.nextCursor).toBeNull()
@@ -278,9 +274,7 @@ describe('Library GraphQL (e2e)', () => {
         originalUrl: `https://example.com/mutation-test-${timestamp}`, // Make URL unique
         savedAt: new Date(),
         state: LibraryItemState.SUCCEEDED,
-        contentReader: ContentReaderType.WEB,
-        folder: FOLDERS.INBOX,
-        itemType: 'ARTICLE',
+        contentType: ContentType.ARTICLE,
       })
 
       const saved = await libraryRepository.save(testItem)
@@ -298,13 +292,13 @@ describe('Library GraphQL (e2e)', () => {
         expect(response.body.data.archiveLibraryItem).toMatchObject({
           id: testItemId,
           state: 'ARCHIVED',
-          folder: FOLDERS.ARCHIVE,
+          folder: 'archive', // folder is computed from state
         })
 
         // Verify in database
         const item = await libraryRepository.findOneBy({ id: testItemId })
         expect(item?.state).toBe(LibraryItemState.ARCHIVED)
-        expect(item?.folder).toBe(FOLDERS.ARCHIVE)
+        expect(item?.folder).toBe('archive') // folder is computed getter
       })
 
       it('unarchives a library item', async () => {
@@ -324,13 +318,13 @@ describe('Library GraphQL (e2e)', () => {
         expect(response.body.data.archiveLibraryItem).toMatchObject({
           id: testItemId,
           state: 'SUCCEEDED',
-          folder: FOLDERS.INBOX,
+          folder: 'inbox', // computed from state
         })
 
         // Verify in database
         const item = await libraryRepository.findOneBy({ id: testItemId })
         expect(item?.state).toBe(LibraryItemState.SUCCEEDED)
-        expect(item?.folder).toBe(FOLDERS.INBOX)
+        expect(item?.folder).toBe('inbox') // computed getter
       })
 
       it('returns error for non-existent item', async () => {
@@ -359,15 +353,14 @@ describe('Library GraphQL (e2e)', () => {
 
         // Verify item is in trash
         const item = await libraryRepository.findOneBy({ id: testItemId })
-        expect(item?.folder).toBe(FOLDERS.TRASH)
+        expect(item?.folder).toBe('trash') // computed getter
         expect(item?.state).toBe(LibraryItemState.DELETED)
       })
 
       it('permanently deletes item already in trash', async () => {
         // First move to trash
         await libraryRepository.update(testItemId, {
-          folder: FOLDERS.TRASH,
-          state: LibraryItemState.DELETED,
+          state: LibraryItemState.DELETED, // folder computed from state
         })
 
         // Then delete permanently
@@ -439,7 +432,6 @@ describe('Library GraphQL (e2e)', () => {
       it('moves item back to inbox', async () => {
         // First move to archive
         await libraryRepository.update(testItemId, {
-          folder: FOLDERS.ARCHIVE,
           state: LibraryItemState.ARCHIVED,
         })
 
@@ -503,9 +495,7 @@ describe('Library GraphQL (e2e)', () => {
           description: 'Learn how to build scalable applications',
           savedAt: new Date(Date.now() - 5000),
           state: LibraryItemState.SUCCEEDED,
-          contentReader: ContentReaderType.WEB,
-          folder: FOLDERS.INBOX,
-          itemType: 'ARTICLE',
+          contentType: ContentType.ARTICLE,
         },
         {
           id: randomUUID(),
@@ -518,9 +508,7 @@ describe('Library GraphQL (e2e)', () => {
           description: 'Modern GraphQL API design patterns',
           savedAt: new Date(Date.now() - 4000),
           state: LibraryItemState.SUCCEEDED,
-          contentReader: ContentReaderType.WEB,
-          folder: FOLDERS.INBOX,
-          itemType: 'ARTICLE',
+          contentType: ContentType.ARTICLE,
         },
         {
           id: randomUUID(),
@@ -533,9 +521,7 @@ describe('Library GraphQL (e2e)', () => {
           description: 'Optimize your database queries',
           savedAt: new Date(Date.now() - 3000),
           state: LibraryItemState.ARCHIVED,
-          contentReader: ContentReaderType.WEB,
-          folder: FOLDERS.ARCHIVE,
-          itemType: 'ARTICLE',
+          contentType: ContentType.ARTICLE,
         },
         {
           id: randomUUID(),
@@ -548,9 +534,7 @@ describe('Library GraphQL (e2e)', () => {
           description: 'Deep dive into TypeScript type system',
           savedAt: new Date(Date.now() - 2000),
           state: LibraryItemState.SUCCEEDED,
-          contentReader: ContentReaderType.WEB,
-          folder: FOLDERS.INBOX,
-          itemType: 'ARTICLE',
+          contentType: ContentType.ARTICLE,
         },
       ]
 
@@ -741,9 +725,7 @@ describe('Library GraphQL (e2e)', () => {
         originalUrl: `https://example.com/bulk-${timestamp}-${i + 1}`, // Make URL unique
         savedAt: new Date(Date.now() - (i + 1) * 1000),
         state: LibraryItemState.SUCCEEDED,
-        contentReader: ContentReaderType.WEB,
-        folder: FOLDERS.INBOX,
-        itemType: 'ARTICLE',
+        contentType: ContentType.ARTICLE,
       }))
 
       const savedItems = await libraryRepository.save(bulkTestItems)
@@ -779,7 +761,7 @@ describe('Library GraphQL (e2e)', () => {
         // First archive some items
         await libraryRepository.update(
           { id: bulkTestItemIds[0] },
-          { state: LibraryItemState.ARCHIVED, folder: 'archive' },
+          { state: LibraryItemState.ARCHIVED },
         )
 
         const response = await executeQuery(BULK_ARCHIVE_ITEMS_MUTATION, {
@@ -982,9 +964,7 @@ describe('Library GraphQL (e2e)', () => {
           originalUrl: `https://example.com/large-${timestamp}-${i + 1}`, // Make URL unique
           savedAt: new Date(),
           state: LibraryItemState.SUCCEEDED,
-          contentReader: ContentReaderType.WEB,
-          folder: FOLDERS.INBOX,
-          itemType: 'ARTICLE',
+          contentType: ContentType.ARTICLE,
         }))
 
         const savedItems = await libraryRepository.save(largeDataset)

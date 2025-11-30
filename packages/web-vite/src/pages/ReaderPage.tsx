@@ -968,6 +968,126 @@ const ReaderPage: React.FC = () => {
 
   // sanitizedContent and userLabels already computed above (before early returns)
 
+  // Render content based on contentType - ARC-014
+  const renderContent = () => {
+    if (!item) return null
+
+    switch (item.contentType) {
+      case 'ARTICLE':
+        // Default HTML article rendering
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div
+            ref={contentRef}
+            className="reader-content"
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+          />
+        )
+
+      case 'PDF':
+        // PDF viewer - render extracted text as HTML for now
+        // TODO Phase 2C: Implement proper PDF viewer component
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div ref={contentRef} className="reader-content reader-content-pdf">
+            <div className="pdf-notice">
+              <p>
+                <strong>PDF Document</strong> - Extracted text content shown
+                below
+              </p>
+              <a
+                href={item.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="view-original-pdf-button"
+              >
+                View Original PDF →
+              </a>
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+          </div>
+        )
+
+      case 'VIDEO':
+        // Video content - render transcript with embedded player
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div ref={contentRef} className="reader-content reader-content-video">
+            <div className="video-notice">
+              <p>
+                <strong>Video Transcript</strong> - YouTube video transcript
+                with timestamps
+              </p>
+              <a
+                href={item.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="view-original-video-button"
+              >
+                Watch on YouTube →
+              </a>
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+          </div>
+        )
+
+      case 'RSS_FEED':
+        // RSS feed - render feed items
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div ref={contentRef} className="reader-content reader-content-rss">
+            <div className="rss-notice">
+              <p>
+                <strong>RSS Feed</strong> - Recent articles from this feed
+              </p>
+              <a
+                href={item.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="view-original-feed-button"
+              >
+                View Feed →
+              </a>
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+          </div>
+        )
+
+      case 'TWITTER':
+        // Twitter thread - render tweet(s)
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div ref={contentRef} className="reader-content reader-content-twitter">
+            <div className="twitter-notice">
+              <p>
+                <strong>Twitter/X Thread</strong> - Saved tweet content
+              </p>
+              <a
+                href={item.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="view-original-tweet-button"
+              >
+                View on Twitter/X →
+              </a>
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+          </div>
+        )
+
+      default:
+        // Unknown or fallback - try rendering as HTML
+        return (
+          /* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */
+          <div
+            ref={contentRef}
+            className="reader-content"
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+          />
+        )
+    }
+  }
+
   return (
     <div className="reader-page">
       <div className="reader-header">
@@ -1123,12 +1243,8 @@ const ReaderPage: React.FC = () => {
         </div>
       </div>
 
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above */}
-      <div
-        ref={contentRef}
-        className="reader-content"
-        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-      />
+      {/* Render content based on type */}
+      {renderContent()}
 
       {/* Create highlight popup */}
       {showCreatePopup && selectedText && (

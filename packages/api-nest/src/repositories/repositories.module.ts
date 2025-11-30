@@ -1,16 +1,19 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { LibraryItemEntity } from '../library/entities/library-item.entity'
-import { LibraryItemRepository } from './library-item.repository'
+
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
-import { HighlightRepository } from './highlight.repository'
-import { Label } from '../label/entities/label.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
-import { LabelRepository } from './label.repository'
-import { EntityLabelRepository } from './entity-label.repository'
+import { Label } from '../label/entities/label.entity'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { RssFeedEntity } from '../library/entities/rss-feed.entity'
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
-import { ReadingProgressRepository } from './reading-progress.repository'
+import { EntityLabelRepository } from './entity-label.repository'
+import { HighlightRepository } from './highlight.repository'
 import { REPOSITORY_TOKENS } from './injection-tokens'
+import { LabelRepository } from './label.repository'
+import { LibraryItemRepository } from './library-item.repository'
+import { ReadingProgressRepository } from './reading-progress.repository'
+import { RssFeedRepository } from './rss-feed.repository'
 
 /**
  * RepositoriesModule
@@ -24,6 +27,7 @@ import { REPOSITORY_TOKENS } from './injection-tokens'
     // Register all entities that repositories need
     TypeOrmModule.forFeature([
       LibraryItemEntity,
+      RssFeedEntity,
       HighlightEntity,
       Label,
       EntityLabel,
@@ -35,6 +39,7 @@ import { REPOSITORY_TOKENS } from './injection-tokens'
       provide: REPOSITORY_TOKENS.ILibraryItemRepository,
       useClass: LibraryItemRepository,
     },
+    RssFeedRepository,
     {
       provide: REPOSITORY_TOKENS.IHighlightRepository,
       useClass: HighlightRepository,
@@ -51,6 +56,10 @@ import { REPOSITORY_TOKENS } from './injection-tokens'
       provide: REPOSITORY_TOKENS.IReadingProgressRepository,
       useClass: ReadingProgressRepository,
     },
+    {
+      provide: REPOSITORY_TOKENS.IRssFeedRepository,
+      useClass: RssFeedRepository,
+    },
   ],
   exports: [
     REPOSITORY_TOKENS.ILibraryItemRepository,
@@ -58,6 +67,7 @@ import { REPOSITORY_TOKENS } from './injection-tokens'
     REPOSITORY_TOKENS.ILabelRepository,
     REPOSITORY_TOKENS.IEntityLabelRepository,
     REPOSITORY_TOKENS.IReadingProgressRepository,
+    REPOSITORY_TOKENS.IRssFeedRepository,
     TypeOrmModule, // Export TypeOrmModule to make raw repositories available in tests
   ],
 })

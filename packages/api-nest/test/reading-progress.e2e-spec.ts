@@ -5,12 +5,11 @@ import request from 'supertest'
 import { Repository } from 'typeorm'
 import { createE2EAppWithModule } from './helpers/create-e2e-app'
 import {
-  ContentReaderType,
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
 } from '../src/library/entities/library-item.entity'
 import { ReadingProgressEntity } from '../src/reading-progress/entities/reading-progress.entity'
-import { FOLDERS } from '../src/constants/folders.constants'
 
 const GET_READING_PROGRESS_QUERY = `
   query GetReadingProgress($libraryItemId: String!, $contentVersion: String) {
@@ -110,9 +109,7 @@ describe('ReadingProgress GraphQL (e2e)', () => {
         description: 'Test description',
         savedAt: new Date(),
         state: LibraryItemState.SUCCEEDED,
-        contentReader: ContentReaderType.WEB,
-        folder: FOLDERS.INBOX,
-        itemType: 'ARTICLE',
+        contentType: ContentType.ARTICLE,
         contentHash: testContentVersion,
       })
 

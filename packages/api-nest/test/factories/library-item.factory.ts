@@ -3,7 +3,7 @@ import { Repository } from 'typeorm'
 import {
   LibraryItemEntity,
   LibraryItemState,
-  ContentReaderType,
+  ContentType,
 } from '../../src/library/entities/library-item.entity'
 import { BaseFactory, getTestRepository } from './base.factory'
 import { FOLDERS } from '../../src/constants/folders.constants'
@@ -37,9 +37,9 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
       originalUrl: faker.internet.url(),
       savedAt: new Date(),
       state: LibraryItemState.SUCCEEDED,
-      folder: FOLDERS.INBOX,
-      contentReader: ContentReaderType.WEB,
-      itemType: 'ARTICLE',
+      // folder is computed from state (removed)
+      // contentReader is computed from contentType (removed)
+      contentType: ContentType.ARTICLE,
       createdAt: new Date(),
       updatedAt: new Date(),
       // ARC-009: Add metadata fields for frontend library feature parity
@@ -76,8 +76,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
   ): Promise<LibraryItemEntity> {
     return this.create({
       userId,
-      folder: FOLDERS.ARCHIVE,
-      state: LibraryItemState.ARCHIVED,
+      state: LibraryItemState.ARCHIVED, // folder is computed from state
       ...overrides,
     })
   }
@@ -91,8 +90,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
   ): Promise<LibraryItemEntity> {
     return this.create({
       userId,
-      folder: FOLDERS.TRASH,
-      state: LibraryItemState.DELETED,
+      state: LibraryItemState.DELETED, // folder is computed from state
       ...overrides,
     })
   }
@@ -154,8 +152,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
   ): Promise<LibraryItemEntity> {
     return this.create({
       userId,
-      contentReader: ContentReaderType.PDF,
-      itemType: 'FILE',
+      contentType: ContentType.PDF, // contentReader is computed from contentType
       ...overrides,
     })
   }
@@ -169,8 +166,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
   ): LibraryItemEntity {
     return this.build({
       userId,
-      folder: FOLDERS.ARCHIVE,
-      state: LibraryItemState.ARCHIVED,
+      state: LibraryItemState.ARCHIVED, // folder is computed from state
       ...overrides,
     })
   }

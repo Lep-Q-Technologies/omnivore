@@ -213,6 +213,14 @@ export type LibraryItemState =
   | 'ARCHIVED'
   | 'CONTENT_NOT_FETCHED'
 
+export type ContentType =
+  | 'ARTICLE'
+  | 'PDF'
+  | 'VIDEO'
+  | 'RSS_FEED'
+  | 'TWITTER'
+  | 'UNKNOWN'
+
 export interface LibraryItem {
   id: string
   title: string
@@ -235,7 +243,9 @@ export interface LibraryItem {
   wordCount?: number | null
   siteName?: string | null
   siteIcon?: string | null
-  itemType: string
+  // ARC-014: Content type detection for appropriate rendering
+  contentType: ContentType
+  itemType: string // Legacy field, use contentType instead
   // ARC-010: Notebook feature
   note?: string | null
   noteUpdatedAt?: string | null

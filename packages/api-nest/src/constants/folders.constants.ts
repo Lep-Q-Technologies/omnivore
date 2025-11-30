@@ -7,6 +7,7 @@ export const FOLDERS = {
   INBOX: 'inbox',
   ARCHIVE: 'archive',
   TRASH: 'trash',
+  FOLLOWING: 'following', // Virtual folder for RSS feed items
   ALL: 'all', // Virtual folder for viewing all items
 } as const
 
@@ -25,6 +26,7 @@ export const ALL_FOLDERS = [
   FOLDERS.INBOX,
   FOLDERS.ARCHIVE,
   FOLDERS.TRASH,
+  FOLDERS.FOLLOWING,
   FOLDERS.ALL,
 ] as const
 

@@ -20,6 +20,7 @@ const LoginPage = React.lazy(() => import('../pages/LoginPage'))
 const EmailLoginPage = React.lazy(() => import('../pages/EmailLoginPage'))
 const RegisterPage = React.lazy(() => import('../pages/RegisterPage'))
 const LibraryPage = React.lazy(() => import('../pages/LibraryPage'))
+const HighlightsPage = React.lazy(() => import('../pages/HighlightsPage'))
 const LabelsPage = React.lazy(() => import('../pages/LabelsPage'))
 const ReaderPage = React.lazy(() => import('../pages/ReaderPage'))
 const SettingsPage = React.lazy(() => import('../pages/SettingsPage'))
@@ -175,6 +176,7 @@ const AppRouter: React.FC = () => {
             >
               <Route path="home" element={<LibraryPage />} />
               <Route path="library" element={<Navigate to="/home" replace />} />
+              <Route path="highlights" element={<HighlightsPage />} />
               <Route path="labels" element={<LabelsPage />} />
               <Route path="reader/:id" element={<ReaderPage />} />
               <Route path="settings" element={<SettingsPage />} />

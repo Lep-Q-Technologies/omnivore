@@ -50,6 +50,35 @@ export const HIGHLIGHT_FRAGMENT = `
   }
 `
 
+export const HIGHLIGHT_WITH_ARTICLE_FRAGMENT = `
+  fragment HighlightWithArticleFields on Highlight {
+    id
+    shortId
+    libraryItemId
+    quote
+    prefix
+    suffix
+    patch
+    annotation
+    createdAt
+    updatedAt
+    sharedAt
+    highlightPositionPercent
+    color
+    libraryItem {
+      id
+      title
+      slug
+      author
+      siteName
+      siteIcon
+      originalUrl
+      savedAt
+      contentType
+    }
+  }
+`
+
 export const LIBRARY_ITEM_BASIC_FRAGMENT = `
   fragment LibraryItemBasicFields on LibraryItem {
     id
@@ -70,6 +99,7 @@ export const LIBRARY_ITEM_BASIC_FRAGMENT = `
     wordCount
     siteName
     siteIcon
+    contentType
     itemType
     note
     noteUpdatedAt
@@ -98,6 +128,7 @@ export const LIBRARY_ITEM_FULL_FRAGMENT = `
     wordCount
     siteName
     siteIcon
+    contentType
     itemType
     note
     noteUpdatedAt
@@ -114,6 +145,25 @@ export const READING_PROGRESS_FRAGMENT = `
     contentVersion
     lastSeenSentinel
     highestSeenSentinel
+    createdAt
+    updatedAt
+  }
+`
+
+export const RSS_FEED_FRAGMENT = `
+  fragment RssFeedFields on RssFeed {
+    id
+    feedUrl
+    title
+    description
+    siteUrl
+    siteIcon
+    lastFetchedAt
+    itemCount
+    unreadCount
+    active
+    lastError
+    failureCount
     createdAt
     updatedAt
   }
