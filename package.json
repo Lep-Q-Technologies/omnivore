@@ -44,5 +44,18 @@
     "volta": {
         "node": "22.11.0",
         "yarn": "1.22.19"
+    },
+    "lint-staged": {
+        "packages/api-nest/**/*.{ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "packages/web-vite/**/*.{ts,tsx,js,jsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,md,yml,yaml}": [
+            "prettier --write"
+        ]
     }
 }
