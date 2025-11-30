@@ -13,11 +13,11 @@ import { RssFeedService } from '../../queue/services/rss-feed.service'
 import { QUEUE_NAMES, JOB_TYPES } from '../../queue/queue.constants'
 import { RssFeedEntity } from '../entities/rss-feed.entity'
 import { ContentType } from '../entities/library-item.entity'
-import { REPOSITORY_TOKENS } from 'src/repositories/injection-tokens'
+import { REPOSITORY_TOKENS } from '../../repositories/injection-tokens'
 import {
   ILibraryItemRepository,
   IRssFeedRepository,
-} from 'src/repositories/interfaces'
+} from '../../repositories/interfaces'
 
 /**
  * Result of importing feed items
@@ -111,19 +111,32 @@ export class RssFeedSubscriptionService {
    *
    * @param feedId - Feed ID
    * @param userId - User ID
+   * @param deleteItems - Whether to delete library items from this feed (default: true)
    */
-  async unsubscribe(feedId: string, userId: string): Promise<void> {
-    this.logger.log(`User ${userId} unsubscribing from feed: ${feedId}`)
+  async unsubscribe(
+    feedId: string,
+    userId: string,
+    deleteItems = true,
+  ): Promise<void> {
+    this.logger.log(
+      `User ${userId} unsubscribing from feed: ${feedId} (deleteItems: ${deleteItems})`,
+    )
 
     const feed = await this.rssFeedRepository.findById(feedId, userId)
     if (!feed) {
       throw new NotFoundException(`Feed ${feedId} not found`)
     }
 
-    // Deactivate subscription (don't delete - keep history)
-    await this.rssFeedRepository.deactivate(feedId)
+    // Delete library items from this feed if requested
+    if (deleteItems) {
+      this.logger.log(`Deleting library items for feed: ${feedId}`)
+      await this.libraryItemRepository.deleteBySubscription(feedId, userId)
+    }
 
-    this.logger.log(`Deactivated feed subscription: ${feedId}`)
+    // Fully delete the subscription
+    await this.rssFeedRepository.delete(feedId)
+
+    this.logger.log(`Deleted feed subscription: ${feedId}`)
   }
 
   /**
@@ -155,6 +168,49 @@ export class RssFeedSubscriptionService {
     activeOnly = true,
   ): Promise<RssFeedEntity[]> {
     return this.rssFeedRepository.findByUser(userId, activeOnly)
+  }
+
+  /**
+   * Get unread count for a feed
+   *
+   * @param feedId - Feed ID
+   * @param userId - User ID
+   * @returns Number of unread items
+   */
+  async getUnreadCount(feedId: string, userId: string): Promise<number> {
+    return this.rssFeedRepository.getUnreadCount(feedId, userId)
+  }
+
+  /**
+   * Update feed settings
+   *
+   * @param feedId - Feed ID
+   * @param userId - User ID
+   * @param settings - Settings to update
+   */
+  async updateSettings(
+    feedId: string,
+    userId: string,
+    settings: {
+      title?: string
+      autoAddToLibrary?: boolean
+      folder?: string
+    },
+  ): Promise<RssFeedEntity> {
+    const feed = await this.rssFeedRepository.findById(feedId, userId)
+    if (!feed) {
+      throw new NotFoundException(`Feed ${feedId} not found`)
+    }
+
+    await this.rssFeedRepository.updateSettings(feedId, userId, settings)
+
+    // Return updated feed
+    const updatedFeed = await this.rssFeedRepository.findById(feedId, userId)
+    if (!updatedFeed) {
+      throw new NotFoundException(`Feed ${feedId} not found after update`)
+    }
+
+    return updatedFeed
   }
 
   /**
@@ -198,29 +254,36 @@ export class RssFeedSubscriptionService {
             continue
           }
 
-          // Create library item
-          const libraryItem = await this.libraryItemRepository.create({
+          // Create library item linked to subscription
+          const libraryItem = this.libraryItemRepository.create({
             userId,
             originalUrl: item.link,
-            title: item.title,
+            slug: this.generateSlug(item.link),
+            title: item.title ||'Untitled',
             author: item.author,
             description: item.description,
             publishedAt: item.publishedAt,
+            savedAt: new Date(),
+            state: 'CONTENT_NOT_FETCHED' as any, // Will be updated after fetch
             contentType: ContentType.ARTICLE, // Feed items are articles
+            subscriptionId: feedId, // Link to RSS feed subscription
           })
+
+          // Save to database
+          const savedItem = await this.libraryItemRepository.save(libraryItem)
 
           // Queue content fetching for the item
           await this.contentQueue.add(
             JOB_TYPES.FETCH_CONTENT,
             {
-              libraryItemId: libraryItem.id,
+              libraryItemId: savedItem.id,
               url: item.link,
               userId,
               source: 'rss',
               timestamp: new Date(),
             },
             {
-              jobId: `fetch-content-${libraryItem.id}`,
+              jobId: `fetch-content-${savedItem.id}`,
               removeOnComplete: true,
               removeOnFail: false,
             },
@@ -254,5 +317,38 @@ export class RssFeedSubscriptionService {
     }
 
     return result
+  }
+
+  /**
+   * Generate a unique, URL-safe slug from a URL
+   * @param url - The URL to generate a slug from
+   * @returns A unique, URL-safe slug
+   * @private
+   */
+  private generateSlug(url: string): string {
+    try {
+      const urlObj = new URL(url)
+      const pathname = urlObj.pathname
+
+      // Extract meaningful part from pathname
+      let slug = pathname
+        .split('/')
+        .filter((part) => part.length > 0)
+        .join('-')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .substring(0, 100)
+
+      if (!slug) {
+        slug = urlObj.hostname.replace(/\./g, '-')
+      }
+
+      // Add timestamp to ensure uniqueness
+      const timestamp = Date.now()
+      return `${slug}-${timestamp}`
+    } catch {
+      return `url-${Date.now()}`
+    }
   }
 }

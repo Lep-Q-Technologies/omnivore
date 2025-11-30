@@ -123,6 +123,10 @@
 .nav-icon {
   margin-right: 0.75rem;
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .nav-label {
@@ -212,10 +216,74 @@
 .shortcut-icon {
   margin-right: 0.75rem;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .shortcut-label {
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcut-icon-img {
+  margin-right: 0.75rem;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.feed-unread-count {
+  background: #ffd234;
+  color: #2a2a2a;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+
+/* Individual feed items - indent slightly */
+.feed-item-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.feed-item {
+  padding-left: 2rem;
+  flex: 1;
+}
+
+.feed-delete-btn {
+  position: absolute;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+  z-index: 10;
+}
+
+.feed-item-container:hover .feed-delete-btn {
+  opacity: 1;
+}
+
+.feed-delete-btn:hover {
+  color: #ff4d4f;
+}
+
+.feed-delete-btn:focus-visible {
+  outline: 2px solid var(--color-action-blue);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+  opacity: 1;
 }
 
 /* Filter shortcuts (nested items) */
