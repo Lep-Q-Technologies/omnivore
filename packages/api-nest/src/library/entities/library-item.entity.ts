@@ -37,7 +37,7 @@ export enum ContentType {
   PDF = 'PDF', // PDF documents
   RSS_FEED = 'RSS_FEED', // RSS/Atom feeds
   VIDEO = 'VIDEO', // YouTube, Vimeo, etc.
-  TWITTER_THREAD = 'TWITTER', // Twitter/X threads
+  TWITTER = 'TWITTER', // Twitter/X threads
   UNKNOWN = 'UNKNOWN', // Could not determine
 }
 

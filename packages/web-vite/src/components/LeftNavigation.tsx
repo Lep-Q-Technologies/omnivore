@@ -80,12 +80,6 @@ const LeftNavigation: React.FC = () => {
       path: '/labels',
       id: 'labels',
     },
-    {
-      icon: <FollowingIcon className="nav-icon" />,
-      label: 'Following',
-      path: '/home?filter=following',
-      id: 'following',
-    },
   ]
 
   const quickFilters: ShortcutItem[] = [
@@ -250,6 +244,7 @@ const LeftNavigation: React.FC = () => {
                 feeds.map((feed) => (
                   <div key={feed.id} className="feed-item-container">
                     <button
+                      type="button"
                       className="shortcut-item feed-item"
                       onClick={() => handleFeedClick(feed.id)}
                       title={feed.title || feed.feedUrl}

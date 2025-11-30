@@ -1,4 +1,12 @@
-import { Args, Mutation, Query, Resolver, ResolveField, Parent, Int } from '@nestjs/graphql'
+import {
+  Args,
+  Mutation,
+  Query,
+  Resolver,
+  ResolveField,
+  Parent,
+  Int,
+} from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
@@ -10,8 +18,18 @@ import {
   UpdateHighlightInput,
 } from './dto/highlight-inputs.type'
 import { DeleteResult } from '../library/dto/library-inputs.type'
-import { HighlightColor } from './entities/highlight.entity'
+import { HighlightColor, HighlightEntity } from './entities/highlight.entity'
 import { LibraryItem } from '../library/dto/library-item.type'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
+
+/**
+ * Highlight with optional eager-loaded library item relation
+ * Used for field resolver typing
+ */
+interface HighlightWithLibraryItem
+  extends Omit<HighlightEntity, 'libraryItem'> {
+  libraryItem?: LibraryItemEntity | null
+}
 
 @Resolver(() => Highlight)
 export class HighlightResolver {
@@ -53,7 +71,8 @@ export class HighlightResolver {
   }
 
   @Query(() => HighlightsConnection, {
-    description: 'Get all highlights for the current user across all library items',
+    description:
+      'Get all highlights for the current user across all library items',
   })
   @UseGuards(JwtAuthGuard)
   async userHighlights(
@@ -86,9 +105,21 @@ export class HighlightResolver {
   // ==================== FIELD RESOLVERS ====================
 
   @ResolveField(() => LibraryItem, { nullable: true })
-  async libraryItem(@Parent() highlight: any): Promise<LibraryItem | null> {
+  async libraryItem(
+    @Parent() highlight: HighlightWithLibraryItem,
+  ): Promise<LibraryItem | null> {
     // The libraryItem is already loaded via JOIN in the repository
-    return highlight.libraryItem ?? null
+    const item = highlight.libraryItem
+
+    // Validate required fields exist before returning
+    // If library item was deleted or has corrupt data, return null
+    if (!item || !item.title || !item.slug || !item.originalUrl) {
+      return null
+    }
+
+    // GraphQL field resolvers can return entities directly
+    // The GraphQL type class will handle computed properties (itemType, etc.)
+    return item as unknown as LibraryItem
   }
 
   // ==================== MUTATIONS ====================
@@ -149,7 +180,7 @@ function mapEntityToGraph(entity: any): any {
     id: entity.id,
     shortId: entity.shortId,
     libraryItemId: entity.libraryItemId,
-    libraryItem: entity.libraryItem,  // Pass through for field resolver
+    libraryItem: entity.libraryItem, // Pass through for field resolver
     quote: entity.quote ?? null,
     prefix: entity.prefix ?? null,
     suffix: entity.suffix ?? null,

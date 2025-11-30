@@ -37,6 +37,16 @@ export class RssFeedResolver {
     @CurrentUser() user: User,
   ): Promise<RssFeedResult> {
     try {
+      try {
+        new URL(feedUrl)
+      } catch {
+        return {
+          success: false,
+          message: 'Invalid feed URL format',
+          errors: ['The provided URL is not a valid URL'],
+        }
+      }
+
       const feed = await this.rssFeedSubscriptionService.subscribe(
         user.id,
         feedUrl,

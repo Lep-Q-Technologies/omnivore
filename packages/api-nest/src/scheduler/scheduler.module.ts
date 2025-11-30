@@ -1,9 +1,9 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
-import { RssFeedSubscriptionService } from '../library/services/rss-feed-subscription.service'
-import { RssFeedService } from '../queue/services/rss-feed.service'
 
+import { RssFeedSubscriptionService } from '../library/services/rss-feed-subscription.service'
 import { QueueModule } from '../queue/queue.module'
+import { RssFeedService } from '../queue/services/rss-feed.service'
 import { RepositoriesModule } from '../repositories/repositories.module'
 import { SchedulerService } from './scheduler.service'
 import { RssFeedRefreshService } from './services/rss-feed-refresh.service'

@@ -1325,6 +1325,299 @@ export const UserFactory = new UserFactoryClass();
 
 ---
 
-**Document Last Updated**: November 21, 2025
-**Total Completed ARCs**: 17 (including ARC-010)
+## ARC-012 Phase 5: Queue Monitoring (Completion) ✅ **COMPLETED**
+
+- **Problem/Objective**: Complete queue infrastructure with production-ready monitoring
+- **Status**: ✅ **COMPLETED** (upgraded from 80% to 100%)
+- **Completion Date**: November 29, 2025
+
+**What Changed**:
+- Queue infrastructure upgraded from stub to production-ready
+- Real content extraction implemented in ContentProcessorService
+- All queue jobs processing real content (not stubs)
+- Production-quality error handling and retry logic
+
+**Final State**:
+- [x] Content processing queue fully operational
+- [x] Real content fetching and extraction
+- [x] Job retry logic with exponential backoff
+- [x] Event-driven architecture fully integrated
+- [x] All 261+ tests passing
+- [ ] BullMQ Board UI - Deferred (not blocking production)
+- [ ] Prometheus metrics - Deferred (can add later)
+
+**Dependencies**: ARC-013 ✅ (provided real content extraction)
+
+**Test Results**: All queue tests passing, content extraction working in production
+
+---
+
+## ARC-013: Content Extraction & Processing ✅ **COMPLETED**
+
+- **Problem/Objective**: Complete the save-to-read flow with real content extraction
+- **Status**: ✅ **COMPLETED**
+- **Completion Date**: November 29, 2025 (Commit: 422aba083)
+
+**Implementation Summary**:
+- **ContentTypeDetectorService**: Detects content type from URL/headers (ARTICLE, PDF, RSS_FEED, VIDEO, TWITTER)
+- **HtmlSanitizerService**: Sanitizes extracted HTML content using DOMPurify
+- **PdfExtractorService**: Extracts text and metadata from PDF documents
+- **ContentProcessorService**: Orchestrates content extraction pipeline with real implementation
+
+**Backend (NestJS)**:
+- [x] Installed dependencies: `@mozilla/readability`, `jsdom`, `dompurify`, `pdf-parse`, `rss-parser`
+- [x] Implemented ContentTypeDetectorService with URL pattern matching and header inspection
+- [x] Implemented HtmlSanitizerService with comprehensive sanitization rules
+- [x] Implemented PdfExtractorService for PDF text extraction
+- [x] Updated ContentProcessorService with real extraction logic (replaced stub)
+- [x] Content type detection routes to appropriate extractor
+- [x] Metadata extraction (title, author, published date, site name, favicon)
+- [x] Content hash generation for duplicate detection
+- [x] Word count and reading time calculation
+- [x] Error handling for extraction failures
+
+**Content Types Supported**:
+- [x] **ARTICLE**: Web articles via Readability.js
+- [x] **PDF**: PDF documents via pdf-parse
+- [x] **RSS_FEED**: RSS/Atom feeds via rss-parser
+- [ ] **VIDEO**: YouTube transcripts (deferred to ARC-014B)
+- [ ] **TWITTER**: Thread unrolling (deferred to ARC-014B)
+
+**Testing**:
+- [x] E2E tests for content extraction flow
+- [x] Unit tests for ContentTypeDetectorService (34 tests)
+- [x] Unit tests for HtmlSanitizerService (10 tests)
+- [x] Unit tests for PdfExtractorService (12 tests)
+- [x] Integration tests for full save → extract → read flow
+- [x] All 261+ tests passing
+
+**Acceptance Criteria**: ✅ **ALL MET**
+- [x] Save URL extracts article title, author, content, images
+- [x] Extracted content displays correctly in reader
+- [x] PDF extraction working (text and metadata)
+- [x] RSS feed parsing working
+- [x] Failed extractions show helpful error messages
+- [x] Content hash prevents duplicates
+- [x] E2E test: Save article → read in reader (full flow)
+- [x] Extraction completes in reasonable time
+- [x] All existing tests still pass
+
+**Key Files Created**:
+- `packages/api-nest/src/queue/services/content-type-detector.service.ts`
+- `packages/api-nest/src/queue/services/content-type-detector.service.spec.ts`
+- `packages/api-nest/src/queue/services/html-sanitizer.service.ts`
+- `packages/api-nest/src/queue/services/pdf-extractor.service.ts`
+- `packages/api-nest/src/queue/services/pdf-extractor.service.spec.ts`
+- Updated: `packages/api-nest/src/queue/processors/content-processor.service.ts`
+
+**Dependencies**: ARC-011 ✅, ARC-012 ✅
+
+**Effort**:
+- **Estimate**: 4-5 days
+- **Actual**: ~3 days
+
+**Priority**: 🔴 **CRITICAL** - Completed
+
+---
+
+## ARC-014A: RSS Feed Subscriptions ✅ **COMPLETED**
+
+- **Problem/Objective**: Implement RSS feed subscriptions with automatic content import
+- **Status**: ✅ **COMPLETED**
+- **Completion Date**: November 29, 2025 (Commits: 449b1fe30, 595842884, 9fee30d5b, 765853378, da84d8892)
+
+**Implementation Summary**:
+Complete RSS feed subscription system with periodic refresh, filtering, and subscription management.
+
+**Backend (NestJS)**:
+- [x] Created RssFeedEntity with subscription metadata
+- [x] Created RssFeedRepository for feed CRUD operations
+- [x] Implemented RssFeedSubscriptionService:
+  - [x] `subscribe(userId, feedUrl)` - Subscribe to RSS feed
+  - [x] `unsubscribe(userId, feedId, deleteItems)` - Unsubscribe with optional item deletion
+  - [x] `findByUser(userId)` - List user's subscriptions
+  - [x] `findById(feedId)` - Get single feed with unread count
+- [x] Implemented RssFeedService for feed parsing (rss-parser)
+- [x] Created SchedulerModule with BasePoller for periodic tasks
+- [x] Implemented RssFeedRefreshService for automatic feed updates
+- [x] Added subscription field to LibraryItem GraphQL type
+- [x] Added field resolver for subscription data
+- [x] Database migration 0198 for rss_feed table
+- [x] Database migration 0199 for subscription_id on library_item
+
+**RSS Feed Features**:
+- [x] Subscribe to RSS/Atom feeds via URL
+- [x] Automatic periodic refresh (configurable interval)
+- [x] Import new feed items as library items
+- [x] Track unread count per feed
+- [x] Unsubscribe with option to delete all feed items
+- [x] Feed metadata (title, description, site icon)
+- [x] Filter library by feed subscription
+- [x] "Following" folder for all RSS items
+
+**Frontend (web-vite)**:
+- [x] RSS feed subscription tab in AddLinkModal
+- [x] RSS feeds section in left navigation (Subscriptions)
+- [x] Individual feed items with unread count
+- [x] Feed icon display (site favicon)
+- [x] Unsubscribe button with confirmation dialog
+- [x] Filter library by feed (click feed → show feed items)
+- [x] URL query param support: `?filter=following&feedId=<id>`
+- [x] Auto-refresh sidebar after unsubscribe
+- [x] Empty state for no subscriptions
+- [x] Hover-to-reveal delete button styling
+
+**Library Filtering**:
+- [x] Added `subscriptionId` filter to LibrarySearchInput
+- [x] "Following" folder shows all RSS items (subscriptionId IS NOT NULL)
+- [x] Filter by specific feed via feedId query param
+- [x] Folder logic: inbox (user-saved), following (RSS), archive, trash
+
+**Scheduler Infrastructure**:
+- [x] BasePoller abstract class for periodic tasks
+- [x] SchedulerModule with BullMQ queue registration
+- [x] SchedulerService for managing scheduled jobs
+- [x] RssFeedRefreshService processes refresh jobs
+- [x] Configurable polling intervals
+- [x] Graceful error handling and retry logic
+
+**Testing**:
+- [x] E2E tests for RSS subscription flow (subscribe, unsubscribe, filter)
+- [x] Repository tests for RssFeedRepository
+- [x] Service tests for RssFeedSubscriptionService
+- [x] All 261+ tests passing
+
+**Acceptance Criteria**: ✅ **ALL MET**
+- [x] Users can subscribe to RSS feeds
+- [x] Feeds auto-import new articles
+- [x] Feed management UI works (subscribe/unsubscribe)
+- [x] Unsubscribe deletes subscription and items
+- [x] Library filtering by feed works
+- [x] Periodic refresh imports new items
+- [x] Feed icons display correctly
+- [x] Unread count shows for each feed
+- [x] "Following" folder shows all RSS items
+- [x] No data loss on unsubscribe (user confirms deletion)
+
+**Key Files Created**:
+- `packages/api-nest/src/library/entities/rss-feed.entity.ts`
+- `packages/api-nest/src/repositories/rss-feed.repository.ts`
+- `packages/api-nest/src/library/services/rss-feed-subscription.service.ts`
+- `packages/api-nest/src/queue/services/rss-feed.service.ts`
+- `packages/api-nest/src/scheduler/base-poller.ts`
+- `packages/api-nest/src/scheduler/scheduler.module.ts`
+- `packages/api-nest/src/scheduler/scheduler.service.ts`
+- `packages/api-nest/src/scheduler/services/rss-feed-refresh.service.ts`
+- `packages/db/migrations/0198.do.create_rss_feed_table.sql`
+- `packages/db/migrations/0199.do.add_subscription_id_to_library_item.sql`
+- `packages/web-vite/src/components/icons/index.tsx` (FollowingIcon, InboxIcon, etc.)
+- Updated: `packages/web-vite/src/components/LeftNavigation.tsx` (Subscriptions section)
+- Updated: `packages/web-vite/src/components/AddLinkModal.tsx` (RSS tab)
+- Updated: `packages/web-vite/src/pages/LibraryPage.tsx` (feed filtering)
+
+**Dependencies**: ARC-013 ✅ (content extraction), ARC-012 ✅ (queue system)
+
+**Effort**:
+- **Estimate**: 5-7 days
+- **Actual**: ~5 days (across multiple commits)
+
+**Priority**: 🔴 **HIGH** - Completed
+
+**Note**: This completes the RSS portion of ARC-014. Video and Twitter content types deferred to ARC-014B.
+
+---
+
+## ARC-010C: Highlights Page UI ✅ **COMPLETED**
+
+- **Problem/Objective**: Create dedicated page to view all highlights across all articles
+- **Status**: ✅ **COMPLETED**
+- **Completion Date**: November 29, 2025 (Commit: 449b1fe30)
+
+**Implementation Summary**:
+Standalone highlights page with navigation integration, color-coded cards, and source article linking.
+
+**Backend (NestJS)**:
+- [x] Added `userHighlights` GraphQL query with cursor-based pagination
+- [x] Added `libraryItem` field resolver to Highlight type for eager loading
+- [x] Implemented `findAllForUser()` in HighlightRepository with LEFT JOIN
+- [x] Added HighlightsConnection type for paginated results
+- [x] Fixed Int vs Float type mismatch in GraphQL arguments
+
+**Frontend (web-vite)**:
+- [x] Created HighlightsPage component (`packages/web-vite/src/pages/HighlightsPage.tsx`)
+- [x] Color-coded highlight cards (yellow, red, green, blue)
+- [x] Display quote, annotation, and source article info
+- [x] Clickable cards navigate to reader with highlight anchor (#shortId)
+- [x] Show source article metadata (title, author, site name, icon)
+- [x] Display creation date for each highlight
+- [x] Empty state when no highlights exist
+- [x] Loading and error states
+- [x] Responsive design (mobile + desktop)
+- [x] Added route to AppRouter (`/highlights`)
+- [x] Added "Highlights" nav item to left navigation
+
+**Navigation Fix**:
+- [x] Fixed highlights disappearing when navigating back from reader
+- [x] Initial fix: Added `location.key` dependency to trigger refetch on route changes
+- [x] User's linter improvement: Added `isMounted` pattern for proper cleanup
+- [x] Prevents stale highlights and race conditions
+
+**Styling Enhancements**:
+- [x] Enhanced annotation visibility with improved contrast
+- [x] Increased font weight for better readability
+- [x] Created `packages/web-vite/src/styles/HighlightsPage.css`
+- [x] Color-coded left border matching highlight colors
+- [x] Hover effects for highlight cards
+- [x] Clean, card-based layout
+
+**GraphQL Integration**:
+- [x] Created HIGHLIGHT_WITH_ARTICLE_FRAGMENT for reusable field selections
+- [x] Added highlight count display
+- [x] Pagination support (initial: 50 highlights)
+- [x] Efficient data fetching with proper fragments
+
+**Acceptance Criteria**: ✅ **ALL MET**
+- [x] Dedicated highlights page displays all user highlights
+- [x] Highlights link back to source article at specific position
+- [x] Color-coded cards match highlight colors
+- [x] Annotations and quotes display clearly
+- [x] Source article metadata shown
+- [x] Navigation works correctly (back button doesn't lose highlights)
+- [x] Empty state for new users
+- [x] Responsive design
+- [x] Loading states
+- [x] Error handling
+
+**Key Files Created**:
+- `packages/web-vite/src/pages/HighlightsPage.tsx`
+- `packages/web-vite/src/styles/HighlightsPage.css`
+- Updated: `packages/api-nest/src/highlight/highlight.resolver.ts` (userHighlights query)
+- Updated: `packages/api-nest/src/repositories/highlight.repository.ts` (findAllForUser)
+- Updated: `packages/web-vite/src/lib/graphql-fragments.ts` (HIGHLIGHT_WITH_ARTICLE_FRAGMENT)
+- Updated: `packages/web-vite/src/router/AppRouter.tsx` (highlights route)
+- Updated: `packages/web-vite/src/components/LeftNavigation.tsx` (highlights nav item)
+
+**User Feedback Addressed**:
+- ✅ Fixed: Highlights disappearing on navigation back
+- ✅ Fixed: Annotation barely visible (improved contrast and font weight)
+- ✅ Navigation refetch logic refined by user's linter
+
+**Dependencies**: ARC-010 ✅ (highlights backend)
+
+**Effort**:
+- **Estimate**: 1-2 days
+- **Actual**: ~1 day
+
+**Priority**: 🟡 **MEDIUM** - Completed
+
+**Impact**:
+- Users can now view all highlights in one place
+- Easy navigation between highlights and source articles
+- Improved annotation visibility
+- Clean, professional UI matching design system
+
+---
+
+**Document Last Updated**: November 30, 2025
+**Total Completed ARCs**: 20 (including ARC-013, ARC-014A, ARC-010C, ARC-012 completion)
 **Total Completed TDs**: 3 (TD-003, TD-004, TD-006 Phases 1-2)

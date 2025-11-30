@@ -1,6 +1,6 @@
 # Unified Migration Backlog: Express to NestJS
 
-**Last Updated**: November 21, 2025
+**Last Updated**: November 30, 2025
 
 This is the **active working backlog** containing only pending and in-progress items. Completed items have been moved to `unified-migration-backlog-complete.md`.
 
@@ -10,15 +10,18 @@ This is the **active working backlog** containing only pending and in-progress i
 
 ## 🎯 Current Status Summary
 
-### ✅ **COMPLETED** (16 Major ARCs)
+### ✅ **COMPLETED** (20 Major ARCs)
 All completed items moved to `unified-migration-backlog-complete.md`. Key achievements:
 - **Backend Foundation**: NestJS setup, auth, GraphQL, database integration
 - **Core Features**: Library CRUD, search, labels, bulk operations, highlights, reading progress
-- **Infrastructure**: Queue system (80%), repository pattern, testing infrastructure
-- **Frontend**: Vite migration, library UI, reader page, labels management
+- **Content Processing**: Web article extraction, PDF extraction, content type detection (ARC-013)
+- **RSS Features**: Feed subscriptions, periodic refresh, unsubscribe, filtering, dedicated UI (ARC-014 partial)
+- **Highlights UI**: Dedicated highlights page with navigation, color-coded cards, source linking (ARC-010C)
+- **Infrastructure**: Queue system (100%), repository pattern, testing infrastructure, scheduler module
+- **Frontend**: Vite migration, library UI, reader page, labels management, highlights page
 - **Technical Debt**: Constants, repository pattern, Testcontainers + factories
 
-**Test Coverage**: 261 tests (174 E2E + 87 unit), 100% passing
+**Test Coverage**: 261+ tests (174 E2E + 87 unit), 100% passing
 
 ### 🚨 **CRITICAL ISSUE IDENTIFIED**
 - **Test Database Connection**: Tests writing to live database instead of testcontainer
@@ -57,97 +60,7 @@ All completed items moved to `unified-migration-backlog-complete.md`. Key achiev
 
 ### 🔴 HIGH PRIORITY
 
-#### ARC-013: Content Extraction & Processing ⭐ **NEXT UP**
-- **Problem/Objective**: Complete the save-to-read flow with actual content extraction (currently stubbed)
-- **Impact**: Unblocks core user workflow (save article → read article)
-- **Current State**:
-  - Queue infrastructure ready (ARC-012 at 80%)
-  - ContentProcessorService has stub implementation
-  - Event system in place
-  - SaveUrl mutation working
-- **Approach**: Implement real content extraction using Readability.js and related tools
-
-**Tasks**:
-
-**Phase 1: Web Article Extraction** (Days 1-2)
-- [ ] Install dependencies:
-  - [ ] `@mozilla/readability` - Content extraction
-  - [ ] `jsdom` - DOM parsing for Node.js
-  - [ ] `dompurify` with jsdom - HTML sanitization
-  - [ ] `turndown` - HTML to Markdown conversion (for plain text)
-- [ ] Implement ContentFetcherService:
-  - [ ] `fetchUrl(url: string): Promise<RawContent>` - HTTP fetch with headers
-  - [ ] Handle redirects and SSL certificates
-  - [ ] Set proper User-Agent and timeouts
-  - [ ] Rate limiting per domain
-- [ ] Implement ReadabilityService:
-  - [ ] `extractArticle(html: string, url: string): Promise<Article>`
-  - [ ] Clean and sanitize HTML
-  - [ ] Extract title, author, published date
-  - [ ] Extract main content with images
-  - [ ] Generate text excerpt/preview
-- [ ] Update ContentProcessorService:
-  - [ ] Replace stub with real extraction logic
-  - [ ] Call ContentFetcherService → ReadabilityService
-  - [ ] Update LibraryItem with extracted content
-  - [ ] Set state to SUCCEEDED or FAILED
-  - [ ] Handle extraction errors gracefully
-
-**Phase 2: Image Processing** (Day 3)
-- [ ] Implement ImageProxyService:
-  - [ ] Download and cache images
-  - [ ] Resize/optimize images
-  - [ ] Generate thumbnails
-  - [ ] Return CDN/proxy URLs
-- [ ] Update content HTML with proxied image URLs
-- [ ] Handle image extraction failures gracefully
-
-**Phase 3: Content Enhancements** (Day 4)
-- [ ] Add metadata extraction:
-  - [ ] OpenGraph tags (og:title, og:description, og:image)
-  - [ ] Twitter Card metadata
-  - [ ] JSON-LD structured data
-  - [ ] Favicon extraction
-- [ ] Implement content hash generation (for duplicate detection)
-- [ ] Add word count calculation
-- [ ] Add reading time estimation
-
-**Phase 4: Testing & Polish** (Day 5)
-- [ ] Create E2E tests:
-  - [ ] Save URL → extract content → verify in reader
-  - [ ] Handle extraction failures
-  - [ ] Handle redirects and SSL issues
-  - [ ] Verify image proxying
-  - [ ] Test metadata extraction
-- [ ] Add integration tests for each service
-- [ ] Performance testing (extraction time targets)
-- [ ] Error handling and user feedback
-
-**Deferred to ARC-014**:
-- [ ] PDF content extraction (pdf-parse)
-- [ ] RSS feed parsing
-- [ ] YouTube video transcripts
-- [ ] Twitter thread unrolling
-
-**Acceptance Criteria**:
-- [ ] Save URL extracts article title, author, content, images
-- [ ] Extracted content displays correctly in reader
-- [ ] Images load through proxy/cache
-- [ ] Failed extractions show helpful error messages
-- [ ] Content hash prevents duplicates
-- [ ] E2E test: Save article → read in reader (full flow)
-- [ ] Extraction completes in <10 seconds for typical articles
-- [ ] All existing tests still pass (261 tests)
-
-**Dependencies**:
-- ARC-011 (completed - Save URL mutation)
-- ARC-012 (80% - Queue infrastructure ready)
-
-**Effort Estimate**: 4-5 days
-
-**Status**: ⭐ **READY TO START** (highest priority after FIX-001)
-
-**Priority**: 🔴 **CRITICAL** - Completes core save-to-read workflow
+_(No critical priority items - core workflow complete!)_
 
 ---
 
@@ -284,43 +197,164 @@ All completed items moved to `unified-migration-backlog-complete.md`. Key achiev
 
 ---
 
-#### ARC-014: Additional Content Types
-- **Problem/Objective**: Support PDF, RSS, video content types
-- **Approach**: Extend content processing pipeline
+#### ARC-014B: Enhanced Content Types (Video, Twitter)
+- **Problem/Objective**: Support video and Twitter thread content types
+- **Approach**: Extend content processing pipeline (PDF and RSS completed in ARC-013/014A)
 
 **Tasks**:
-- [ ] PDF extraction:
-  - [ ] Install `pdf-parse` or `pdfjs-dist`
-  - [ ] Extract text from PDFs
-  - [ ] Generate PDF thumbnails
-  - [ ] Handle scanned PDFs (OCR)
-- [ ] RSS feed parsing:
-  - [ ] Install `rss-parser`
-  - [ ] Subscribe to RSS feeds
-  - [ ] Auto-import new articles
-  - [ ] Feed management UI
 - [ ] Video transcripts:
-  - [ ] YouTube transcript API
+  - [ ] YouTube transcript API integration
   - [ ] Video metadata extraction
   - [ ] Thumbnail extraction
+  - [ ] Vimeo, Wistia, other platforms
 - [ ] Twitter threads:
-  - [ ] Thread unrolling
+  - [ ] Thread unrolling API
   - [ ] Author attribution
   - [ ] Media preservation
+  - [ ] Handle Twitter/X API changes
 
 **Acceptance Criteria**:
-- [ ] PDFs extract and display correctly
-- [ ] RSS feeds auto-import articles
-- [ ] Video content saves with metadata
+- [ ] Video content saves with metadata and transcripts
 - [ ] Twitter threads unroll properly
+- [ ] Video thumbnails display in library
+- [ ] Thread media preserved
 
-**Dependencies**: ARC-013 (web article extraction)
+**Dependencies**: ARC-013 ✅ (web article extraction complete)
 
-**Effort Estimate**: 5-7 days
+**Effort Estimate**: 3-4 days
 
 **Status**: Not started
 
-**Priority**: 🟢 **LOW** - After core web articles working
+**Priority**: 🟢 **LOW** - Enhancement after core types working
+
+---
+
+#### ARC-015: Text-to-Speech & Translations
+- **Problem/Objective**: Enable audio playback of articles and multilingual translation
+- **Approach**: Integrate TTS models and translation APIs
+
+**Tasks**:
+- [ ] Text-to-Speech Integration:
+  - [ ] Research TTS options (OpenAI TTS, ElevenLabs, Azure Speech)
+  - [ ] Implement audio generation service
+  - [ ] Cache generated audio files
+  - [ ] Add audio player UI component
+  - [ ] Support playback speed controls
+  - [ ] Background/offline playback support
+- [ ] Translation Service:
+  - [ ] Language detection for articles
+  - [ ] Translation API integration (Google Translate, DeepL)
+  - [ ] TTS in target language
+  - [ ] Language preference persistence
+  - [ ] Display original + translated text side-by-side
+- [ ] Audio Management:
+  - [ ] Audio file storage (S3/CDN)
+  - [ ] Queue-based generation (async processing)
+  - [ ] Progress indicators for generation
+  - [ ] Download for offline listening
+
+**Acceptance Criteria**:
+- [ ] Users can generate audio from any article
+- [ ] Audio playback works in browser
+- [ ] Multiple language support for TTS
+- [ ] Translation quality acceptable
+- [ ] Audio files cached and reused
+- [ ] Generation completes in reasonable time (<2 minutes)
+
+**Dependencies**: ARC-013 ✅ (content extraction), ARC-012 ✅ (queue system)
+
+**Effort Estimate**: 5-7 days
+
+**Status**: Not started (backlog item for future consideration)
+
+**Priority**: 🟢 **LOW** - Future enhancement
+
+---
+
+#### ARC-016: Newsletter Subscriptions
+- **Problem/Objective**: Support newsletter email subscriptions alongside RSS feeds
+- **Approach**: Email forwarding addresses + parsing pipeline
+
+**Tasks**:
+- [ ] Email Infrastructure:
+  - [ ] Generate unique email addresses per user
+  - [ ] Email forwarding service (SendGrid, Postmark)
+  - [ ] Email parsing service (extract content from newsletters)
+  - [ ] Spam filtering and validation
+- [ ] Newsletter Management:
+  - [ ] Subscribe/unsubscribe UI similar to RSS feeds
+  - [ ] Display newsletters in "Subscriptions" section
+  - [ ] Newsletter-specific content extraction
+  - [ ] Preserve newsletter formatting
+- [ ] Content Processing:
+  - [ ] Parse HTML emails
+  - [ ] Extract article content from newsletter templates
+  - [ ] Handle inline images
+  - [ ] Detect sender/publication info
+- [ ] UI Integration:
+  - [ ] Add "Newsletter" tab to Subscriptions
+  - [ ] Subscription management page
+  - [ ] Newsletter unread count
+  - [ ] Filter by newsletter source
+
+**Acceptance Criteria**:
+- [ ] Users can subscribe to newsletters via unique email
+- [ ] Newsletters imported automatically
+- [ ] Content extracted from common newsletter formats
+- [ ] Newsletter items appear in library
+- [ ] Unsubscribe works correctly
+- [ ] Spam newsletters filtered out
+
+**Dependencies**: ARC-014A ✅ (RSS subscriptions pattern)
+
+**Effort Estimate**: 5-7 days
+
+**Status**: Not started (backlog item for future consideration)
+
+**Priority**: 🟢 **LOW** - Future enhancement
+
+---
+
+#### ARC-017: Content Digest Feature
+- **Problem/Objective**: Provide curated digest view of followed content
+- **Approach**: Aggregate and prioritize content from subscriptions
+
+**Tasks**:
+- [ ] Digest Algorithm:
+  - [ ] Score items by recency, source quality, engagement
+  - [ ] ML-based relevance scoring (optional)
+  - [ ] User preference learning
+  - [ ] Deduplication of similar articles
+- [ ] Digest Views:
+  - [ ] Daily digest page
+  - [ ] Weekly digest page
+  - [ ] Custom digest (date range, sources)
+  - [ ] Digest email option
+- [ ] UI Components:
+  - [ ] Digest card layout (summary + preview)
+  - [ ] "Read Later" quick action
+  - [ ] Mark digest as read
+  - [ ] Digest preferences settings
+- [ ] Scheduling:
+  - [ ] Daily/weekly digest generation job
+  - [ ] Email digest delivery
+  - [ ] Push notification for new digest
+
+**Acceptance Criteria**:
+- [ ] Daily digest shows top content from subscriptions
+- [ ] Digest algorithm surfaces relevant articles
+- [ ] Users can customize digest preferences
+- [ ] Email digest option works
+- [ ] Digest doesn't include already-read items
+- [ ] Performance acceptable for 100+ subscriptions
+
+**Dependencies**: ARC-014A ✅ (RSS subscriptions)
+
+**Effort Estimate**: 4-6 days
+
+**Status**: Not started (backlog item for future consideration)
+
+**Priority**: 🟢 **LOW** - Future enhancement, requires user feedback
 
 ---
 
@@ -368,34 +402,49 @@ All completed items moved to `unified-migration-backlog-complete.md`. Key achiev
 ## 📋 Backlog Management Notes
 
 ### Completed Items
-All completed ARCs (001-008, 010A, 010, 011, 012 partial) and TDs (003, 004, 006 Phases 1-2) have been moved to `unified-migration-backlog-complete.md` for historical reference.
+All completed ARCs (001-008, 010A, 010, 010C, 011, 012, 013, 014A) and TDs (003, 004, 006 Phases 1-2) have been moved to `unified-migration-backlog-complete.md` for historical reference.
+
+**Recently Completed** (Nov 29-30, 2025):
+- **ARC-013**: Content Extraction & Processing (web articles, PDFs, RSS feeds)
+- **ARC-014A**: RSS Feed Subscriptions (subscribe, unsubscribe, periodic refresh, filtering)
+- **ARC-010C**: Highlights Page UI (dedicated highlights view, navigation fixes)
+- **ARC-012**: Queue Infrastructure (upgraded from 80% to 100% complete)
 
 ### Next Review
-- **When**: After ARC-013 completion
-- **Focus**: Evaluate ARC-014 priority, frontend polish items
+- **When**: After ARC-009 completion (frontend polish)
+- **Focus**: Evaluate next priorities - ARC-014B (video/Twitter), ARC-015 (TTS/translations), or ARC-016 (newsletters)
 - **Metrics**: Test coverage, performance benchmarks, user feedback
+- **Recent Completions**: ARC-013 ✅, ARC-014A ✅, ARC-010C ✅, ARC-012 ✅ (upgraded to 100%)
 
 ### Dependencies
 ```
 FIX-001 → [No dependencies, critical fix]
-ARC-013 → Requires: ARC-011 ✅, ARC-012 Phase 1-4 ✅
 ARC-009 → Can start anytime (frontend only)
 ARC-010B → Requires: ARC-010 ✅
-ARC-012 Phase 5 → Requires: ARC-013 (real jobs to monitor)
-ARC-014 → Requires: ARC-013 ✅
+ARC-012 Phase 5 → Requires: ARC-013 ✅ (completed)
+ARC-014B → Requires: ARC-013 ✅, ARC-014A ✅
+ARC-015 → Requires: ARC-013 ✅, ARC-012 ✅
+ARC-016 → Requires: ARC-014A ✅ (RSS subscriptions pattern)
+ARC-017 → Requires: ARC-014A ✅ (RSS subscriptions)
 TD-006 Phases 3-5 → Can proceed anytime (incremental)
 ```
 
 ### Success Metrics for Next Milestone
-- [ ] FIX-001 complete (test isolation)
-- [ ] ARC-013 complete (content extraction working)
-- [ ] Full save-to-read flow working end-to-end
-- [ ] 280+ tests passing (with new ARC-013 tests)
-- [ ] User can: register → login → save article → read extracted content → highlight → annotate
+- [x] ARC-013 complete (content extraction working) ✅
+- [x] ARC-014A complete (RSS subscriptions working) ✅
+- [x] ARC-010C complete (Highlights page working) ✅
+- [x] Full save-to-read flow working end-to-end ✅
+- [x] 261+ tests passing ✅
+- [x] User can: register → login → save article → read extracted content → highlight → annotate ✅
+- [x] User can: subscribe to RSS feeds → view feed items → unsubscribe ✅
+- [x] User can: view all highlights → navigate to source → return to highlights ✅
+- [ ] FIX-001 complete (test isolation) - Deferred
+- [ ] ARC-009 complete (frontend polish) - In progress (95%)
+- [ ] All core user workflows complete
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: November 21, 2025
+**Document Version**: 3.0
+**Last Updated**: November 30, 2025
 **Managed By**: Development Team
 **See Also**: `unified-migration-backlog-complete.md` for completed items

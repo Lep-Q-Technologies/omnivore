@@ -56,17 +56,21 @@ export class RssFeed {
 
 /**
  * Input type for updating RSS feed settings
+ *
+ * Note: autoAddToLibrary and folder fields are not yet implemented as they
+ * require additional columns in RssFeedEntity and a database migration.
  */
 @InputType()
 export class UpdateRssFeedSettingsInput {
   @Field({ nullable: true, description: 'Feed title override' })
   title?: string
 
-  @Field({ nullable: true, description: 'Whether to auto-add new items to library' })
-  autoAddToLibrary?: boolean
+  // TODO: Implement when RssFeedEntity adds these columns
+  // @Field({ nullable: true, description: 'Whether to auto-add new items to library' })
+  // autoAddToLibrary?: boolean
 
-  @Field({ nullable: true, description: 'Default folder for new items' })
-  folder?: string
+  // @Field({ nullable: true, description: 'Default folder for new items' })
+  // folder?: string
 }
 
 /**

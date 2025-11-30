@@ -30,7 +30,7 @@ enum ContentType {
   ARTICLE
   PDF
   RSS_FEED
-  TWITTER_THREAD
+  TWITTER
   UNKNOWN
   VIDEO
 }
@@ -595,12 +595,6 @@ input UpdateReadingProgressInput {
 }
 
 input UpdateRssFeedSettingsInput {
-  """Whether to auto-add new items to library"""
-  autoAddToLibrary: Boolean
-
-  """Default folder for new items"""
-  folder: String
-
   """Feed title override"""
   title: String
 }

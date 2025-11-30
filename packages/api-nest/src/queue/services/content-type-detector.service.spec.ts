@@ -98,7 +98,7 @@ describe('ContentTypeDetectorService', () => {
         const result = await service.detectContentType(
           'https://twitter.com/user/status/1234567890',
         )
-        expect(result.contentType).toBe(ContentType.TWITTER_THREAD)
+        expect(result.contentType).toBe(ContentType.TWITTER)
         expect(result.confidence).toBe(1.0)
         expect(result.metadata?.tweetId).toBe('1234567890')
       })
@@ -107,7 +107,7 @@ describe('ContentTypeDetectorService', () => {
         const result = await service.detectContentType(
           'https://x.com/user/status/9876543210',
         )
-        expect(result.contentType).toBe(ContentType.TWITTER_THREAD)
+        expect(result.contentType).toBe(ContentType.TWITTER)
         expect(result.metadata?.tweetId).toBe('9876543210')
       })
 
@@ -115,7 +115,7 @@ describe('ContentTypeDetectorService', () => {
         const result = await service.detectContentType(
           'https://twitter.com/user',
         )
-        expect(result.contentType).not.toBe(ContentType.TWITTER_THREAD)
+        expect(result.contentType).not.toBe(ContentType.TWITTER)
       })
     })
 

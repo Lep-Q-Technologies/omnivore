@@ -235,18 +235,20 @@ export class RssFeedRepository implements IRssFeedRepository {
    *
    * @param feedId - Feed ID
    * @param userId - User ID
-   * @param settings - Settings to update
+   * @param settings - Settings to update (currently only title is supported;
+   *                   autoAddToLibrary and folder require additional entity columns)
    */
   async updateSettings(
     feedId: string,
     userId: string,
     settings: Partial<{
       title: string
-      autoAddToLibrary: boolean
-      folder: string
+      // TODO: Add support for autoAddToLibrary and folder when entity columns are added
+      // autoAddToLibrary: boolean
+      // folder: string
     }>,
   ): Promise<void> {
-    const updateData: any = {}
+    const updateData: Partial<RssFeedEntity> = {}
 
     if (settings.title !== undefined) {
       updateData.title = settings.title
