@@ -33,6 +33,8 @@ import {
 import { LabelService } from '../label/label.service'
 import { Label } from '../label/dto/label.type'
 import { LibraryItemEntity, ContentType } from './entities/library-item.entity'
+import { RssFeed } from './dto/rss-feed.type'
+import { RssFeedEntity } from './entities/rss-feed.entity'
 
 /**
  * Library item with entity fields for field resolvers
@@ -40,6 +42,7 @@ import { LibraryItemEntity, ContentType } from './entities/library-item.entity'
  */
 interface LibraryItemWithEntityFields extends LibraryItem {
   totalSentinels?: number
+  subscription?: RssFeedEntity | null
 }
 
 @Resolver(() => LibraryItem)
@@ -61,6 +64,17 @@ export class LibraryResolver {
     // Use DataLoader to batch label queries and prevent N+1 problems
     const labels = await dataLoaders.labels.load(libraryItem.id)
     return labels.length > 0 ? labels : null
+  }
+
+  @ResolveField(() => RssFeed, { nullable: true })
+  async subscription(
+    @Parent() libraryItem: LibraryItemWithEntityFields,
+  ): Promise<RssFeed | null> {
+    // If subscription is already loaded (via eager loading), return it
+    if (libraryItem.subscription) {
+      return libraryItem.subscription as any
+    }
+    return null
   }
 
   @ResolveField(() => Number, { nullable: true })

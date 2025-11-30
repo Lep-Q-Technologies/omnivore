@@ -221,6 +221,13 @@ export type ContentType =
   | 'TWITTER'
   | 'UNKNOWN'
 
+export interface RssFeed {
+  id: string
+  title?: string | null
+  siteIcon?: string | null
+  feedUrl: string
+}
+
 export interface LibraryItem {
   id: string
   title: string
@@ -251,6 +258,8 @@ export interface LibraryItem {
   noteUpdatedAt?: string | null
   // Sentinel-based reading progress percentage (0-100)
   readingProgressPercent?: number | null
+  // RSS feed subscription if this item was imported from an RSS feed
+  subscription?: RssFeed | null
 }
 
 export interface DeleteResult {

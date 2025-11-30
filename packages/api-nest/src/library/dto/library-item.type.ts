@@ -13,6 +13,7 @@ import {
   ContentType,
 } from '../entities/library-item.entity'
 import { Label } from '../../label/dto/label.type'
+import { RssFeed } from './rss-feed.type'
 
 registerEnumType(LibraryItemState, {
   name: 'LibraryItemState',
@@ -73,6 +74,12 @@ export class LibraryItem {
 
   @Field(() => [Label], { nullable: true })
   labels?: Label[] | null
+
+  @Field(() => RssFeed, {
+    nullable: true,
+    description: 'RSS feed subscription if this item was imported from an RSS feed',
+  })
+  subscription?: RssFeed | null
 
   @Field({ nullable: true })
   content?: string | null

@@ -62,6 +62,9 @@ import { RssFeedEntity } from '../library/entities/rss-feed.entity'
             HighlightEntity,
             ReadingProgressEntity,
           ],
+          // DEBUG: Log entities to check if any are undefined
+          // logging: true,
+          // logger: 'advanced-console',
           migrationsRun: false,
           synchronize: false,
           logging: ['query', 'warn', 'error'],

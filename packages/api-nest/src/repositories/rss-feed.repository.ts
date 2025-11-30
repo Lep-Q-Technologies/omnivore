@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { RssFeedEntity } from '../library/entities/rss-feed.entity'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
 import { IRssFeedRepository } from './interfaces'
 
 /**
@@ -217,11 +218,10 @@ export class RssFeedRepository implements IRssFeedRepository {
    * @returns Number of unread items
    */
   async getUnreadCount(feedId: string, userId: string): Promise<number> {
-    const result = await this.repository
-      .createQueryBuilder('feed')
-      .leftJoin('feed.libraryItems', 'item')
-      .where('feed.id = :feedId', { feedId })
-      .andWhere('feed.user_id = :userId', { userId })
+    const result = await this.repository.manager
+      .createQueryBuilder(LibraryItemEntity, 'item')
+      .where('item.subscription_id = :feedId', { feedId })
+      .andWhere('item.user_id = :userId', { userId })
       .andWhere('item.read_at IS NULL')
       .andWhere("item.state != 'DELETED'")
       .select('COUNT(item.id)', 'count')

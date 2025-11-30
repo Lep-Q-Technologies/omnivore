@@ -104,6 +104,12 @@ export const LIBRARY_ITEM_BASIC_FRAGMENT = `
     note
     noteUpdatedAt
     readingProgressPercent
+    subscription {
+      id
+      title
+      siteIcon
+      feedUrl
+    }
   }
 `
 
