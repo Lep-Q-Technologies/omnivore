@@ -1,7 +1,7 @@
 # Development Dockerfile for web-vite
 # Uses Vite dev server with HMR (Hot Module Replacement)
 
-FROM node:22.12-alpine
+FROM node:25-alpine
 
 # Install necessary build tools
 RUN apk add --no-cache g++ make python3 py3-setuptools
