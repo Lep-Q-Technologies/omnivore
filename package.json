@@ -7,12 +7,17 @@
     "packages/*"
   ],
   "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=25.0.0",
+    "npm": ">=10.0.0",
+    "yarn": ">=1.22.0"
+  },
   "scripts": {
-    "test": "lerna run --stream test --scope=api-nest --scope=web-vite",
-    "test:all": "lerna run --stream test",
-    "lint": "lerna run --parallel lint --scope=api-nest --scope=web-vite",
-    "lint:all": "lerna run --parallel lint",
-    "build": "lerna run build",
+    "test": "yarn workspace @omnivore/api-nest test && yarn workspace web-vite test",
+    "test:e2e": "yarn workspace @omnivore/api-nest test:e2e",
+    "test:all": "yarn workspace @omnivore/api-nest test && yarn workspace @omnivore/api-nest test:e2e && yarn workspace web-vite test",
+    "lint": "yarn workspace @omnivore/api-nest lint && yarn workspace web-vite lint",
+    "build": "yarn workspace @omnivore/api-nest build && yarn workspace web-vite build",
     "gql-typegen": "graphql-codegen",
     "deploy:web": "vercel --prod",
     "prepare": "husky install || true"
@@ -20,6 +25,8 @@
   "dependencies": {},
   "devDependencies": {
     "@ardatan/aggregate-error": "^0.0.6",
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
     "@graphql-codegen/cli": "^2.6.2",
     "@graphql-codegen/introspection": "^2.1.1",
     "@graphql-codegen/schema-ast": "^2.1.1",
@@ -32,18 +39,15 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-simple-import-sort": "^7.0.0",
-    "@commitlint/cli": "^18.4.3",
-    "@commitlint/config-conventional": "^18.4.3",
     "graphql": "^15.3.0",
     "graphql-tag": "^2.11.0",
     "husky": "^9.0.0",
-    "lerna": "^7.4.1",
     "lint-staged": "^15.0.0",
     "prettier": "^2.5.1",
     "typescript": "5.7.3"
   },
   "volta": {
-    "node": "22.11.0",
+    "node": "25.2.0",
     "yarn": "1.22.19"
   },
   "lint-staged": {
