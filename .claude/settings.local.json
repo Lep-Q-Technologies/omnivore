@@ -3,7 +3,22 @@
     "allow": [
       "Bash(npm ls:*)",
       "Bash(yarn workspaces info:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(docker exec:*)",
+      "Bash(node:*)",
+      "Bash(TEST_DATABASE_NAME=omnivore npm run test:e2e:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(npm test:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(yarn workspace @omnivore/api-nest run test:*)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)",
+      "Bash(yarn test:e2e:*)",
+      "Bash(yarn upgrade:*)",
+      "Bash(yarn workspace @omnivore/api-nest eslint:*)",
+      "Bash(yarn install:*)"
     ],
     "deny": [],
     "ask": []

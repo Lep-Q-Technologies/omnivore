@@ -1,19 +1,20 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  Index,
-} from 'typeorm'
-import {
   Field,
   GraphQLISODateTime,
   ID,
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql'
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  // OneToOne, // Reserved for future use
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm'
+
 import { UserRole } from '../enums/user-role.enum'
 
 export enum StatusType {
@@ -59,6 +60,21 @@ export class User {
   @Field(() => String, { nullable: true })
   @Column('text', { name: 'email', nullable: true })
   email?: string
+
+  /**
+   * Unique email alias for newsletter routing
+   * Example: "a7x9k2m1" becomes a7x9k2m1@inbox.omnivore.app
+   * or a7x9k2m1+subscription-id@inbox.omnivore.app for specific subscriptions
+   * Part of ARC-016 (Newsletter Subscriptions)
+   */
+  @Field(() => String, { nullable: true })
+  @Column('varchar', {
+    name: 'email_alias',
+    length: 64,
+    unique: true,
+    nullable: true,
+  })
+  emailAlias?: string
 
   @Column('text', { nullable: true })
   phone?: string
@@ -127,5 +143,23 @@ export class User {
 
   canAccess(): boolean {
     return this.isActive() && !this.isSuspended() && !this.isPending()
+  }
+
+  /**
+   * Get the user's newsletter email address
+   * Format: {emailAlias}@inbox.omnivore.app
+   * Returns null if emailAlias is not set
+   */
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Newsletter email address for receiving newsletter subscriptions',
+  })
+  get newsletterEmail(): string | null {
+    if (!this.emailAlias) {
+      return null
+    }
+    // TODO: Make domain configurable via environment variable
+    return `${this.emailAlias}@inbox.omnivore.app`
   }
 }

@@ -14,7 +14,6 @@
     "lint": "eslint src --ext ts,js,tsx,jsx",
     "compile": "tsc",
     "build": "tsc",
-    "start": "functions-framework --target=exportHandler",
     "dev": "concurrently \"tsc -w\" \"nodemon --watch ./build/ --exec npm run start\""
   },
   "devDependencies": {
@@ -24,7 +23,6 @@
     "eslint-plugin-prettier": "^4.0.0"
   },
   "dependencies": {
-    "@google-cloud/functions-framework": "3.4.5",
     "@google-cloud/storage": "^7.0.1",
     "@omnivore-app/api": "^1.0.4",
     "@omnivore/utils": "1.0.0",

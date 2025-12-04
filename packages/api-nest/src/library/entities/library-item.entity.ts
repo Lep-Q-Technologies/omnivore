@@ -10,7 +10,6 @@ import {
 } from 'typeorm'
 
 import { EntityLabel } from '../../label/entities/entity-label.entity'
-import { RssFeedEntity } from './rss-feed.entity'
 import { User } from '../../user/entities/user.entity'
 
 export enum LibraryItemState {
@@ -54,12 +53,12 @@ export class LibraryItemEntity {
   userId!: string
 
   /**
-   * Optional link to RSS feed subscription
-   * Set when item is imported from an RSS feed
+   * Optional link to subscription (RSS feed, newsletter, etc.)
+   * Set when item is imported from a subscription
    */
-  // @ManyToOne('RssFeedEntity', { nullable: true, onDelete: 'SET NULL' })
+  // @ManyToOne('SubscriptionEntity', { nullable: true, onDelete: 'SET NULL' })
   // @JoinColumn({ name: 'subscription_id' })
-  // subscription?: RssFeedEntity | null
+  // subscription?: SubscriptionEntity | null
 
   @Column({ name: 'subscription_id', type: 'uuid', nullable: true })
   subscriptionId?: string | null

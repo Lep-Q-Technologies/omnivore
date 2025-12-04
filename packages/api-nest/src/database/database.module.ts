@@ -1,21 +1,22 @@
 import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule, ConfigService } from '@nestjs/config'
+import { TypeOrmModule } from '@nestjs/typeorm'
+
 import { EnvVariables } from '../config/env-variables'
-import { QueryPerformanceLogger } from './query-logger'
-import { StructuredLogger } from '../logging/structured-logger.service'
-import { LoggingModule } from '../logging/logging.module'
-import { User, UserProfile, UserPersonalization } from '../user/entities'
 import { Filter } from '../filter/entities/filter.entity'
 import { Group } from '../group/entities/group.entity'
-import { Invite } from '../group/entities/invite.entity'
 import { GroupMembership } from '../group/entities/group-membership.entity'
-import { LibraryItemEntity } from '../library/entities/library-item.entity'
-import { Label } from '../label/entities/label.entity'
-import { EntityLabel } from '../label/entities/entity-label.entity'
+import { Invite } from '../group/entities/invite.entity'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
+import { EntityLabel } from '../label/entities/entity-label.entity'
+import { Label } from '../label/entities/label.entity'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { SubscriptionEntity } from '../library/entities/subscription.entity'
+import { LoggingModule } from '../logging/logging.module'
+import { StructuredLogger } from '../logging/structured-logger.service'
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
-import { RssFeedEntity } from '../library/entities/rss-feed.entity'
+import { User, UserPersonalization, UserProfile } from '../user/entities'
+import { QueryPerformanceLogger } from './query-logger'
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { RssFeedEntity } from '../library/entities/rss-feed.entity'
             Group,
             Invite,
             GroupMembership,
-            RssFeedEntity,
+            SubscriptionEntity,
             LibraryItemEntity,
             Label,
             EntityLabel,

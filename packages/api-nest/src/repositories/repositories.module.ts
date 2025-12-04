@@ -5,7 +5,7 @@ import { HighlightEntity } from '../highlight/entities/highlight.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { Label } from '../label/entities/label.entity'
 import { LibraryItemEntity } from '../library/entities/library-item.entity'
-import { RssFeedEntity } from '../library/entities/rss-feed.entity'
+import { SubscriptionEntity } from '../library/entities/subscription.entity'
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
 import { EntityLabelRepository } from './entity-label.repository'
 import { HighlightRepository } from './highlight.repository'
@@ -13,7 +13,7 @@ import { REPOSITORY_TOKENS } from './injection-tokens'
 import { LabelRepository } from './label.repository'
 import { LibraryItemRepository } from './library-item.repository'
 import { ReadingProgressRepository } from './reading-progress.repository'
-import { RssFeedRepository } from './rss-feed.repository'
+import { SubscriptionRepository } from './subscription.repository'
 
 /**
  * RepositoriesModule
@@ -27,7 +27,7 @@ import { RssFeedRepository } from './rss-feed.repository'
     // Register all entities that repositories need
     TypeOrmModule.forFeature([
       LibraryItemEntity,
-      RssFeedEntity,
+      SubscriptionEntity,
       HighlightEntity,
       Label,
       EntityLabel,
@@ -39,7 +39,10 @@ import { RssFeedRepository } from './rss-feed.repository'
       provide: REPOSITORY_TOKENS.ILibraryItemRepository,
       useClass: LibraryItemRepository,
     },
-    RssFeedRepository,
+    {
+      provide: REPOSITORY_TOKENS.ISubscriptionRepository,
+      useClass: SubscriptionRepository,
+    },
     {
       provide: REPOSITORY_TOKENS.IHighlightRepository,
       useClass: HighlightRepository,
@@ -57,8 +60,8 @@ import { RssFeedRepository } from './rss-feed.repository'
       useClass: ReadingProgressRepository,
     },
     {
-      provide: REPOSITORY_TOKENS.IRssFeedRepository,
-      useClass: RssFeedRepository,
+      provide: REPOSITORY_TOKENS.ISubscriptionRepository,
+      useClass: SubscriptionRepository,
     },
   ],
   exports: [
@@ -67,7 +70,7 @@ import { RssFeedRepository } from './rss-feed.repository'
     REPOSITORY_TOKENS.ILabelRepository,
     REPOSITORY_TOKENS.IEntityLabelRepository,
     REPOSITORY_TOKENS.IReadingProgressRepository,
-    REPOSITORY_TOKENS.IRssFeedRepository,
+    REPOSITORY_TOKENS.ISubscriptionRepository,
     TypeOrmModule, // Export TypeOrmModule to make raw repositories available in tests
   ],
 })

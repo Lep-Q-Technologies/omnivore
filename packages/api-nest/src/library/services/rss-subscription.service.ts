@@ -1,23 +1,27 @@
 /**
- * RssFeedSubscriptionService - Manage RSS feed subscriptions
+ * RssSubscriptionService - Manage RSS feed subscriptions
  *
- * Handles subscribing/unsubscribing to RSS feeds and importing feed items
- * as library items.
+ * Single Responsibility: Handles RSS-specific subscription operations.
+ * Newsletter subscriptions are handled by NewsletterSubscriptionService (ARC-016 Phase 2).
  */
 
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { Queue } from 'bullmq'
-import { RssFeedMetadata } from '../../repositories/rss-feed.repository'
+
+import { JOB_TYPES, QUEUE_NAMES } from '../../queue/queue.constants'
 import { RssFeedService } from '../../queue/services/rss-feed.service'
-import { QUEUE_NAMES, JOB_TYPES } from '../../queue/queue.constants'
-import { RssFeedEntity } from '../entities/rss-feed.entity'
-import { ContentType } from '../entities/library-item.entity'
 import { REPOSITORY_TOKENS } from '../../repositories/injection-tokens'
 import {
   ILibraryItemRepository,
-  IRssFeedRepository,
+  ISubscriptionRepository,
 } from '../../repositories/interfaces'
+import { SubscriptionMetadata } from '../../repositories/subscription.repository'
+import { ContentType } from '../entities/library-item.entity'
+import {
+  SubscriptionEntity,
+  SubscriptionSourceType,
+} from '../entities/subscription.entity'
 
 /**
  * Result of importing feed items
@@ -30,12 +34,12 @@ export interface FeedImportResult {
 }
 
 @Injectable()
-export class RssFeedSubscriptionService {
-  private readonly logger = new Logger(RssFeedSubscriptionService.name)
+export class RssSubscriptionService {
+  private readonly logger = new Logger(RssSubscriptionService.name)
 
   constructor(
-    @Inject(REPOSITORY_TOKENS.IRssFeedRepository)
-    private readonly rssFeedRepository: IRssFeedRepository,
+    @Inject(REPOSITORY_TOKENS.ISubscriptionRepository)
+    private readonly subscriptionRepository: ISubscriptionRepository,
     @Inject(REPOSITORY_TOKENS.ILibraryItemRepository)
     private readonly libraryItemRepository: ILibraryItemRepository,
     private readonly rssFeedService: RssFeedService,
@@ -49,30 +53,37 @@ export class RssFeedSubscriptionService {
    * @param userId - User ID
    * @param feedUrl - RSS feed URL
    * @param importItems - Whether to immediately import feed items (default: true)
-   * @returns Created feed subscription
+   * @returns Created RSS subscription
    */
   async subscribe(
     userId: string,
     feedUrl: string,
     importItems = true,
-  ): Promise<RssFeedEntity> {
-    this.logger.log(`User ${userId} subscribing to feed: ${feedUrl}`)
+  ): Promise<SubscriptionEntity> {
+    this.logger.log(`User ${userId} subscribing to RSS feed: ${feedUrl}`)
 
     // Check if already subscribed
-    const existing = await this.rssFeedRepository.findByUrl(feedUrl, userId)
+    const existing = await this.subscriptionRepository.findBySource(
+      userId,
+      SubscriptionSourceType.RSS,
+      feedUrl,
+    )
+
     if (existing) {
       if (!existing.active) {
         // Reactivate inactive subscription
-        await this.rssFeedRepository.activate(existing.id)
-        this.logger.log(`Reactivated feed subscription: ${existing.id}`)
+        await this.subscriptionRepository.activate(existing.id)
+        this.logger.log(`Reactivated RSS subscription: ${existing.id}`)
+
         return existing
       }
-      this.logger.log(`Already subscribed to feed: ${existing.id}`)
+      this.logger.log(`Already subscribed to RSS feed: ${existing.id}`)
+
       return existing
     }
 
     // Parse feed to get metadata
-    let metadata: RssFeedMetadata = {}
+    let metadata: SubscriptionMetadata = {}
     try {
       const feed = await this.rssFeedService.parseFeed(feedUrl)
       metadata = {
@@ -87,7 +98,7 @@ export class RssFeedSubscriptionService {
     }
 
     // Create subscription
-    const subscription = await this.rssFeedRepository.create(
+    const subscription = await this.subscriptionRepository.createRss(
       userId,
       feedUrl,
       metadata,
@@ -109,7 +120,7 @@ export class RssFeedSubscriptionService {
   /**
    * Unsubscribe from an RSS feed
    *
-   * @param feedId - Feed ID
+   * @param feedId - RSS feed subscription ID
    * @param userId - User ID
    * @param deleteItems - Whether to delete library items from this feed (default: true)
    */
@@ -119,72 +130,90 @@ export class RssFeedSubscriptionService {
     deleteItems = true,
   ): Promise<void> {
     this.logger.log(
-      `User ${userId} unsubscribing from feed: ${feedId} (deleteItems: ${deleteItems})`,
+      `User ${userId} unsubscribing from RSS feed: ${feedId} (deleteItems: ${deleteItems})`,
     )
 
-    const feed = await this.rssFeedRepository.findById(feedId, userId)
-    if (!feed) {
-      throw new NotFoundException(`Feed ${feedId} not found`)
+    const subscription = await this.subscriptionRepository.findById(
+      feedId,
+      userId,
+    )
+    if (!subscription) {
+      throw new NotFoundException(`RSS feed ${feedId} not found`)
+    }
+
+    if (!subscription.isRss) {
+      throw new Error('Can only unsubscribe from RSS feeds using this service')
     }
 
     // Delete library items from this feed if requested
     if (deleteItems) {
-      this.logger.log(`Deleting library items for feed: ${feedId}`)
+      this.logger.log(`Deleting library items for RSS feed: ${feedId}`)
       await this.libraryItemRepository.deleteBySubscription(feedId, userId)
     }
 
     // Fully delete the subscription
-    await this.rssFeedRepository.delete(feedId)
+    await this.subscriptionRepository.delete(feedId)
 
-    this.logger.log(`Deleted feed subscription: ${feedId}`)
+    this.logger.log(`Deleted RSS subscription: ${feedId}`)
   }
 
   /**
-   * Refresh a feed and import new items
+   * Refresh an RSS feed and import new items
    *
-   * @param feedId - Feed ID
+   * @param feedId - RSS feed subscription ID
    * @param userId - User ID
    * @returns Import result
    */
   async refresh(feedId: string, userId: string): Promise<FeedImportResult> {
-    this.logger.log(`Refreshing feed: ${feedId}`)
+    this.logger.log(`Refreshing RSS feed: ${feedId}`)
 
-    const feed = await this.rssFeedRepository.findById(feedId, userId)
-    if (!feed) {
-      throw new NotFoundException(`Feed ${feedId} not found`)
+    const subscription = await this.subscriptionRepository.findById(
+      feedId,
+      userId,
+    )
+    if (!subscription) {
+      throw new NotFoundException(`RSS feed ${feedId} not found`)
+    }
+
+    if (!subscription.isRss) {
+      throw new Error('Can only refresh RSS feeds')
     }
 
     return this.importFeedItems(feedId, userId)
   }
 
   /**
-   * Get all feed subscriptions for a user
+   * Get all RSS feed subscriptions for a user
    *
    * @param userId - User ID
-   * @param activeOnly - Only return active subscriptions
+   * @param activeOnly - Only return active subscriptions (default: true)
    */
   async getUserFeeds(
     userId: string,
     activeOnly = true,
-  ): Promise<RssFeedEntity[]> {
-    return this.rssFeedRepository.findByUser(userId, activeOnly)
+  ): Promise<SubscriptionEntity[]> {
+    return this.subscriptionRepository.findByUser(
+      userId,
+      SubscriptionSourceType.RSS,
+      activeOnly,
+    )
   }
 
   /**
-   * Get unread count for a feed
+   * Get unread count for an RSS feed
    *
-   * @param feedId - Feed ID
+   * @param feedId - RSS feed subscription ID
    * @param userId - User ID
    * @returns Number of unread items
    */
   async getUnreadCount(feedId: string, userId: string): Promise<number> {
-    return this.rssFeedRepository.getUnreadCount(feedId, userId)
+    return this.subscriptionRepository.getUnreadCount(feedId, userId)
   }
 
   /**
-   * Update feed settings
+   * Update RSS feed settings
    *
-   * @param feedId - Feed ID
+   * @param feedId - RSS feed subscription ID
    * @param userId - User ID
    * @param settings - Settings to update
    */
@@ -193,30 +222,37 @@ export class RssFeedSubscriptionService {
     userId: string,
     settings: {
       title?: string
-      autoAddToLibrary?: boolean
       folder?: string
+      autoAddLabels?: string[]
     },
-  ): Promise<RssFeedEntity> {
-    const feed = await this.rssFeedRepository.findById(feedId, userId)
-    if (!feed) {
-      throw new NotFoundException(`Feed ${feedId} not found`)
+  ): Promise<SubscriptionEntity> {
+    const subscription = await this.subscriptionRepository.findById(
+      feedId,
+      userId,
+    )
+    if (!subscription) {
+      throw new NotFoundException(`RSS feed ${feedId} not found`)
     }
 
-    await this.rssFeedRepository.updateSettings(feedId, userId, settings)
-
-    // Return updated feed
-    const updatedFeed = await this.rssFeedRepository.findById(feedId, userId)
-    if (!updatedFeed) {
-      throw new NotFoundException(`Feed ${feedId} not found after update`)
+    if (!subscription.isRss) {
+      throw new Error('Can only update RSS feed settings using this service')
     }
 
-    return updatedFeed
+    await this.subscriptionRepository.updateSettings(feedId, userId, settings)
+
+    // Return updated subscription
+    const updated = await this.subscriptionRepository.findById(feedId, userId)
+    if (!updated) {
+      throw new NotFoundException(`RSS feed ${feedId} not found after update`)
+    }
+
+    return updated
   }
 
   /**
-   * Import items from a feed
+   * Import items from an RSS feed
    *
-   * @param feedId - Feed ID
+   * @param feedId - RSS feed subscription ID
    * @param userId - User ID
    * @returns Import result
    */
@@ -224,9 +260,16 @@ export class RssFeedSubscriptionService {
     feedId: string,
     userId: string,
   ): Promise<FeedImportResult> {
-    const feed = await this.rssFeedRepository.findById(feedId, userId)
-    if (!feed) {
-      throw new NotFoundException(`Feed ${feedId} not found`)
+    const subscription = await this.subscriptionRepository.findById(
+      feedId,
+      userId,
+    )
+    if (!subscription) {
+      throw new NotFoundException(`RSS feed ${feedId} not found`)
+    }
+
+    if (!subscription.feedUrl) {
+      throw new Error('RSS subscription does not have a feed URL')
     }
 
     const result: FeedImportResult = {
@@ -238,7 +281,9 @@ export class RssFeedSubscriptionService {
 
     try {
       // Parse feed
-      const parsedFeed = await this.rssFeedService.parseFeed(feed.feedUrl)
+      const parsedFeed = await this.rssFeedService.parseFeed(
+        subscription.feedUrl,
+      )
 
       // Import each feed item as a library item
       for (const item of parsedFeed.items) {
@@ -259,14 +304,14 @@ export class RssFeedSubscriptionService {
             userId,
             originalUrl: item.link,
             slug: this.generateSlug(item.link),
-            title: item.title ||'Untitled',
+            title: item.title || 'Untitled',
             author: item.author,
             description: item.description,
             publishedAt: item.publishedAt,
             savedAt: new Date(),
             state: 'CONTENT_NOT_FETCHED' as any, // Will be updated after fetch
-            contentType: ContentType.ARTICLE, // Feed items are articles
-            subscriptionId: feedId, // Link to RSS feed subscription
+            contentType: ContentType.RSS_FEED, // RSS feed items
+            subscriptionId: feedId, // Link to RSS subscription
           })
 
           // Save to database
@@ -293,21 +338,26 @@ export class RssFeedSubscriptionService {
         } catch (error) {
           this.logger.error(`Failed to import feed item ${item.link}: ${error}`)
           result.errors.push(
-            `${item.title}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `${item.title}: ${
+              error instanceof Error ? error.message : 'Unknown error'
+            }`,
           )
         }
       }
 
-      // Update feed metadata
-      await this.rssFeedRepository.markFetched(feedId, result.itemsImported)
+      // Update subscription metadata
+      await this.subscriptionRepository.markFetched(
+        feedId,
+        result.itemsImported,
+      )
 
       result.success = true
       this.logger.log(
-        `Imported ${result.itemsImported} items from feed ${feedId}, skipped ${result.itemsSkipped}`,
+        `Imported ${result.itemsImported} items from RSS feed ${feedId}, skipped ${result.itemsSkipped}`,
       )
     } catch (error) {
-      this.logger.error(`Failed to import feed ${feedId}: ${error}`)
-      await this.rssFeedRepository.markFailed(
+      this.logger.error(`Failed to import RSS feed ${feedId}: ${error}`)
+      await this.subscriptionRepository.markFailed(
         feedId,
         error instanceof Error ? error.message : 'Unknown error',
       )
@@ -346,6 +396,7 @@ export class RssFeedSubscriptionService {
 
       // Add timestamp to ensure uniqueness
       const timestamp = Date.now()
+
       return `${slug}-${timestamp}`
     } catch {
       return `url-${Date.now()}`

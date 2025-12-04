@@ -12,5 +12,5 @@ export const REPOSITORY_TOKENS = {
   ILabelRepository: Symbol('ILabelRepository'),
   IEntityLabelRepository: Symbol('IEntityLabelRepository'),
   IReadingProgressRepository: Symbol('IReadingProgressRepository'),
-  IRssFeedRepository: Symbol('IRssFeedRepository'),
+  ISubscriptionRepository: Symbol('ISubscriptionRepository'),
 } as const

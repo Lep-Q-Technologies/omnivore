@@ -602,8 +602,12 @@ input UpdateRssFeedSettingsInput {
 type User {
   createdAt: DateTime!
   email: String
+  emailAlias: String
   id: ID!
   name: String
+
+  """Newsletter email address for receiving newsletter subscriptions"""
+  newsletterEmail: String
   role: UserRole
   source: RegistrationType!
   status: StatusType!

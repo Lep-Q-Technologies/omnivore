@@ -1,7 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { Queue } from 'bullmq'
-import { RssFeedRefreshService } from './services/rss-feed-refresh.service'
 
 /**
  * SchedulerService
@@ -16,7 +15,6 @@ export class SchedulerService implements OnModuleInit {
   constructor(
     @InjectQueue('scheduler')
     private readonly schedulerQueue: Queue,
-    private readonly rssFeedRefreshService: RssFeedRefreshService,
   ) {}
 
   /**
@@ -64,9 +62,13 @@ export class SchedulerService implements OnModuleInit {
    * (for testing or user-requested refresh)
    */
   async triggerRssFeedRefresh(): Promise<void> {
-    await this.schedulerQueue.add('refresh-all-rss-feeds', {}, {
-      priority: 1, // High priority for manual triggers
-    })
+    await this.schedulerQueue.add(
+      'refresh-all-rss-feeds',
+      {},
+      {
+        priority: 1, // High priority for manual triggers
+      },
+    )
   }
 
   /**

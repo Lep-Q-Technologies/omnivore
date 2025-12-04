@@ -1,25 +1,12 @@
 import { INestApplication } from '@nestjs/common'
-import { getRepositoryToken } from '@nestjs/typeorm'
 import request from 'supertest'
-import { Repository } from 'typeorm'
-import { createE2EAppWithModule } from './helpers/create-e2e-app'
-import { LibraryItemEntity } from '../src/library/entities/library-item.entity'
-import { RssFeedEntity } from '../src/library/entities/rss-feed.entity'
 
-const SUBSCRIBE_TO_RSS_FEED_MUTATION = `
-  mutation SubscribeToRssFeed($feedUrl: String!, $importItems: Boolean) {
-    subscribeToRssFeed(feedUrl: $feedUrl, importItems: $importItems) {
-      success
-      message
-      errors
-      feed {
-        id
-        feedUrl
-        title
-      }
-    }
-  }
-`
+import { REPOSITORY_TOKENS } from '../src/repositories/injection-tokens'
+import {
+  ILibraryItemRepository,
+  ISubscriptionRepository,
+} from '../src/repositories/interfaces'
+import { createE2EAppWithModule } from './helpers/create-e2e-app'
 
 const UNSUBSCRIBE_FROM_RSS_FEED_MUTATION = `
   mutation UnsubscribeFromRssFeed($feedId: ID!, $deleteItems: Boolean) {
@@ -48,8 +35,8 @@ describe('RSS Feed GraphQL (e2e)', () => {
   let app: INestApplication
   let authToken: string
   let userId: string
-  let libraryRepository: Repository<LibraryItemEntity>
-  let rssFeedRepository: Repository<RssFeedEntity>
+  let libraryRepository: ILibraryItemRepository
+  let subscriptionRepository: ISubscriptionRepository
 
   beforeAll(async () => {
     // Set required environment variables for tests
@@ -60,12 +47,12 @@ describe('RSS Feed GraphQL (e2e)', () => {
     const { app: testApp, moduleFixture } = await createE2EAppWithModule()
     app = testApp
 
-    libraryRepository = moduleFixture.get<Repository<LibraryItemEntity>>(
-      getRepositoryToken(LibraryItemEntity),
+    libraryRepository = moduleFixture.get<ILibraryItemRepository>(
+      REPOSITORY_TOKENS.ILibraryItemRepository,
     )
 
-    rssFeedRepository = moduleFixture.get<Repository<RssFeedEntity>>(
-      getRepositoryToken(RssFeedEntity),
+    subscriptionRepository = moduleFixture.get<ISubscriptionRepository>(
+      REPOSITORY_TOKENS.ISubscriptionRepository,
     )
 
     // Register test user
@@ -108,16 +95,16 @@ describe('RSS Feed GraphQL (e2e)', () => {
 
     it('should unsubscribe from RSS feed and delete items', async () => {
       // Step 1: Create a subscription directly in the database
-      const subscription = rssFeedRepository.create({
+      const subscription = await subscriptionRepository.createRss(
         userId,
-        user: { id: userId } as any,
-        feedUrl: 'https://example.com/feed.xml',
-        title: 'Test Feed',
-        siteUrl: 'https://example.com',
-        active: true,
-      })
-      const savedFeed = await rssFeedRepository.save(subscription)
-      feedId = savedFeed.id
+        'https://example.com/feed.xml',
+        {
+          title: 'Test Feed',
+          siteUrl: 'https://example.com',
+          siteIcon: 'https://example.com/icon.png',
+        },
+      )
+      feedId = subscription.id
 
       // Step 2: Create library items linked to this subscription
       const item1 = libraryRepository.create({
@@ -138,12 +125,15 @@ describe('RSS Feed GraphQL (e2e)', () => {
         subscriptionId: feedId,
         savedAt: new Date(),
       })
-      await libraryRepository.save([item1, item2])
+      await libraryRepository.save(item1)
+      await libraryRepository.save(item2)
 
       // Step 3: Verify items exist before deletion
-      const itemsBeforeDeletion = await libraryRepository.find({
-        where: { subscriptionId: feedId, userId },
-      })
+      const itemsBeforeDeletion = await libraryRepository.findByIds(
+        [item1.id, item2.id],
+        userId,
+      )
+
       expect(itemsBeforeDeletion).toHaveLength(2)
 
       // Step 4: Unsubscribe with deleteItems = true
@@ -159,31 +149,32 @@ describe('RSS Feed GraphQL (e2e)', () => {
       )
 
       // Step 5: Verify subscription is deleted
-      const subscriptionAfterDeletion = await rssFeedRepository.findOne({
-        where: { id: feedId },
-      })
+      const subscriptionAfterDeletion = await subscriptionRepository.findById(
+        feedId,
+        userId,
+      )
       expect(subscriptionAfterDeletion).toBeNull()
 
       // Step 6: Verify library items are deleted
-      const itemsAfterDeletion = await libraryRepository.find({
-        where: { subscriptionId: feedId, userId },
-      })
+      const itemsAfterDeletion = await libraryRepository.findByIds(
+        [item1.id, item2.id],
+        userId,
+      )
       expect(itemsAfterDeletion).toHaveLength(0)
     })
 
     it('should unsubscribe from RSS feed but keep items when deleteItems = false', async () => {
       // Step 1: Create a subscription
-      const subscription = rssFeedRepository.create({
+      const subscription = await subscriptionRepository.createRss(
         userId,
-        user: { id: userId } as any,
-        feedUrl: 'https://example.com/feed2.xml',
-        title: 'Test Feed 2',
-        siteUrl: 'https://example.com',
-        active: true,
-      })
-      const savedFeed = await rssFeedRepository.save(subscription)
-      const testFeedId = savedFeed.id
-
+        'https://example.com/feed2.xml',
+        {
+          title: 'Test Feed 2',
+          siteUrl: 'https://example.com',
+          siteIcon: 'https://example.com/icon.png',
+        },
+      )
+      const testFeedId = subscription.id
       // Step 2: Create library items
       const item = libraryRepository.create({
         userId,
@@ -191,7 +182,6 @@ describe('RSS Feed GraphQL (e2e)', () => {
         title: 'RSS Item to Keep',
         slug: 'rss-item-to-keep',
         originalUrl: 'https://example.com/article-keep',
-        subscriptionId: testFeedId,
         savedAt: new Date(),
       })
       await libraryRepository.save(item)
@@ -209,19 +199,21 @@ describe('RSS Feed GraphQL (e2e)', () => {
       )
 
       // Step 4: Verify subscription is deleted
-      const subscriptionAfterDeletion = await rssFeedRepository.findOne({
-        where: { id: testFeedId },
-      })
+      const subscriptionAfterDeletion = await subscriptionRepository.findById(
+        testFeedId,
+        userId,
+      )
       expect(subscriptionAfterDeletion).toBeNull()
 
       // Step 5: Verify library items still exist
-      const itemsAfterDeletion = await libraryRepository.find({
-        where: { subscriptionId: testFeedId, userId },
-      })
+      const itemsAfterDeletion = await libraryRepository.findByIds(
+        [item.id],
+        userId,
+      )
       expect(itemsAfterDeletion).toHaveLength(1)
 
       // Cleanup: Delete the item manually
-      await libraryRepository.delete({ id: item.id })
+      await libraryRepository.bulkDelete(userId, [item.id])
     })
   })
 })

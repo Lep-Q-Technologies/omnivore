@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common'
 import {
   Args,
   ID,
@@ -8,22 +9,22 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql'
-import { UseGuards } from '@nestjs/common'
+
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../../user/decorators/current-user.decorator'
 import { User } from '../../user/entities/user.entity'
-import { RssFeedSubscriptionService } from '../services/rss-feed-subscription.service'
 import {
   RssFeed,
   RssFeedResult,
   UpdateRssFeedSettingsInput,
 } from '../dto/rss-feed.type'
+import { RssSubscriptionService } from '../services/rss-subscription.service'
 
 @Resolver(() => RssFeed)
 @UseGuards(JwtAuthGuard)
 export class RssFeedResolver {
   constructor(
-    private readonly rssFeedSubscriptionService: RssFeedSubscriptionService,
+    private readonly rssSubscriptionService: RssSubscriptionService,
   ) {}
 
   /**
@@ -47,7 +48,7 @@ export class RssFeedResolver {
         }
       }
 
-      const feed = await this.rssFeedSubscriptionService.subscribe(
+      const feed = await this.rssSubscriptionService.subscribe(
         user.id,
         feedUrl,
         importItems,
@@ -86,7 +87,7 @@ export class RssFeedResolver {
     @CurrentUser() user: User,
   ): Promise<RssFeedResult> {
     try {
-      await this.rssFeedSubscriptionService.unsubscribe(
+      await this.rssSubscriptionService.unsubscribe(
         feedId,
         user.id,
         deleteItems,
@@ -116,10 +117,7 @@ export class RssFeedResolver {
     @CurrentUser() user: User,
   ): Promise<RssFeedResult> {
     try {
-      const result = await this.rssFeedSubscriptionService.refresh(
-        feedId,
-        user.id,
-      )
+      const result = await this.rssSubscriptionService.refresh(feedId, user.id)
 
       return {
         success: result.success,
@@ -144,7 +142,7 @@ export class RssFeedResolver {
     activeOnly: boolean,
     @CurrentUser() user: User,
   ): Promise<RssFeed[]> {
-    return this.rssFeedSubscriptionService.getUserFeeds(user.id, activeOnly)
+    return this.rssSubscriptionService.getUserFeeds(user.id, activeOnly)
   }
 
   /**
@@ -157,7 +155,7 @@ export class RssFeedResolver {
     @CurrentUser() user: User,
   ): Promise<RssFeedResult> {
     try {
-      const feed = await this.rssFeedSubscriptionService.updateSettings(
+      const feed = await this.rssSubscriptionService.updateSettings(
         feedId,
         user.id,
         settings,
@@ -185,6 +183,6 @@ export class RssFeedResolver {
     @Parent() feed: RssFeed,
     @CurrentUser() user: User,
   ): Promise<number> {
-    return this.rssFeedSubscriptionService.getUnreadCount(feed.id, user.id)
+    return this.rssSubscriptionService.getUnreadCount(feed.id, user.id)
   }
 }
