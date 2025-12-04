@@ -1,22 +1,23 @@
-import { TEST_DB_CONSTANTS } from './test-db-constants'
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql'
 import { DataSource } from 'typeorm'
-import { User } from '../../src/user/entities/user.entity'
-import { UserProfile } from '../../src/user/entities/profile.entity'
-import { UserPersonalization } from '../../src/user/entities/user-personalization.entity'
+
 import { Filter } from '../../src/filter/entities/filter.entity'
 import { Group } from '../../src/group/entities/group.entity'
-import { Invite } from '../../src/group/entities/invite.entity'
 import { GroupMembership } from '../../src/group/entities/group-membership.entity'
-import { LibraryItemEntity } from '../../src/library/entities/library-item.entity'
-import { Label } from '../../src/label/entities/label.entity'
-import { EntityLabel } from '../../src/label/entities/entity-label.entity'
+import { Invite } from '../../src/group/entities/invite.entity'
 import { HighlightEntity } from '../../src/highlight/entities/highlight.entity'
+import { EntityLabel } from '../../src/label/entities/entity-label.entity'
+import { Label } from '../../src/label/entities/label.entity'
+import { LibraryItemEntity } from '../../src/library/entities/library-item.entity'
+import { SubscriptionEntity } from '../../src/library/entities/subscription.entity'
 import { ReadingProgressEntity } from '../../src/reading-progress/entities/reading-progress.entity'
-import { RssFeedEntity } from '../../src/library/entities/rss-feed.entity'
+import { UserProfile } from '../../src/user/entities/profile.entity'
+import { User } from '../../src/user/entities/user.entity'
+import { UserPersonalization } from '../../src/user/entities/user-personalization.entity'
+import { TEST_DB_CONSTANTS } from './test-db-constants'
 
 let container: StartedPostgreSqlContainer | null = null
 let dataSource: DataSource | null = null
@@ -57,7 +58,7 @@ export async function setupTestContainer(): Promise<{
       Group,
       Invite,
       GroupMembership,
-      RssFeedEntity,
+      SubscriptionEntity,
       LibraryItemEntity,
       Label,
       EntityLabel,
@@ -115,6 +116,7 @@ export function getTestDataSource(): DataSource {
       'Test DataSource not initialized. Make sure globalSetup has run.',
     )
   }
+
   return dataSource
 }
 
@@ -153,7 +155,7 @@ export async function cleanDatabase(): Promise<void> {
     'omnivore.highlight',
     'omnivore.label',
     'omnivore.library_item',
-    'omnivore.rss_feed',
+    'omnivore.subscription',
     'omnivore.group_membership',
     'omnivore.invite',
     'omnivore.group',

@@ -13,9 +13,7 @@
     "lint": "eslint src --ext ts,js,tsx,jsx",
     "compile": "tsc",
     "build": "tsc",
-    "start": "functions-framework --target=importHandler",
-    "dev": "concurrently \"tsc -w\" \"nodemon --watch ./build/ --exec npm run start\"",
-    "start:collector": "functions-framework --target=importMetricsCollector"
+    "dev": "concurrently \"tsc -w\" \"nodemon --watch ./build/ --exec npm run start\""
   },
   "devDependencies": {
     "@types/chai": "^4.3.4",
@@ -33,7 +31,6 @@
   },
   "dependencies": {
     "@fast-csv/parse": "^5.0.0",
-    "@google-cloud/functions-framework": "3.4.5",
     "@google-cloud/storage": "^7.0.1",
     "@omnivore/readability": "1.0.0",
     "@omnivore/utils": "1.0.0",

@@ -1,9 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common'
 import { Processor, WorkerHost } from '@nestjs/bullmq'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { Job } from 'bullmq'
+
+import { RssSubscriptionService } from '../../library/services/rss-subscription.service'
 import { REPOSITORY_TOKENS } from '../../repositories/injection-tokens'
-import { IRssFeedRepository } from '../../repositories/interfaces'
-import { RssFeedSubscriptionService } from '../../library/services/rss-feed-subscription.service'
+import { ISubscriptionRepository } from '../../repositories/interfaces'
 
 /**
  * RssFeedRefreshService
@@ -18,9 +19,9 @@ export class RssFeedRefreshService extends WorkerHost {
   private readonly logger = new Logger(RssFeedRefreshService.name)
 
   constructor(
-    @Inject(REPOSITORY_TOKENS.IRssFeedRepository)
-    private readonly rssFeedRepository: IRssFeedRepository,
-    private readonly rssFeedSubscriptionService: RssFeedSubscriptionService,
+    @Inject(REPOSITORY_TOKENS.ISubscriptionRepository)
+    private readonly subscriptionRepository: ISubscriptionRepository,
+    private readonly rssSubscriptionService: RssSubscriptionService,
   ) {
     super()
   }
@@ -38,6 +39,7 @@ export class RssFeedRefreshService extends WorkerHost {
         return this.refreshAllRssFeeds()
       default:
         this.logger.warn(`Unknown job type: ${name}`)
+
         return { success: false, error: 'Unknown job type' }
     }
   }
@@ -67,10 +69,11 @@ export class RssFeedRefreshService extends WorkerHost {
     try {
       // Get feeds that need refreshing
       // (not fetched in last hour, or never fetched)
-      const feedsToRefresh = await this.rssFeedRepository.getFeedsToRefresh(
-        3600, // 1 hour in seconds
-        100, // batch limit
-      )
+      const feedsToRefresh =
+        await this.subscriptionRepository.getFeedsToRefresh(
+          3600, // 1 hour in seconds
+          100, // batch limit
+        )
 
       this.logger.log(`Found ${feedsToRefresh.length} feeds to refresh`)
 
@@ -79,8 +82,10 @@ export class RssFeedRefreshService extends WorkerHost {
         try {
           this.logger.debug(`Refreshing feed: ${feed.title} (${feed.id})`)
 
-          const importResult =
-            await this.rssFeedSubscriptionService.refresh(feed.id, feed.userId)
+          const importResult = await this.rssSubscriptionService.refresh(
+            feed.id,
+            feed.userId,
+          )
 
           if (importResult.success) {
             result.feedsRefreshed++
@@ -141,13 +146,15 @@ export class RssFeedRefreshService extends WorkerHost {
     this.logger.log(`Manually refreshing feed: ${feedId}`)
 
     try {
-      const importResult = await this.rssFeedSubscriptionService.refresh(
+      const importResult = await this.rssSubscriptionService.refresh(
         feedId,
         userId,
       )
+
       return importResult
     } catch (error) {
       this.logger.error(`Failed to refresh feed ${feedId}`, error)
+
       return {
         success: false,
         itemsImported: 0,

@@ -15,7 +15,6 @@
     "lint": "eslint src --ext ts,js,tsx,jsx",
     "compile": "tsc",
     "build": "tsc",
-    "start": "functions-framework --source=build/src/ --target=inboundEmailHandler",
     "dev": "concurrently \"tsc -w\" \"nodemon --watch ./build/ --exec npm run start\"",
     "gcloud-deploy": "gcloud functions deploy inboundEmailHandler --trigger-http --allow-unauthenticated --region=$npm_config_region --runtime nodejs14 --env-vars-file=../gcf-shared/env-$npm_config_env.yaml",
     "deploy": "yarn build && yarn gcloud-deploy"
@@ -33,7 +32,6 @@
     "mocha": "^10.0.0"
   },
   "dependencies": {
-    "@google-cloud/functions-framework": "3.4.5",
     "@google-cloud/storage": "^7.0.1",
     "@omnivore/utils": "1.0.0",
     "@sentry/serverless": "^7.77.0",
