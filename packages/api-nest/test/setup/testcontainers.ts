@@ -12,6 +12,7 @@ import { HighlightEntity } from '../../src/highlight/entities/highlight.entity'
 import { EntityLabel } from '../../src/label/entities/entity-label.entity'
 import { Label } from '../../src/label/entities/label.entity'
 import { LibraryItemEntity } from '../../src/library/entities/library-item.entity'
+import { PendingConfirmationEntity } from '../../src/library/entities/pending-confirmation.entity'
 import { SubscriptionEntity } from '../../src/library/entities/subscription.entity'
 import { ReadingProgressEntity } from '../../src/reading-progress/entities/reading-progress.entity'
 import { UserProfile } from '../../src/user/entities/profile.entity'
@@ -59,6 +60,7 @@ export async function setupTestContainer(): Promise<{
       Invite,
       GroupMembership,
       SubscriptionEntity,
+      PendingConfirmationEntity,
       LibraryItemEntity,
       Label,
       EntityLabel,
@@ -156,6 +158,7 @@ export async function cleanDatabase(): Promise<void> {
     'omnivore.label',
     'omnivore.library_item',
     'omnivore.subscription',
+    'omnivore.pending_confirmation',
     'omnivore.group_membership',
     'omnivore.invite',
     'omnivore.group',

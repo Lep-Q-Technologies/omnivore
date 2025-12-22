@@ -14,6 +14,7 @@ export const QUEUE_NAMES = {
   CONTENT_PROCESSING: 'content-processing',
   NOTIFICATIONS: 'notifications',
   POST_PROCESSING: 'post-processing',
+  EMAIL_PROCESSING: 'email-processing', // Legacy queue name for compatibility
 } as const
 
 /**
@@ -32,6 +33,12 @@ export const JOB_TYPES = {
   // Post Processing Queue
   UPDATE_SEARCH_INDEX: 'update-search-index',
   GENERATE_THUMBNAIL: 'generate-thumbnail',
+
+  // Email Processing Queue (Legacy compatibility)
+  SAVE_NEWSLETTER: 'save-newsletter',
+  FORWARD_EMAIL: 'forward-email',
+  CONFIRMATION_EMAIL: 'confirmation-email',
+  SAVE_ATTACHMENT: 'save-attachment',
 } as const
 
 /**

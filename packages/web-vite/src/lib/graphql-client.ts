@@ -3,15 +3,28 @@
 
 import { useCallback, useState } from 'react'
 
-import type { DeleteResult, HighlightColor, LibraryItem, RssFeed } from '../types/api'
+import type {
+  DeleteResult,
+  HighlightColor,
+  LibraryItem,
+  NewsletterEmailResult,
+  NewsletterSubscription,
+  NewsletterSubscriptionResult,
+  RssFeed,
+  UpdateNewsletterSubscriptionInput,
+} from '../types/api'
 import {
   HIGHLIGHT_FRAGMENT,
   LABEL_BASIC_FRAGMENT,
   LABEL_FRAGMENT,
   LIBRARY_ITEM_FULL_FRAGMENT,
+  NEWSLETTER_SUBSCRIPTION_FRAGMENT,
   READING_PROGRESS_FRAGMENT,
   RSS_FEED_FRAGMENT,
 } from './graphql-fragments'
+
+// Re-export types for convenience
+export type { RssFeed, NewsletterSubscription, NewsletterEmailResult }
 
 const DEFAULT_GRAPHQL_PATH = '/api/graphql'
 const TOKEN_STORAGE_KEY = 'omnivore-auth-token'
@@ -1442,6 +1455,261 @@ export function useUpdateRssFeedSettings() {
           error instanceof Error
             ? error
             : new Error('Failed to update RSS feed settings')
+        setState({ loading: false, error: err, data: null })
+        throw err
+      }
+    },
+    [],
+  )
+
+  return { ...state, updateSettings }
+}
+
+// ==================== NEWSLETTER SUBSCRIPTION QUERIES ====================
+
+const GET_NEWSLETTER_EMAIL_QUERY = `
+  query GetNewsletterEmail {
+    newsletterEmail {
+      newsletterEmail
+      emailAlias
+    }
+  }
+`
+
+const GET_NEWSLETTER_SUBSCRIPTIONS_QUERY = `
+  ${NEWSLETTER_SUBSCRIPTION_FRAGMENT}
+  query GetNewsletterSubscriptions($activeOnly: Boolean = true) {
+    newsletterSubscriptions(activeOnly: $activeOnly) {
+      ...NewsletterSubscriptionFields
+    }
+  }
+`
+
+// ==================== NEWSLETTER SUBSCRIPTION MUTATIONS ====================
+
+const SUBSCRIBE_TO_NEWSLETTER_MUTATION = `
+  ${NEWSLETTER_SUBSCRIPTION_FRAGMENT}
+  mutation SubscribeToNewsletter($senderEmail: String!, $title: String) {
+    subscribeToNewsletter(senderEmail: $senderEmail, title: $title) {
+      success
+      message
+      subscription {
+        ...NewsletterSubscriptionFields
+      }
+      errors
+    }
+  }
+`
+
+const UNSUBSCRIBE_FROM_NEWSLETTER_MUTATION = `
+  mutation UnsubscribeFromNewsletter($subscriptionId: ID!, $deleteItems: Boolean = true) {
+    unsubscribeFromNewsletter(subscriptionId: $subscriptionId, deleteItems: $deleteItems) {
+      success
+      message
+      errors
+    }
+  }
+`
+
+const UPDATE_NEWSLETTER_SETTINGS_MUTATION = `
+  ${NEWSLETTER_SUBSCRIPTION_FRAGMENT}
+  mutation UpdateNewsletterSettings($subscriptionId: ID!, $settings: UpdateNewsletterSubscriptionInput!) {
+    updateNewsletterSettings(subscriptionId: $subscriptionId, settings: $settings) {
+      success
+      message
+      subscription {
+        ...NewsletterSubscriptionFields
+      }
+      errors
+    }
+  }
+`
+
+// ==================== NEWSLETTER SUBSCRIPTION HOOKS ====================
+
+export function useNewsletterEmail() {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: NewsletterEmailResult | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const fetchNewsletterEmail = useCallback(async () => {
+    setState({ loading: true, error: null, data: null })
+    try {
+      const result = await graphqlRequest<{
+        newsletterEmail: NewsletterEmailResult
+      }>(GET_NEWSLETTER_EMAIL_QUERY, {})
+      setState({ loading: false, error: null, data: result.newsletterEmail })
+
+      return result.newsletterEmail
+    } catch (error) {
+      const err =
+        error instanceof Error
+          ? error
+          : new Error('Failed to fetch newsletter email')
+      setState({ loading: false, error: err, data: null })
+      throw err
+    }
+  }, [])
+
+  return { ...state, fetchNewsletterEmail }
+}
+
+export function useNewsletterSubscriptions(activeOnly = true) {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: NewsletterSubscription[] | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const fetchNewsletterSubscriptions = useCallback(async () => {
+    setState({ loading: true, error: null, data: null })
+    try {
+      const result = await graphqlRequest<{
+        newsletterSubscriptions: NewsletterSubscription[]
+      }>(GET_NEWSLETTER_SUBSCRIPTIONS_QUERY, { activeOnly })
+      setState({
+        loading: false,
+        error: null,
+        data: result.newsletterSubscriptions,
+      })
+
+      return result.newsletterSubscriptions
+    } catch (error) {
+      const err =
+        error instanceof Error
+          ? error
+          : new Error('Failed to fetch newsletter subscriptions')
+      setState({ loading: false, error: err, data: null })
+      throw err
+    }
+  }, [activeOnly])
+
+  return { ...state, fetchNewsletterSubscriptions }
+}
+
+export function useSubscribeToNewsletter() {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: NewsletterSubscriptionResult | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const subscribe = useCallback(
+    async (senderEmail: string, title?: string) => {
+      setState({ loading: true, error: null, data: null })
+      try {
+        const result = await graphqlRequest<{
+          subscribeToNewsletter: NewsletterSubscriptionResult
+        }>(SUBSCRIBE_TO_NEWSLETTER_MUTATION, { senderEmail, title })
+        setState({
+          loading: false,
+          error: null,
+          data: result.subscribeToNewsletter,
+        })
+
+        return result.subscribeToNewsletter
+      } catch (error) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error('Failed to subscribe to newsletter')
+        setState({ loading: false, error: err, data: null })
+        throw err
+      }
+    },
+    [],
+  )
+
+  return { ...state, subscribe }
+}
+
+export function useUnsubscribeFromNewsletter() {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: NewsletterSubscriptionResult | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const unsubscribe = useCallback(
+    async (subscriptionId: string, deleteItems = true) => {
+      setState({ loading: true, error: null, data: null })
+      try {
+        const result = await graphqlRequest<{
+          unsubscribeFromNewsletter: NewsletterSubscriptionResult
+        }>(UNSUBSCRIBE_FROM_NEWSLETTER_MUTATION, { subscriptionId, deleteItems })
+        setState({
+          loading: false,
+          error: null,
+          data: result.unsubscribeFromNewsletter,
+        })
+
+        return result.unsubscribeFromNewsletter
+      } catch (error) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error('Failed to unsubscribe from newsletter')
+        setState({ loading: false, error: err, data: null })
+        throw err
+      }
+    },
+    [],
+  )
+
+  return { ...state, unsubscribe }
+}
+
+export function useUpdateNewsletterSettings() {
+  const [state, setState] = useState<{
+    loading: boolean
+    error: Error | null
+    data: NewsletterSubscriptionResult | null
+  }>({
+    loading: false,
+    error: null,
+    data: null,
+  })
+
+  const updateSettings = useCallback(
+    async (
+      subscriptionId: string,
+      settings: UpdateNewsletterSubscriptionInput,
+    ) => {
+      setState({ loading: true, error: null, data: null })
+      try {
+        const result = await graphqlRequest<{
+          updateNewsletterSettings: NewsletterSubscriptionResult
+        }>(UPDATE_NEWSLETTER_SETTINGS_MUTATION, { subscriptionId, settings })
+        setState({
+          loading: false,
+          error: null,
+          data: result.updateNewsletterSettings,
+        })
+
+        return result.updateNewsletterSettings
+      } catch (error) {
+        const err =
+          error instanceof Error
+            ? error
+            : new Error('Failed to update newsletter settings')
         setState({ loading: false, error: err, data: null })
         throw err
       }

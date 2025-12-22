@@ -3,19 +3,26 @@
  * Runs in each test worker to initialize the test DataSource
  */
 
+// Add crypto polyfill for @nestjs/schedule
+import { webcrypto } from 'crypto'
+// @ts-ignore
+global.crypto = webcrypto
+
 import './test-logger-config' // Import logger configuration to suppress noise
+
 import { DataSource } from 'typeorm'
-import { User } from '../../src/user/entities/user.entity'
-import { UserProfile } from '../../src/user/entities/profile.entity'
-import { UserPersonalization } from '../../src/user/entities/user-personalization.entity'
+
 import { Filter } from '../../src/filter/entities/filter.entity'
 import { Group } from '../../src/group/entities/group.entity'
-import { Invite } from '../../src/group/entities/invite.entity'
 import { GroupMembership } from '../../src/group/entities/group-membership.entity'
-import { LibraryItemEntity } from '../../src/library/entities/library-item.entity'
-import { Label } from '../../src/label/entities/label.entity'
-import { EntityLabel } from '../../src/label/entities/entity-label.entity'
+import { Invite } from '../../src/group/entities/invite.entity'
 import { HighlightEntity } from '../../src/highlight/entities/highlight.entity'
+import { EntityLabel } from '../../src/label/entities/entity-label.entity'
+import { Label } from '../../src/label/entities/label.entity'
+import { LibraryItemEntity } from '../../src/library/entities/library-item.entity'
+import { UserProfile } from '../../src/user/entities/profile.entity'
+import { User } from '../../src/user/entities/user.entity'
+import { UserPersonalization } from '../../src/user/entities/user-personalization.entity'
 
 /**
  * Initialize test DataSource using connection details from global setup

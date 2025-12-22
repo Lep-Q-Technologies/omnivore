@@ -175,3 +175,26 @@ export const RSS_FEED_FRAGMENT = `
   }
 `
 
+export const NEWSLETTER_SUBSCRIPTION_FRAGMENT = `
+  fragment NewsletterSubscriptionFields on NewsletterSubscription {
+    id
+    senderEmail
+    emailAlias
+    newsletterEmail
+    title
+    description
+    siteUrl
+    siteIcon
+    lastReceivedAt
+    itemCount
+    unreadCount
+    active
+    folder
+    autoAddLabels
+    unsubscribeMailTo
+    unsubscribeHttpUrl
+    createdAt
+    updatedAt
+  }
+`
+

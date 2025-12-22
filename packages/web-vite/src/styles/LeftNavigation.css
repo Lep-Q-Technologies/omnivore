@@ -182,6 +182,66 @@
   border-radius: 0.25rem;
 }
 
+/* Subscriptions content - container for subsections */
+.subscriptions-content {
+  padding: 0;
+}
+
+/* Subscription subsections (RSS, Newsletters) */
+.subscription-subsection {
+  margin-bottom: 0.5rem;
+}
+
+.subsection-header {
+  padding: 0.25rem 0.5rem;
+}
+
+.subsection-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #777;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.subsection-toggle:hover {
+  color: #898989;
+}
+
+.subsection-toggle:focus-visible {
+  outline: 2px solid var(--color-action-blue);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+  color: #898989;
+}
+
+.subsection-icon {
+  font-size: 0.7rem;
+  color: #666;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.subsection-title {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.subsection-count {
+  font-size: 0.7rem;
+  color: #666;
+  font-weight: 400;
+}
+
 /* Shortcut items */
 .shortcuts-list {
   padding: 0.5rem 0;

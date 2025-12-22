@@ -6,6 +6,7 @@ import {
   SubscriptionType,
   useGetSubscriptionsQuery,
 } from '../../lib/networking/queries/useGetSubscriptionsQuery'
+import { useGetPendingConfirmationsQuery } from '../../lib/networking/queries/useGetPendingConfirmationsQuery'
 import { unsubscribeMutation } from '../../lib/networking/mutations/unsubscribeMutation'
 import { showErrorToast, showSuccessToast } from '../../lib/toastHelpers'
 import {
@@ -13,12 +14,17 @@ import {
   SettingsTable,
   SettingsTableRow,
 } from '../../components/templates/settings/SettingsTable'
+import { PendingConfirmationsSection } from '../../components/templates/settings/PendingConfirmations'
 import { StyledText } from '../../components/elements/StyledText'
 import Link from 'next/link'
 import { formattedShortDate } from '../../lib/dateFormatting'
 
 export default function SubscriptionsPage(): JSX.Element {
   const { subscriptions, revalidate, isValidating } = useGetSubscriptionsQuery()
+  const {
+    pendingConfirmations,
+    revalidate: revalidateConfirmations,
+  } = useGetPendingConfirmationsQuery()
   const [confirmUnsubscribeSubscription, setConfirmUnsubscribeSubscription] =
     useState<Subscription | null>(null)
 
@@ -102,6 +108,11 @@ export default function SubscriptionsPage(): JSX.Element {
             text={isValidating ? '-' : 'No Subscriptions Found'}
           />
         )}
+
+        <PendingConfirmationsSection
+          confirmations={pendingConfirmations}
+          onUpdate={revalidateConfirmations}
+        />
 
         {confirmUnsubscribeSubscription ? (
           <ConfirmationModal

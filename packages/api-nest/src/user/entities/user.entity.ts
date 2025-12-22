@@ -6,6 +6,7 @@ import {
   registerEnumType,
 } from '@nestjs/graphql'
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -14,8 +15,15 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
+import { customAlphabet } from 'nanoid'
 
 import { UserRole } from '../enums/user-role.enum'
+
+// Generate URL-safe email aliases (8 characters, lowercase alphanumeric)
+const generateEmailAlias = customAlphabet(
+  'abcdefghijklmnopqrstuvwxyz0123456789',
+  8,
+)
 
 export enum StatusType {
   ACTIVE = 'ACTIVE',
@@ -143,6 +151,17 @@ export class User {
 
   canAccess(): boolean {
     return this.isActive() && !this.isSuspended() && !this.isPending()
+  }
+
+  /**
+   * Auto-generate email alias before inserting new user
+   * Ensures all new users have a unique email alias for newsletters
+   */
+  @BeforeInsert()
+  generateEmailAliasIfNeeded() {
+    if (!this.emailAlias) {
+      this.emailAlias = generateEmailAlias()
+    }
   }
 
   /**

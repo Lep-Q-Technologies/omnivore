@@ -81,6 +81,20 @@ export class SubscriptionEntity {
   emailAlias?: string | null
 
   /**
+   * Get the full newsletter email address for this subscription
+   * Combines user email alias + subscription email alias
+   * @param userEmailAlias - The user's base email alias
+   * @returns Full newsletter email address or null for RSS subscriptions
+   */
+  getNewsletterEmail(userEmailAlias: string): string | null {
+    if (!this.emailAlias || this.sourceType !== SubscriptionSourceType.NEWSLETTER) {
+      return null
+    }
+    // TODO: Make domain configurable via environment variable
+    return `${userEmailAlias}+${this.emailAlias}@inbox.omnivore.app`
+  }
+
+  /**
    * Content title extracted from feed/newsletter metadata
    */
   @Column({ name: 'title', type: 'varchar', length: 512, nullable: true })
