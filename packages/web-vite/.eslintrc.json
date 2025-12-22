@@ -1,0 +1,25 @@
+{
+  "extends": ["../../.eslintrc.base.json"],
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "rules": {
+    "@typescript-eslint/no-unnecessary-condition": "off",
+    "@typescript-eslint/prefer-nullish-coalescing": "off",
+    "@typescript-eslint/prefer-optional-chain": "off",
+    "@typescript-eslint/await-thenable": "off",
+    "@typescript-eslint/no-floating-promises": "off",
+    "@typescript-eslint/no-misused-promises": "off",
+    "valid-jsdoc": "off",
+    "no-undefined": "off",
+    "no-console": "off"
+  },
+  "env": {
+    "browser": true,
+    "es2020": true
+  }
+}

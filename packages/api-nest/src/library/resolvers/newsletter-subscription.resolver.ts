@@ -1,0 +1,269 @@
+import { UseGuards } from '@nestjs/common'
+import {
+  Args,
+  ID,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql'
+
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
+import { CurrentUser } from '../../user/decorators/current-user.decorator'
+import { User } from '../../user/entities/user.entity'
+import {
+  NewsletterEmailResult,
+  NewsletterSubscription,
+  NewsletterSubscriptionResult,
+  UpdateNewsletterSubscriptionInput,
+} from '../dto/newsletter-subscription.type'
+import { NewsletterSubscriptionService } from '../services/newsletter-subscription.service'
+
+@Resolver(() => NewsletterSubscription)
+@UseGuards(JwtAuthGuard)
+export class NewsletterSubscriptionResolver {
+  constructor(
+    private readonly newsletterService: NewsletterSubscriptionService,
+  ) {}
+
+  /**
+   * Get user's unique newsletter email address
+   */
+  @Query(() => NewsletterEmailResult)
+  async newsletterEmail(@CurrentUser() user: User): Promise<NewsletterEmailResult> {
+    if (!user.emailAlias) {
+      throw new Error('User does not have a newsletter email address')
+    }
+
+    return {
+      newsletterEmail: user.newsletterEmail!,
+      emailAlias: user.emailAlias,
+    }
+  }
+
+  /**
+   * Get all newsletter subscriptions for the current user
+   */
+  @Query(() => [NewsletterSubscription])
+  async newsletterSubscriptions(
+    @Args('activeOnly', { type: () => Boolean, defaultValue: true })
+    activeOnly: boolean,
+    @CurrentUser() user: User,
+  ): Promise<NewsletterSubscription[]> {
+    const subscriptions = await this.newsletterService.getUserNewsletters(
+      user.id,
+      activeOnly,
+    )
+
+    return subscriptions.map((sub) => ({
+      id: sub.id,
+      userId: sub.userId,
+      senderEmail: sub.senderEmail!,
+      emailAlias: sub.emailAlias!,
+      title: sub.title,
+      description: sub.description,
+      siteUrl: sub.siteUrl,
+      siteIcon: sub.siteIcon,
+      lastReceivedAt: sub.lastFetchedAt,
+      itemCount: sub.itemCount,
+      active: sub.active,
+      folder: sub.folder,
+      autoAddLabels: sub.autoAddLabels,
+      unsubscribeMailTo: sub.unsubscribeMailTo,
+      unsubscribeHttpUrl: sub.unsubscribeHttpUrl,
+      createdAt: sub.createdAt,
+      updatedAt: sub.updatedAt,
+    }))
+  }
+
+  /**
+   * Create a newsletter subscription
+   * This is typically called when the user first receives an email from a sender
+   */
+  @Mutation(() => NewsletterSubscriptionResult)
+  async subscribeToNewsletter(
+    @Args('senderEmail') senderEmail: string,
+    @Args('title', { nullable: true }) title: string | undefined,
+    @CurrentUser() user: User,
+  ): Promise<NewsletterSubscriptionResult> {
+    try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(senderEmail)) {
+        return {
+          success: false,
+          message: 'Invalid sender email format',
+          errors: ['The provided email address is not valid'],
+        }
+      }
+
+      const subscription = await this.newsletterService.findOrCreateByEmail(
+        user.id,
+        senderEmail,
+        { title },
+      )
+
+      return {
+        success: true,
+        message: `Subscribed to newsletter from ${senderEmail}`,
+        subscription: {
+          id: subscription.id,
+          userId: subscription.userId,
+          senderEmail: subscription.senderEmail!,
+          emailAlias: subscription.emailAlias!,
+          title: subscription.title,
+          description: subscription.description,
+          siteUrl: subscription.siteUrl,
+          siteIcon: subscription.siteIcon,
+          lastReceivedAt: subscription.lastFetchedAt,
+          itemCount: subscription.itemCount,
+          active: subscription.active,
+          folder: subscription.folder,
+          autoAddLabels: subscription.autoAddLabels,
+          unsubscribeMailTo: subscription.unsubscribeMailTo,
+          unsubscribeHttpUrl: subscription.unsubscribeHttpUrl,
+          createdAt: subscription.createdAt,
+          updatedAt: subscription.updatedAt,
+        },
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to subscribe: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        errors: [
+          error instanceof Error ? error.message : 'Failed to create subscription',
+        ],
+      }
+    }
+  }
+
+  /**
+   * Unsubscribe from a newsletter
+   */
+  @Mutation(() => NewsletterSubscriptionResult)
+  async unsubscribeFromNewsletter(
+    @Args('subscriptionId', { type: () => ID }) subscriptionId: string,
+    @Args('deleteItems', {
+      type: () => Boolean,
+      defaultValue: true,
+      description: 'Whether to delete library items from this newsletter (default: true)',
+    })
+    deleteItems: boolean,
+    @CurrentUser() user: User,
+  ): Promise<NewsletterSubscriptionResult> {
+    try {
+      await this.newsletterService.unsubscribe(
+        subscriptionId,
+        user.id,
+        deleteItems,
+      )
+
+      return {
+        success: true,
+        message: deleteItems
+          ? 'Unsubscribed from newsletter and deleted items'
+          : 'Unsubscribed from newsletter (items preserved)',
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to unsubscribe: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        errors: [
+          error instanceof Error ? error.message : 'Failed to unsubscribe',
+        ],
+      }
+    }
+  }
+
+  /**
+   * Update newsletter subscription settings
+   */
+  @Mutation(() => NewsletterSubscriptionResult)
+  async updateNewsletterSettings(
+    @Args('subscriptionId', { type: () => ID }) subscriptionId: string,
+    @Args('settings') settings: UpdateNewsletterSubscriptionInput,
+    @CurrentUser() user: User,
+  ): Promise<NewsletterSubscriptionResult> {
+    try {
+      const subscription = await this.newsletterService.updateSettings(
+        subscriptionId,
+        user.id,
+        settings,
+      )
+
+      if (!subscription) {
+        return {
+          success: false,
+          message: 'Newsletter subscription not found',
+          errors: ['Subscription not found or access denied'],
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Newsletter settings updated',
+        subscription: {
+          id: subscription.id,
+          userId: subscription.userId,
+          senderEmail: subscription.senderEmail!,
+          emailAlias: subscription.emailAlias!,
+          title: subscription.title,
+          description: subscription.description,
+          siteUrl: subscription.siteUrl,
+          siteIcon: subscription.siteIcon,
+          lastReceivedAt: subscription.lastFetchedAt,
+          itemCount: subscription.itemCount,
+          active: subscription.active,
+          folder: subscription.folder,
+          autoAddLabels: subscription.autoAddLabels,
+          unsubscribeMailTo: subscription.unsubscribeMailTo,
+          unsubscribeHttpUrl: subscription.unsubscribeHttpUrl,
+          createdAt: subscription.createdAt,
+          updatedAt: subscription.updatedAt,
+        },
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to update settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        errors: [
+          error instanceof Error ? error.message : 'Failed to update settings',
+        ],
+      }
+    }
+  }
+
+  /**
+   * Field resolver for newsletterEmail (computed from user + subscription aliases)
+   */
+  @ResolveField('newsletterEmail', () => String, { nullable: true })
+  async resolveNewsletterEmail(
+    @Parent() subscription: NewsletterSubscription,
+    @CurrentUser() user: User,
+  ): Promise<string | null> {
+    if (!subscription.emailAlias || !user.emailAlias) {
+      return null
+    }
+    // TODO: Make domain configurable via environment variable
+    return `${user.emailAlias}+${subscription.emailAlias}@inbox.omnivore.app`
+  }
+
+  /**
+   * Field resolver for unreadCount (computed from library items)
+   */
+  @ResolveField(() => Number, { nullable: true })
+  async unreadCount(
+    @Parent() subscription: NewsletterSubscription,
+    @CurrentUser() user: User,
+  ): Promise<number | null> {
+    try {
+      return await this.newsletterService.getUnreadCount(
+        subscription.id,
+        user.id,
+      )
+    } catch {
+      return null
+    }
+  }
+}

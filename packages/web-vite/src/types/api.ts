@@ -238,6 +238,46 @@ export interface RssFeed {
   updatedAt: string
 }
 
+export interface NewsletterSubscription {
+  id: string
+  userId: string
+  senderEmail: string
+  emailAlias: string
+  newsletterEmail?: string | null
+  title?: string | null
+  description?: string | null
+  siteUrl?: string | null
+  siteIcon?: string | null
+  lastReceivedAt?: string | null
+  itemCount: number
+  unreadCount?: number | null
+  active: boolean
+  folder?: string | null
+  autoAddLabels?: string[] | null
+  unsubscribeMailTo?: string | null
+  unsubscribeHttpUrl?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UpdateNewsletterSubscriptionInput {
+  title?: string
+  folder?: string
+  autoAddLabels?: string[]
+}
+
+export interface NewsletterSubscriptionResult {
+  success: boolean
+  message?: string | null
+  subscription?: NewsletterSubscription | null
+  errors?: string[] | null
+}
+
+export interface NewsletterEmailResult {
+  newsletterEmail: string
+  emailAlias: string
+}
+
 export interface LibraryItem {
   id: string
   title: string

@@ -11,6 +11,7 @@ import { HighlightEntity } from '../highlight/entities/highlight.entity'
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { Label } from '../label/entities/label.entity'
 import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { PendingConfirmationEntity } from '../library/entities/pending-confirmation.entity'
 import { SubscriptionEntity } from '../library/entities/subscription.entity'
 import { LoggingModule } from '../logging/logging.module'
 import { StructuredLogger } from '../logging/structured-logger.service'
@@ -57,6 +58,7 @@ import { QueryPerformanceLogger } from './query-logger'
             Invite,
             GroupMembership,
             SubscriptionEntity,
+            PendingConfirmationEntity,
             LibraryItemEntity,
             Label,
             EntityLabel,

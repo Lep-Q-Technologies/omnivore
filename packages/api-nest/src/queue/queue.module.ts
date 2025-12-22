@@ -5,27 +5,41 @@
  * Configures queues for content processing, notifications, and post-processing.
  */
 
-import { Module } from '@nestjs/common'
 import { BullModule } from '@nestjs/bullmq'
+import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { QUEUE_NAMES, REDIS_CONFIG } from './queue.constants'
+
+import { EnvVariables } from '../config/env-variables'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { PendingConfirmationEntity } from '../library/entities/pending-confirmation.entity'
+import { SubscriptionEntity } from '../library/entities/subscription.entity'
+import { NewsletterSubscriptionService } from '../library/services/newsletter-subscription.service'
+import { PendingConfirmationService } from '../library/services/pending-confirmation.service'
+import { RepositoriesModule } from '../repositories/repositories.module'
+import { User } from '../user/entities/user.entity'
 import { EventBusService } from './event-bus.service'
-import { QueueHealthIndicator } from './queue-health.indicator'
 import { ContentProcessorService } from './processors/content-processor.service'
-import { HtmlSanitizerService } from './services/html-sanitizer.service'
+import { EmailProcessorService } from './processors/email-processor.service'
+import { QUEUE_NAMES, REDIS_CONFIG } from './queue.constants'
+import { QueueHealthIndicator } from './queue-health.indicator'
 import { ContentTypeDetectorService } from './services/content-type-detector.service'
+import { HtmlSanitizerService } from './services/html-sanitizer.service'
 import { PdfExtractorService } from './services/pdf-extractor.service'
 import { RssFeedService } from './services/rss-feed.service'
-import { VideoExtractorService } from './services/video-extractor.service'
 import { TwitterExtractorService } from './services/twitter-extractor.service'
-import { LibraryItemEntity } from '../library/entities/library-item.entity'
-import { EnvVariables } from '../config/env-variables'
+import { VideoExtractorService } from './services/video-extractor.service'
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([LibraryItemEntity]),
+    RepositoriesModule,
+    TypeOrmModule.forFeature([
+      LibraryItemEntity,
+      SubscriptionEntity,
+      PendingConfirmationEntity,
+      User,
+    ]),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -98,12 +112,25 @@ import { EnvVariables } from '../config/env-variables'
           },
         },
       },
+      {
+        name: QUEUE_NAMES.EMAIL_PROCESSING,
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+        },
+      },
     ),
   ],
   providers: [
     EventBusService,
     QueueHealthIndicator,
     ContentProcessorService,
+    EmailProcessorService,
+    NewsletterSubscriptionService,
+    PendingConfirmationService,
     HtmlSanitizerService,
     ContentTypeDetectorService,
     PdfExtractorService,

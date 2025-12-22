@@ -325,6 +325,7 @@ type Mutation {
     """Library item ID"""
     id: String!
   ): DeleteResult!
+  dismissConfirmation(confirmationId: String!): PendingConfirmationResult!
 
   """Move a library item to a different folder"""
   moveLibraryItemToFolder(
@@ -335,13 +336,20 @@ type Mutation {
     id: String!
   ): LibraryItem!
   refreshRssFeed(feedId: ID!): RssFeedResult!
+  resendConfirmationEmail(alternateEmail: String, confirmationId: String!): PendingConfirmationResult!
 
   """Save a URL to the library with content extraction"""
   saveUrl(input: SaveUrlInput!): LibraryItem!
 
   """Set labels for a library item (replaces existing labels)"""
   setLibraryItemLabels(itemId: String!, labelIds: [String!]!): [Label!]!
+  subscribeToNewsletter(senderEmail: String!, title: String): NewsletterSubscriptionResult!
   subscribeToRssFeed(feedUrl: String!, importItems: Boolean! = true): RssFeedResult!
+  unsubscribeFromNewsletter(
+    """Whether to delete library items from this newsletter (default: true)"""
+    deleteItems: Boolean! = true
+    subscriptionId: ID!
+  ): NewsletterSubscriptionResult!
   unsubscribeFromRssFeed(
     """Whether to delete library items from this feed (default: true)"""
     deleteItems: Boolean = true
@@ -368,6 +376,7 @@ type Mutation {
     """Updated library item metadata"""
     input: UpdateLibraryItemInput!
   ): LibraryItem!
+  updateNewsletterSettings(settings: UpdateNewsletterSubscriptionInput!, subscriptionId: ID!): NewsletterSubscriptionResult!
 
   """Update notebook content for a library item"""
   updateNotebook(
@@ -384,6 +393,178 @@ type Mutation {
     input: UpdateReadingProgressInput!
   ): ReadingProgress!
   updateRssFeedSettings(feedId: ID!, settings: UpdateRssFeedSettingsInput!): RssFeedResult!
+}
+
+type NewsletterEmailResult {
+  """User email alias (e.g., a7x9k2)"""
+  emailAlias: String!
+
+  """Full newsletter email address (e.g., user+a7x9k2@omnivore.app)"""
+  newsletterEmail: String!
+}
+
+"""Newsletter platform provider"""
+enum NewsletterPlatform {
+  BEEHIIV
+  BUTTONDOWN
+  CONVERTKIT
+  GHOST
+  MAILCHIMP
+  REVUE
+  SUBSTACK
+  UNKNOWN
+}
+
+type NewsletterSubscription {
+  active: Boolean!
+
+  """Labels to auto-apply to newsletters"""
+  autoAddLabels: [String!]
+  createdAt: DateTime!
+  description: String
+
+  """
+  Unique email alias for routing (e.g., "a7x9k2" in user+a7x9k2@omnivore.app)
+  """
+  emailAlias: String!
+
+  """Folder to auto-route newsletters to"""
+  folder: String
+  id: ID!
+
+  """Total newsletters imported"""
+  itemCount: Int!
+
+  """Last email received"""
+  lastReceivedAt: DateTime
+  newsletterEmail: String
+
+  """Sender email address (e.g., writer@substack.com)"""
+  senderEmail: String!
+  siteIcon: String
+  siteUrl: String
+  title: String
+
+  """Number of unread newsletters (computed via field resolver)"""
+  unreadCount: Int
+
+  """Unsubscribe HTTP URL"""
+  unsubscribeHttpUrl: String
+
+  """Unsubscribe email address"""
+  unsubscribeMailTo: String
+  updatedAt: DateTime!
+  userId: String!
+}
+
+type NewsletterSubscriptionResult {
+  errors: [String!]
+  message: String
+  subscription: NewsletterSubscription
+  success: Boolean!
+}
+
+type PendingConfirmation {
+  """HTML content of the confirmation email"""
+  confirmationEmailHtml: String!
+
+  """Plain text of the confirmation email"""
+  confirmationEmailText: String
+
+  """Extracted confirmation URL"""
+  confirmationUrl: String
+
+  """Whether confirmation has been completed"""
+  confirmed: Boolean!
+
+  """When confirmation was completed"""
+  confirmedAt: DateTime
+
+  """When confirmation was created"""
+  createdAt: DateTime!
+
+  """Hours since confirmation was created"""
+  durationPendingHours: Int!
+
+  """Whether confirmation has expired"""
+  expired: Boolean!
+
+  """When confirmation expires"""
+  expiresAt: DateTime!
+
+  """Number of times confirmation was forwarded"""
+  forwardAttempts: Int!
+
+  """Email address where confirmation was forwarded"""
+  forwardedTo: String!
+
+  """History of email addresses confirmation was forwarded to"""
+  forwardedToEmails: [String!]
+  id: ID!
+
+  """Whether confirmation is expiring soon (<24 hours)"""
+  isExpiringSoon: Boolean!
+
+  """Whether confirmation is still pending"""
+  isPending: Boolean!
+
+  """Last time confirmation was forwarded"""
+  lastForwardedAt: DateTime!
+
+  """Additional metadata for debugging"""
+  metadata: JSON
+
+  """Name of the newsletter"""
+  newsletterName: String!
+
+  """Detected newsletter platform"""
+  newsletterPlatform: NewsletterPlatform
+
+  """Sender email address of the newsletter"""
+  newsletterSender: String!
+
+  """Whether reminder should be sent (>48 hours)"""
+  shouldSendReminder: Boolean!
+
+  """When confirmation was last updated"""
+  updatedAt: DateTime!
+
+  """Whether user dismissed this confirmation"""
+  userDismissed: Boolean!
+  userId: String!
+}
+
+type PendingConfirmationAnalytics {
+  """Average time to confirm in milliseconds"""
+  avgTimeToConfirm: Float!
+
+  """Analytics broken down by platform"""
+  byPlatform: JSON!
+
+  """Confirmed count"""
+  confirmed: Int!
+
+  """Conversion rate (confirmed / total)"""
+  conversionRate: Float!
+
+  """Dismissed count"""
+  dismissed: Int!
+
+  """Expired count"""
+  expired: Int!
+
+  """Pending count"""
+  pending: Int!
+
+  """Total confirmations"""
+  total: Int!
+}
+
+type PendingConfirmationResult {
+  confirmation: PendingConfirmation
+  errors: [String!]
+  message: String
+  success: Boolean!
 }
 
 type Query {
@@ -407,6 +588,11 @@ type Query {
   libraryItem(id: String!): LibraryItem
   libraryItems(after: String, first: Int = 20, search: LibrarySearchInput): LibraryItemsConnection!
   me: User!
+  newsletterEmail: NewsletterEmailResult!
+  newsletterSubscriptions(activeOnly: Boolean! = true): [NewsletterSubscription!]!
+  pendingConfirmation(confirmationId: String!): PendingConfirmation
+  pendingConfirmationAnalytics: PendingConfirmationAnalytics!
+  pendingConfirmations(includeCompleted: Boolean! = false): [PendingConfirmation!]!
 
   """Get reading progress for a library item"""
   readingProgress(
@@ -567,6 +753,17 @@ input UpdateLibraryItemInput {
   readAt: DateTime
 
   """Updated title for the library item"""
+  title: String
+}
+
+input UpdateNewsletterSubscriptionInput {
+  """Labels to auto-apply to newsletters"""
+  autoAddLabels: [String!]
+
+  """Folder to auto-route newsletters to"""
+  folder: String
+
+  """Newsletter title override"""
   title: String
 }
 

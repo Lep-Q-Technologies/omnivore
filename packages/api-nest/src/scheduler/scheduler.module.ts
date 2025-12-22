@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
+import { ScheduleModule } from '@nestjs/schedule'
 
 import { RssSubscriptionService } from '../library/services/rss-subscription.service'
 import { QueueModule } from '../queue/queue.module'
@@ -19,6 +20,7 @@ import { RssFeedRefreshService } from './services/rss-feed-refresh.service'
  */
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     RepositoriesModule,
     QueueModule,
     BullModule.registerQueue({
