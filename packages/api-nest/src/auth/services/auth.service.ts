@@ -16,7 +16,6 @@ import { StatusType, User } from '../../user/entities/user.entity'
 import { UserService } from '../../user/user.service'
 import { DefaultUserResourcesService } from '../default-user-resources.service'
 import {
-  AuthUserData,
   LoginSuccessResponse,
   RegisterSuccessWithLoginResponse,
   RegisterSuccessWithVerificationResponse,
@@ -136,21 +135,12 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Login successful',
-      // redirectUrl removed: Frontend should determine navigation based on its own routing logic
-      // Legacy: index.tsx checks auth and redirects to DEFAULT_HOME_PATH
-      // Vite: LoginPage navigates to /library on isAuthenticated change
+      accessToken: this.jwtService.sign(payload),
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role,
       },
-      accessToken: this.jwtService.sign(payload),
-      expiresIn: this.configService.get<string>(
-        EnvVariables.JWT_EXPIRES_IN,
-        '1h',
-      ),
     }
   }
 
@@ -270,10 +260,6 @@ export class AuthService {
     return {
       success: true,
       accessToken: this.jwtService.sign(payload),
-      expiresIn: this.configService.get<string>(
-        EnvVariables.JWT_EXPIRES_IN,
-        '1h',
-      ),
     }
   }
 

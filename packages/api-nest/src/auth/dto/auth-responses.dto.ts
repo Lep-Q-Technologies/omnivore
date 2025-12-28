@@ -33,7 +33,9 @@ export class BaseAuthResponse {
 }
 
 /**
- * User data returned in successful authentication responses
+ * Minimal user data returned in successful authentication responses
+ * Note: id and email are also in JWT, but included for convenience
+ * Role is ONLY in JWT (not returned separately)
  */
 export class AuthUserData {
   @ApiProperty({
@@ -49,50 +51,31 @@ export class AuthUserData {
   email: string
 
   @ApiProperty({
-    description: 'User display name',
+    description: 'User display name (not in JWT)',
     example: 'John Doe',
   })
   name: string
-
-  @ApiProperty({
-    description: 'User role in the system',
-    example: 'user',
-  })
-  role: string
 }
 
 /**
  * Successful login response
+ * Simplified: removed expiresIn (decode from JWT), message (success=true is enough)
  */
-export class LoginSuccessResponse extends BaseAuthResponse {
+export class LoginSuccessResponse {
   @ApiProperty({ example: true })
   success: true
 
   @ApiProperty({
-    description: 'Authenticated user data',
-    type: AuthUserData,
-  })
-  user: AuthUserData
-
-  @ApiProperty({
-    description: 'JWT access token',
+    description: 'JWT access token (contains: sub, email, role, exp)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   accessToken: string
 
   @ApiProperty({
-    description: 'Token expiration time',
-    example: '1h',
+    description: 'Minimal user data (name is not in JWT)',
+    type: AuthUserData,
   })
-  expiresIn: string
-
-  @ApiProperty({
-    description:
-      'Redirect URL for successful login (DEPRECATED: Frontend should determine navigation)',
-    example: '/home',
-    required: false,
-  })
-  redirectUrl?: string
+  user: AuthUserData
 }
 
 /**
@@ -132,42 +115,23 @@ export type LoginResponse = LoginSuccessResponse | AuthErrorResponse
 
 /**
  * Successful registration with immediate login
+ * Same structure as LoginSuccessResponse for consistency
  */
-export class RegisterSuccessWithLoginResponse extends BaseAuthResponse {
+export class RegisterSuccessWithLoginResponse {
   @ApiProperty({ example: true })
   success: true
 
   @ApiProperty({
-    description: 'Success message',
-    example: 'Registration successful',
-  })
-  message: string
-
-  @ApiProperty({
-    description:
-      'Redirect URL after registration (DEPRECATED: Frontend determines navigation)',
-    example: '/home',
-    required: false,
-  })
-  redirectUrl?: string
-
-  @ApiProperty({
-    description: 'Authenticated user data',
-    type: AuthUserData,
-  })
-  user: AuthUserData
-
-  @ApiProperty({
-    description: 'JWT access token for immediate login',
+    description: 'JWT access token (contains: sub, email, role, exp)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   accessToken: string
 
   @ApiProperty({
-    description: 'Token expiration time',
-    example: '1h',
+    description: 'Minimal user data (name is not in JWT)',
+    type: AuthUserData,
   })
-  expiresIn: string
+  user: AuthUserData
 }
 
 /**

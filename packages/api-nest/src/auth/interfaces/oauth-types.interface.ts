@@ -15,10 +15,21 @@ export interface PendingUserTokenPayload {
   username: string
 }
 
-export interface GoogleWebAuthResponse {
-  success: boolean
-  authToken?: string
+export interface OAuthSuccessResponse {
+  success: true
+  accessToken: string
+  user: {
+    id: string
+    email: string
+    name: string
+  }
 }
+
+export interface OAuthFailureResponse {
+  success: false
+}
+
+export type GoogleWebAuthResponse = OAuthSuccessResponse | OAuthFailureResponse
 
 export interface OAuthUserInfo {
   email: string
