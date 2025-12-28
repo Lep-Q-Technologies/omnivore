@@ -1,16 +1,17 @@
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
-import { createE2EApp } from './helpers/create-e2e-app'
+
 import {
-  TEST_PERSONAS,
   INVALID_CREDENTIALS,
+  TEST_PERSONAS,
   TestPersona,
 } from '../src/testing/test-personas'
+import { createE2EApp } from './helpers/create-e2e-app'
 
 describe('Authentication E2E Tests', () => {
   let app: INestApplication
-  let authTokens: Map<string, string> = new Map()
-  let testUsers: Map<
+  const authTokens: Map<string, string> = new Map()
+  const testUsers: Map<
     string,
     { email: string; password: string; name: string }
   > = new Map()
@@ -19,6 +20,7 @@ describe('Authentication E2E Tests', () => {
   const generateTestUser = (baseName: string) => {
     const timestamp = Date.now()
     const randomId = Math.floor(Math.random() * 1000)
+
     return {
       email: `test-${timestamp}-${randomId}-${baseName}@omnivore.app`,
       password: 'password123',
@@ -244,7 +246,9 @@ describe('Authentication E2E Tests', () => {
         beforeAll(async () => {
           if (persona.password) {
             // Create a unique email for this persona to avoid conflicts
-            const uniqueEmail = `test-${Date.now()}-${Math.floor(Math.random() * 1000)}-${persona.email}`
+            const uniqueEmail = `test-${Date.now()}-${Math.floor(
+              Math.random() * 1000,
+            )}-${persona.email}`
 
             // Register the persona with unique email
             const response = await request(app.getHttpServer())

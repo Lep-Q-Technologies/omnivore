@@ -56,12 +56,10 @@ const createMockProfile = (overrides: Partial<UserProfile> = {}): UserProfile =>
 describe('AuthService', () => {
   let service: AuthService
   let jwtService: JwtService
-  let configService: ConfigService
   let userService: UserService
   let emailVerificationService: EmailVerificationService
   let defaultResourcesService: DefaultUserResourcesService
   let notificationClient: NotificationClient
-  let mockStructuredLogger: StructuredLogger
 
   const mockJwtService = {
     sign: jest.fn(),
@@ -179,7 +177,6 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService)
     jwtService = module.get<JwtService>(JwtService)
-    configService = module.get<ConfigService>(ConfigService)
     userService = module.get<UserService>(UserService)
     emailVerificationService = module.get<EmailVerificationService>(
       EmailVerificationService,
@@ -255,15 +252,12 @@ describe('AuthService', () => {
       })
       expect(result).toEqual({
         success: true,
-        message: 'Login successful',
+        accessToken: mockToken,
         user: {
           id: mockUser.id,
           email: mockUser.email,
           name: mockUser.name,
-          role: mockUser.role,
         },
-        accessToken: mockToken,
-        expiresIn: '1h',
       })
     })
   })
@@ -286,15 +280,12 @@ describe('AuthService', () => {
       const mockResult = { user: mockUser, profile: mockProfile }
       const mockLoginResult = {
         success: true,
-        message: 'Login successful',
+        accessToken: 'jwt-token',
         user: {
           id: mockUser.id,
           email: mockUser.email,
           name: mockUser.name,
-          role: mockUser.role,
         },
-        accessToken: 'jwt-token',
-        expiresIn: '1h',
       }
 
       mockUserService.registerUserComplete.mockResolvedValue(mockResult)
@@ -395,15 +386,12 @@ describe('AuthService', () => {
       const mockActivatedUser = createMockUser({ status: StatusType.ACTIVE })
       const mockLoginResult = {
         success: true,
-        message: 'Login successful',
+        accessToken: 'jwt-token',
         user: {
           id: mockActivatedUser.id,
           email: mockActivatedUser.email,
           name: mockActivatedUser.name,
-          role: mockActivatedUser.role,
         },
-        accessToken: 'jwt-token',
-        expiresIn: '1h',
       }
 
       mockEmailVerificationService.verifyToken.mockResolvedValue(mockPayload)
@@ -433,15 +421,12 @@ describe('AuthService', () => {
       const mockUser = createMockUser({ status: StatusType.ACTIVE })
       const mockLoginResult = {
         success: true,
-        message: 'Login successful',
+        accessToken: 'jwt-token',
         user: {
           id: mockUser.id,
           email: mockUser.email,
           name: mockUser.name,
-          role: mockUser.role,
         },
-        accessToken: 'jwt-token',
-        expiresIn: '1h',
       }
 
       mockEmailVerificationService.verifyToken.mockResolvedValue(mockPayload)
@@ -491,7 +476,6 @@ describe('AuthService', () => {
       const mockToken = 'new-jwt-token'
 
       mockJwtService.sign.mockReturnValue(mockToken)
-      mockConfigService.get.mockReturnValue('1h')
 
       const result = await service.refreshToken(mockUser)
 
@@ -503,7 +487,6 @@ describe('AuthService', () => {
       expect(result).toEqual({
         success: true,
         accessToken: mockToken,
-        expiresIn: '1h',
       })
     })
   })
