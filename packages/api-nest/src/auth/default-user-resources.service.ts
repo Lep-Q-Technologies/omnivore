@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
-import { Filter } from '../filter/entities/filter.entity'
+import { DataSource, Repository } from 'typeorm'
+
 import { FOLDERS } from '../constants/folders.constants'
 import { seedLibraryItems } from '../database/seeds/library-items.seed'
-import { ConfigService } from '@nestjs/config'
+import { Filter } from '../filter/entities/filter.entity'
 
 export interface ProvisionOptions {
   client?: string
@@ -154,6 +155,7 @@ export class DefaultUserResourcesService {
       this.logger.debug(
         `Skipping library items seed for user ${userId} (env: ${nodeEnv})`,
       )
+
       return
     }
 
@@ -161,10 +163,7 @@ export class DefaultUserResourcesService {
       await seedLibraryItems(this.dataSource, userId)
       this.logger.debug(`Seeded example library items for user ${userId}`)
     } catch (error) {
-      this.logger.warn(
-        `Failed to seed library items for user ${userId}`,
-        error,
-      )
+      this.logger.warn(`Failed to seed library items for user ${userId}`, error)
       // Don't throw - this is optional and shouldn't block user creation
     }
   }

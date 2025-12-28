@@ -1,21 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
+import { EnvVariables } from '../../config/env-variables'
+import { RegistrationType } from '../../user/entities/user.entity'
 import { UserService } from '../../user/user.service'
+import { GoogleWebAuthResponse } from '../interfaces/oauth-types.interface'
 import { AuthService } from './auth.service'
 import { GoogleOAuthService } from './google-oauth.service'
-import { AppleOAuthService } from './apple-oauth.service'
 import { PendingUserService } from './pending-user.service'
-import {
-  AuthProvider,
-  OAuthUserInfo,
-  GoogleWebAuthResponse,
-} from '../interfaces/oauth-types.interface'
-import {
-  User,
-  StatusType,
-  RegistrationType,
-} from '../../user/entities/user.entity'
-import { EnvVariables } from '../../config/env-variables'
 
 @Injectable()
 export class OAuthAuthService {
@@ -26,104 +18,75 @@ export class OAuthAuthService {
     private readonly userService: UserService,
     private readonly authService: AuthService,
     private readonly googleOAuthService: GoogleOAuthService,
-    private readonly appleOAuthService: AppleOAuthService,
     private readonly pendingUserService: PendingUserService,
   ) {}
 
   /**
    * Handle Google web authentication flow
+   * Creates new users immediately when they don't exist (no pending user step)
+   * Returns auth token for both new and existing users
    */
-  async handleGoogleWebAuth(
-    idToken: string,
-    isLocal = false,
-    isVercel = false,
-  ): Promise<GoogleWebAuthResponse> {
-    const baseURL = this.getBaseURL(isLocal, isVercel)
-    const authFailedRedirect = `${baseURL}/login?errorCodes=AuthFailed`
-
+  async handleGoogleWebAuth(idToken: string): Promise<GoogleWebAuthResponse> {
     try {
       // Verify the Google ID token
       const userInfo = await this.googleOAuthService.verifyWebToken(idToken)
       if (!userInfo || !userInfo.email) {
         this.logger.warn('Invalid Google token or missing email')
-        return { redirectURL: authFailedRedirect }
+
+        return { success: false }
       }
 
       // Look for existing user by email and source
-      const existingUser = await this.userService.findByEmailAndSource(
+      let user = await this.userService.findByEmailAndSource(
         userInfo.email,
         RegistrationType.GOOGLE,
       )
 
-      if (!existingUser) {
-        // User doesn't exist, create pending user token for profile completion
-        const pendingUserAuth =
-          await this.pendingUserService.createPendingUserToken({
-            email: userInfo.email,
-            sourceUserId: userInfo.sourceUserId,
-            provider: 'GOOGLE',
-            name: userInfo.name || '',
-            username: this.pendingUserService.generateSuggestedUsername(
-              userInfo.name || '',
-            ),
-          })
+      if (!user) {
+        this.logger.log('Creating new Google OAuth user', {
+          email: userInfo.email,
+          sourceUserId: userInfo.sourceUserId,
+        })
 
-        if (!pendingUserAuth) {
-          this.logger.error('Failed to create pending user token')
-          return { redirectURL: authFailedRedirect }
-        }
+        const registrationResult = await this.userService.registerUser({
+          email: userInfo.email,
+          name: userInfo.name || userInfo.email.split('@')[0],
+          sourceUserId: userInfo.sourceUserId,
+          registrationType: RegistrationType.GOOGLE,
+          requireEmailConfirmation: false, // OAuth users are pre-verified
+          pictureUrl: userInfo.pictureUrl,
+        })
 
-        this.logger.log(
-          'User does not exist, redirecting to profile completion',
-          {
-            email: userInfo.email,
-            sourceUserId: userInfo.sourceUserId,
-          },
-        )
-
-        return {
-          redirectURL: `${baseURL}/confirm-profile`,
-          pendingUserAuth,
-        }
+        user = registrationResult.user
       }
 
-      // User exists, check if they can access the system
-      if (!existingUser.canAccess()) {
-        const redirectPath =
-          existingUser.status === StatusType.ARCHIVED
-            ? '/archived-account'
-            : '/login?errorCodes=AccountSuspended'
+      // Check if user can access the system
+      if (!user.canAccess()) {
+        this.logger.warn('User cannot access system', {
+          userId: user.id,
+          status: user.status,
+        })
 
-        return { redirectURL: `${baseURL}${redirectPath}` }
+        return { success: false }
       }
 
-      // Generate auth token for existing user
-      const authToken = await this.createWebAuthToken(existingUser.id)
-      if (!authToken) {
-        this.logger.error('Failed to create auth token for existing user')
-        return { redirectURL: authFailedRedirect }
-      }
-
-      let redirectURL = `${baseURL}/home`
-
-      // Handle SSO for Vercel deployments
-      if (isVercel) {
-        const ssoToken = this.createSsoToken(authToken, redirectURL)
-        redirectURL = this.getSsoRedirectURL(ssoToken)
-      }
+      // Generate proper JWT token using AuthService
+      const loginResponse = await this.authService.login(user)
 
       this.logger.log('Google authentication successful', {
-        userId: existingUser.id,
-        email: existingUser.email,
+        userId: user.id,
+        email: user.email,
+        isNewUser: !user,
       })
 
       return {
-        authToken,
-        redirectURL,
+        success: true,
+        authToken: loginResponse.accessToken,
       }
     } catch (error) {
       this.logger.error('Error in Google web authentication', error)
-      return { redirectURL: authFailedRedirect }
+
+      return { success: false }
     }
   }
 
@@ -150,6 +113,7 @@ export class OAuthAuthService {
         !tokenResult.sourceUserId
       ) {
         this.logger.warn('Invalid Google mobile token', tokenResult)
+
         return { success: false }
       }
 
@@ -184,6 +148,7 @@ export class OAuthAuthService {
           userId: existingUser.id,
           status: existingUser.status,
         })
+
         return { success: false }
       }
 
@@ -196,182 +161,7 @@ export class OAuthAuthService {
       return { success: true, authToken }
     } catch (error) {
       this.logger.error('Error in Google mobile authentication', error)
-      return { success: false }
-    }
-  }
 
-  /**
-   * Handle Apple web authentication flow
-   */
-  async handleAppleWebAuth(
-    idToken: string,
-    appleUserData?: {
-      name?: { firstName?: string; lastName?: string }
-      email?: string
-    },
-    isLocal = false,
-    isVercel = false,
-  ): Promise<GoogleWebAuthResponse> {
-    const baseURL = this.getBaseURL(isLocal, isVercel)
-    const authFailedRedirect = `${baseURL}/login?errorCodes=AuthFailed`
-
-    try {
-      // Verify the Apple ID token
-      const userInfo = await this.appleOAuthService.verifyAppleToken(
-        idToken,
-        appleUserData,
-      )
-      if (!userInfo || !userInfo.email) {
-        this.logger.warn('Invalid Apple token or missing email')
-        return { redirectURL: authFailedRedirect }
-      }
-
-      // Look for existing user by email and source
-      const existingUser = await this.userService.findByEmailAndSource(
-        userInfo.email,
-        RegistrationType.APPLE,
-      )
-
-      if (!existingUser) {
-        // User doesn't exist, create pending user token for profile completion
-        const pendingUserAuth =
-          await this.pendingUserService.createPendingUserToken({
-            email: userInfo.email,
-            sourceUserId: userInfo.sourceUserId,
-            provider: 'APPLE',
-            name: userInfo.name || '',
-            username: this.pendingUserService.generateSuggestedUsername(
-              userInfo.name || '',
-            ),
-          })
-
-        if (!pendingUserAuth) {
-          this.logger.error('Failed to create pending user token')
-          return { redirectURL: authFailedRedirect }
-        }
-
-        this.logger.log(
-          'User does not exist, redirecting to profile completion',
-          {
-            email: userInfo.email,
-            sourceUserId: userInfo.sourceUserId,
-          },
-        )
-
-        return {
-          redirectURL: `${baseURL}/confirm-profile`,
-          pendingUserAuth,
-        }
-      }
-
-      // User exists, check if they can access the system
-      if (!existingUser.canAccess()) {
-        const redirectPath =
-          existingUser.status === StatusType.ARCHIVED
-            ? '/archived-account'
-            : '/login?errorCodes=AccountSuspended'
-
-        return { redirectURL: `${baseURL}${redirectPath}` }
-      }
-
-      // Generate auth token for existing user
-      const authToken = await this.createWebAuthToken(existingUser.id)
-      if (!authToken) {
-        this.logger.error('Failed to create auth token for existing user')
-        return { redirectURL: authFailedRedirect }
-      }
-
-      let redirectURL = `${baseURL}/home`
-
-      // Handle SSO for Vercel deployments
-      if (isVercel) {
-        const ssoToken = this.createSsoToken(authToken, redirectURL)
-        redirectURL = this.getSsoRedirectURL(ssoToken)
-      }
-
-      this.logger.log('Apple authentication successful', {
-        userId: existingUser.id,
-        email: existingUser.email,
-      })
-
-      return {
-        authToken,
-        redirectURL,
-      }
-    } catch (error) {
-      this.logger.error('Error in Apple web authentication', error)
-      return { redirectURL: authFailedRedirect }
-    }
-  }
-
-  /**
-   * Handle Apple mobile authentication
-   */
-  async handleAppleMobileAuth(
-    idToken: string,
-    appleUserData?: {
-      name?: { firstName?: string; lastName?: string }
-      email?: string
-    },
-  ): Promise<{
-    success: boolean
-    authToken?: string
-    pendingUserAuth?: string
-  }> {
-    try {
-      const userInfo = await this.appleOAuthService.verifyAppleToken(
-        idToken,
-        appleUserData,
-      )
-
-      if (!userInfo || !userInfo.email || !userInfo.sourceUserId) {
-        this.logger.warn('Invalid Apple mobile token', userInfo)
-        return { success: false }
-      }
-
-      // Look for existing user
-      const existingUser = await this.userService.findByEmailAndSource(
-        userInfo.email,
-        RegistrationType.APPLE,
-      )
-
-      if (!existingUser) {
-        // Create pending user token for mobile registration
-        const pendingUserAuth =
-          await this.pendingUserService.createPendingUserToken({
-            email: userInfo.email,
-            sourceUserId: userInfo.sourceUserId,
-            provider: 'APPLE',
-            name: userInfo.name || '',
-            username: this.pendingUserService.generateSuggestedUsername(
-              userInfo.name || '',
-            ),
-          })
-
-        if (!pendingUserAuth) {
-          return { success: false }
-        }
-
-        return { success: true, pendingUserAuth }
-      }
-
-      if (!existingUser.canAccess()) {
-        this.logger.warn('User cannot access system', {
-          userId: existingUser.id,
-          status: existingUser.status,
-        })
-        return { success: false }
-      }
-
-      // Generate auth token
-      const authToken = await this.createWebAuthToken(existingUser.id)
-      if (!authToken) {
-        return { success: false }
-      }
-
-      return { success: true, authToken }
-    } catch (error) {
-      this.logger.error('Error in Apple mobile authentication', error)
       return { success: false }
     }
   }
@@ -389,11 +179,10 @@ export class OAuthAuthService {
       throw new Error('Invalid or expired pending user token')
     }
 
-    // Determine registration type from provider
-    const source =
-      pendingUser.provider === 'GOOGLE'
-        ? RegistrationType.GOOGLE
-        : RegistrationType.APPLE
+    // Only Google OAuth is supported
+    if (pendingUser.provider !== 'GOOGLE') {
+      throw new Error('Unsupported OAuth provider')
+    }
 
     // Register the user
     const result = await this.userService.registerUser({
@@ -403,7 +192,7 @@ export class OAuthAuthService {
       bio: profileData.bio,
       requireEmailConfirmation: false, // OAuth users don't need email confirmation
       sourceUserId: pendingUser.sourceUserId,
-      registrationType: source,
+      registrationType: RegistrationType.GOOGLE,
     })
 
     // Log in the newly created user
@@ -438,13 +227,14 @@ export class OAuthAuthService {
   private async createWebAuthToken(userId: string): Promise<string | null> {
     try {
       // This should use the same JWT creation logic as the existing auth service
-      const payload = { sub: userId, email: '', role: 'user' }
       // For now, we'll use a simple approach - in a real implementation,
       // we'd need to access the JwtService directly or create a shared token service
       this.logger.log('Creating web auth token for user', { userId })
+
       return `mock_token_${userId}_${Date.now()}`
     } catch (error) {
       this.logger.error('Error creating web auth token', error)
+
       return null
     }
   }
@@ -456,6 +246,7 @@ export class OAuthAuthService {
     // TODO: Implement SSO token creation logic
     // This is a complex feature that involves secure token exchange
     this.logger.log('SSO token creation requested', { redirectURL })
+
     return `sso_${authToken.substring(0, 20)}_${Date.now()}`
   }
 
@@ -465,6 +256,7 @@ export class OAuthAuthService {
   private getSsoRedirectURL(ssoToken: string): string {
     // TODO: Implement SSO redirect URL logic
     const baseURL = this.configService.get<string>(EnvVariables.FRONTEND_URL)
+
     return `${baseURL}/sso?token=${ssoToken}`
   }
 }

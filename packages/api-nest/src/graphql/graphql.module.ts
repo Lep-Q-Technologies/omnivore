@@ -1,16 +1,17 @@
-import { Module } from '@nestjs/common'
-import { ModuleRef } from '@nestjs/core'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { GraphQLModule } from '@nestjs/graphql'
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
+import { Module } from '@nestjs/common'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { ModuleRef } from '@nestjs/core'
+import { GraphQLModule } from '@nestjs/graphql'
 import { Request, Response } from 'express'
-import { resolve } from 'path'
 import { GraphQLJSON } from 'graphql-scalars'
+import { resolve } from 'path'
+
 import { EnvVariables } from '../config/env-variables'
 import { RepositoriesModule } from '../repositories/repositories.module'
-import { DataLoaderFactory, AuthenticatedRequest } from './dataloader.service'
 import { User } from '../user/entities/user.entity'
+import { AuthenticatedRequest, DataLoaderFactory } from './dataloader.service'
 
 /**
  * GraphQL context interface

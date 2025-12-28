@@ -1,4 +1,5 @@
 import { Logger, QueryRunner } from 'typeorm'
+
 import { StructuredLogger } from '../logging/structured-logger.service'
 
 /**
@@ -7,6 +8,7 @@ import { StructuredLogger } from '../logging/structured-logger.service'
  */
 export class QueryPerformanceLogger implements Logger {
   private readonly slowQueryThreshold = 500 // ms
+
   private readonly warnQueryThreshold = 200 // ms
 
   constructor(
@@ -18,7 +20,9 @@ export class QueryPerformanceLogger implements Logger {
    * Logs query execution with timing
    */
   logQuery(query: string, parameters?: any[], queryRunner?: QueryRunner) {
-    if (!this.enabled) return
+    if (!this.enabled) {
+      return
+    }
 
     // Extract the main operation type
     const operation = this.extractOperation(query)
@@ -66,14 +70,18 @@ export class QueryPerformanceLogger implements Logger {
   ) {
     const operation = this.extractOperation(query)
 
-    this.logger.warn(`Slow query detected: ${operation}`, {
-      operation: 'database',
-      queryType: operation,
-    }, {
-      executionTime: `${time}ms`,
-      query: this.truncateQuery(query),
-      parameters,
-    })
+    this.logger.warn(
+      `Slow query detected: ${operation}`,
+      {
+        operation: 'database',
+        queryType: operation,
+      },
+      {
+        executionTime: `${time}ms`,
+        query: this.truncateQuery(query),
+        parameters,
+      },
+    )
   }
 
   /**
@@ -111,13 +119,27 @@ export class QueryPerformanceLogger implements Logger {
   private extractOperation(query: string): string {
     const normalized = query.trim().toUpperCase()
 
-    if (normalized.startsWith('SELECT')) return 'SELECT'
-    if (normalized.startsWith('INSERT')) return 'INSERT'
-    if (normalized.startsWith('UPDATE')) return 'UPDATE'
-    if (normalized.startsWith('DELETE')) return 'DELETE'
-    if (normalized.startsWith('CREATE')) return 'CREATE'
-    if (normalized.startsWith('ALTER')) return 'ALTER'
-    if (normalized.startsWith('DROP')) return 'DROP'
+    if (normalized.startsWith('SELECT')) {
+      return 'SELECT'
+    }
+    if (normalized.startsWith('INSERT')) {
+      return 'INSERT'
+    }
+    if (normalized.startsWith('UPDATE')) {
+      return 'UPDATE'
+    }
+    if (normalized.startsWith('DELETE')) {
+      return 'DELETE'
+    }
+    if (normalized.startsWith('CREATE')) {
+      return 'CREATE'
+    }
+    if (normalized.startsWith('ALTER')) {
+      return 'ALTER'
+    }
+    if (normalized.startsWith('DROP')) {
+      return 'DROP'
+    }
 
     return 'QUERY'
   }
@@ -126,9 +148,11 @@ export class QueryPerformanceLogger implements Logger {
    * Truncate long queries for logging
    */
   private truncateQuery(query: string, maxLength = 200): string {
-    if (query.length <= maxLength) return query
+    if (query.length <= maxLength) {
+      return query
+    }
 
-    return query.substring(0, maxLength) + '...'
+    return `${query.substring(0, maxLength)}...`
   }
 }
 
@@ -153,16 +177,26 @@ export class QueryTimer {
     const duration = Date.now() - this.startTime
 
     const meta: any = { duration: `${duration}ms` }
-    if (rowCount !== undefined) meta.rowCount = rowCount
+    if (rowCount !== undefined) {
+      meta.rowCount = rowCount
+    }
 
     if (duration > 500) {
-      this.logger.warn(`Slow query: ${this.queryName}`, {
-        operation: 'database',
-      }, meta)
+      this.logger.warn(
+        `Slow query: ${this.queryName}`,
+        {
+          operation: 'database',
+        },
+        meta,
+      )
     } else if (duration > 200) {
-      this.logger.debug(`Query: ${this.queryName}`, {
-        operation: 'database',
-      }, meta)
+      this.logger.debug(
+        `Query: ${this.queryName}`,
+        {
+          operation: 'database',
+        },
+        meta,
+      )
     }
 
     return duration

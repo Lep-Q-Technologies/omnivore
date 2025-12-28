@@ -46,7 +46,9 @@ export interface TwitterThreadResult {
 @Injectable()
 export class TwitterExtractorService {
   private readonly logger = new Logger(TwitterExtractorService.name)
-  private readonly SYNDICATION_API_URL = 'https://cdn.syndication.twimg.com/tweet-result'
+
+  private readonly SYNDICATION_API_URL =
+    'https://cdn.syndication.twimg.com/tweet-result'
 
   /**
    * Extract a Twitter thread
@@ -199,7 +201,8 @@ export class TwitterExtractorService {
     const tweetHtml = this.formatTweetHtml(mainTweet)
 
     const pageTitle =
-      title || `Tweet by @${author.username}: ${mainTweet.text.substring(0, 50)}...`
+      title ||
+      `Tweet by @${author.username}: ${mainTweet.text.substring(0, 50)}...`
 
     return `
       <!DOCTYPE html>
@@ -276,6 +279,7 @@ export class TwitterExtractorService {
       '"': '&quot;',
       "'": '&#039;',
     }
+
     return text.replace(/[&<>"']/g, (char) => map[char])
   }
 }

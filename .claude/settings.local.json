@@ -18,7 +18,15 @@
       "Bash(yarn test:e2e:*)",
       "Bash(yarn upgrade:*)",
       "Bash(yarn workspace @omnivore/api-nest eslint:*)",
-      "Bash(yarn install:*)"
+      "Bash(yarn install:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(yarn workspace:*)",
+      "Bash(tree:*)",
+      "Bash(npm run dev:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

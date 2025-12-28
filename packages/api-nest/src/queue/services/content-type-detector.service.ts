@@ -7,6 +7,7 @@
 
 import { Injectable, Logger } from '@nestjs/common'
 import fetch from 'cross-fetch'
+
 import { ContentType } from '../../library/entities/library-item.entity'
 
 /**
@@ -44,6 +45,7 @@ export class ContentTypeDetectorService {
           this.logger.log(
             `Detected ${mimeResult.contentType} from MIME type: ${mimeType}`,
           )
+
           return mimeResult
         }
       }
@@ -54,6 +56,7 @@ export class ContentTypeDetectorService {
         this.logger.log(
           `Detected ${urlResult.contentType} from URL pattern: ${urlResult.reason}`,
         )
+
         return urlResult
       }
 
@@ -63,6 +66,7 @@ export class ContentTypeDetectorService {
         this.logger.log(
           `Detected ${headResult.contentType} from HEAD request: ${headResult.reason}`,
         )
+
         return headResult
       }
 
@@ -70,6 +74,7 @@ export class ContentTypeDetectorService {
       this.logger.debug(
         `Could not determine content type for ${url}, defaulting to article`,
       )
+
       return {
         contentType: ContentType.ARTICLE,
         confidence: 0.5,
@@ -79,6 +84,7 @@ export class ContentTypeDetectorService {
       this.logger.warn(
         `Error detecting content type for ${url}: ${error instanceof Error ? error.message : String(error)}`,
       )
+
       return {
         contentType: ContentType.ARTICLE,
         confidence: 0.3,
@@ -176,6 +182,7 @@ export class ContentTypeDetectorService {
       // Vimeo
       if (hostname === 'vimeo.com' || hostname === 'www.vimeo.com') {
         const videoId = pathname.split('/')[1]
+
         return {
           contentType: ContentType.VIDEO,
           confidence: 1.0,
@@ -186,7 +193,10 @@ export class ContentTypeDetectorService {
 
       // Twitter/X
       if (
-        (hostname === 'twitter.com' || hostname === 'www.twitter.com' || hostname === 'x.com' || hostname === 'www.x.com') &&
+        (hostname === 'twitter.com' ||
+          hostname === 'www.twitter.com' ||
+          hostname === 'x.com' ||
+          hostname === 'www.x.com') &&
         pathname.includes('/status/')
       ) {
         // Extract tweet ID
@@ -236,6 +246,7 @@ export class ContentTypeDetectorService {
       this.logger.warn(
         `Failed to parse URL ${url}: ${error instanceof Error ? error.message : String(error)}`,
       )
+
       return {
         contentType: ContentType.UNKNOWN,
         confidence: 0,
@@ -274,6 +285,7 @@ export class ContentTypeDetectorService {
       this.logger.debug(
         `HEAD request failed for ${url}: ${error instanceof Error ? error.message : String(error)}`,
       )
+
       return {
         contentType: ContentType.UNKNOWN,
         confidence: 0,

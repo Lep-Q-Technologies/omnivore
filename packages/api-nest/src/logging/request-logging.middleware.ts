@@ -1,7 +1,8 @@
 import { Injectable, NestMiddleware } from '@nestjs/common'
-import { Request, Response, NextFunction } from 'express'
-import { StructuredLogger } from './structured-logger.service'
+import { NextFunction, Request, Response } from 'express'
+
 import { RequestWithCorrelationId } from './correlation-id.middleware'
+import { StructuredLogger } from './structured-logger.service'
 
 @Injectable()
 export class RequestLoggingMiddleware implements NestMiddleware {
@@ -39,6 +40,7 @@ export class RequestLoggingMiddleware implements NestMiddleware {
         responseBody = body
         responseSent = true
       }
+
       return originalSend.call(this, body)
     }
 
@@ -47,6 +49,7 @@ export class RequestLoggingMiddleware implements NestMiddleware {
         responseBody = body
         responseSent = true
       }
+
       return originalJson.call(this, body)
     }
 
@@ -84,7 +87,9 @@ export class RequestLoggingMiddleware implements NestMiddleware {
   }
 
   private sanitizeResponseBody(body: any, isSuccess = false): any {
-    if (!body) return undefined
+    if (!body) {
+      return undefined
+    }
 
     // For successful requests, only log minimal info to avoid noise
     if (isSuccess) {
@@ -95,6 +100,7 @@ export class RequestLoggingMiddleware implements NestMiddleware {
         }
 
         const keys = Object.keys(body)
+
         return { _type: 'object', keys: keys.slice(0, 5) }
       }
 

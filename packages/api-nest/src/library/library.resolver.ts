@@ -1,40 +1,41 @@
+import { UseGuards } from '@nestjs/common'
 import {
   Args,
-  Int,
-  Query,
-  Mutation,
-  Resolver,
-  ResolveField,
-  Parent,
   Context,
+  Int,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
 } from '@nestjs/graphql'
-import { UseGuards } from '@nestjs/common'
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { DataLoaderService } from '../graphql/dataloader.service'
+import { Label } from '../label/dto/label.type'
+import { LabelService } from '../label/label.service'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
-import { LibraryService } from './library.service'
-import { DataLoaderService } from '../graphql/dataloader.service'
-import {
-  LibraryItem,
-  LibraryItemsConnection,
-  BulkActionResult,
-  SearchResult,
-  SearchSuccess,
-  SearchItemEdge,
-  SearchPageInfo,
-} from './dto/library-item.type'
 import {
   DeleteResult,
   LibrarySearchInput,
   SaveUrlInput,
-  UpdateNotebookInput,
   UpdateLibraryItemInput,
+  UpdateNotebookInput,
 } from './dto/library-inputs.type'
-import { LabelService } from '../label/label.service'
-import { Label } from '../label/dto/label.type'
-import { LibraryItemEntity, ContentType } from './entities/library-item.entity'
+import {
+  BulkActionResult,
+  LibraryItem,
+  LibraryItemsConnection,
+  SearchItemEdge,
+  SearchPageInfo,
+  SearchResult,
+  SearchSuccess,
+} from './dto/library-item.type'
 import { RssFeed } from './dto/rss-feed.type'
+import { ContentType, LibraryItemEntity } from './entities/library-item.entity'
 import { RssFeedEntity } from './entities/rss-feed.entity'
+import { LibraryService } from './library.service'
 
 /**
  * Library item with entity fields for field resolvers
@@ -63,6 +64,7 @@ export class LibraryResolver {
   ): Promise<Label[] | null> {
     // Use DataLoader to batch label queries and prevent N+1 problems
     const labels = await dataLoaders.labels.load(libraryItem.id)
+
     return labels.length > 0 ? labels : null
   }
 
@@ -74,6 +76,7 @@ export class LibraryResolver {
     if (libraryItem.subscription) {
       return mapRssFeedEntityToGraph(libraryItem.subscription)
     }
+
     return null
   }
 
@@ -144,6 +147,7 @@ export class LibraryResolver {
     @Args('id', { type: () => String }) id: string,
   ): Promise<LibraryItem | null> {
     const entity = await this.libraryService.findById(user.id, id)
+
     return entity ? mapEntityToGraph(entity) : null
   }
 
@@ -234,6 +238,7 @@ export class LibraryResolver {
     archived: boolean,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.archiveItem(user.id, id, archived)
+
     return mapEntityToGraph(entity)
   }
 
@@ -269,6 +274,7 @@ export class LibraryResolver {
       id,
       input.note,
     )
+
     return mapEntityToGraph(entity)
   }
 
@@ -291,6 +297,7 @@ export class LibraryResolver {
       id,
       input,
     )
+
     return mapEntityToGraph(entity)
   }
 
@@ -309,6 +316,7 @@ export class LibraryResolver {
     folder: string,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.moveToFolder(user.id, id, folder)
+
     return mapEntityToGraph(entity)
   }
 
@@ -396,6 +404,7 @@ export class LibraryResolver {
     input: SaveUrlInput,
   ): Promise<LibraryItem> {
     const entity = await this.libraryService.saveUrl(user.id, input)
+
     return mapEntityToGraph(entity)
   }
 }

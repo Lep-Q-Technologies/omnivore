@@ -2,12 +2,13 @@
  * EventBusService Unit Tests
  */
 
-import { Test, TestingModule } from '@nestjs/testing'
 import { getQueueToken } from '@nestjs/bullmq'
+import { Test, TestingModule } from '@nestjs/testing'
 import { Queue } from 'bullmq'
+
 import { EventBusService } from './event-bus.service'
-import { QUEUE_NAMES, JOB_TYPES, JOB_PRIORITY } from './queue.constants'
 import { EVENT_NAMES } from './events.constants'
+import { JOB_PRIORITY, JOB_TYPES, QUEUE_NAMES } from './queue.constants'
 
 type MockQueue = jest.Mocked<Pick<Queue, 'name' | 'add'>>
 

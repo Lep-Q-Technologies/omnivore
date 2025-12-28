@@ -42,6 +42,7 @@ export interface RssFeedResult {
 @Injectable()
 export class RssFeedService {
   private readonly logger = new Logger(RssFeedService.name)
+
   private readonly parser: Parser
 
   constructor() {
@@ -121,6 +122,7 @@ export class RssFeedService {
     // Must have at minimum a link
     if (!item.link) {
       this.logger.warn('Skipping feed item without link')
+
       return null
     }
 
@@ -145,6 +147,7 @@ export class RssFeedService {
    */
   isLikelyFeedUrl(url: string): boolean {
     const lowerUrl = url.toLowerCase()
+
     return (
       lowerUrl.includes('/feed') ||
       lowerUrl.includes('/rss') ||

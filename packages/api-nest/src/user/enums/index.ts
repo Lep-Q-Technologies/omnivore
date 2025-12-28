@@ -1,7 +1,7 @@
 export {
-  UserRole,
+  getRolePermissions,
+  hasPermission,
   Permission,
   ROLE_PERMISSIONS,
-  hasPermission,
-  getRolePermissions,
+  UserRole,
 } from './user-role.enum'

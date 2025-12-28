@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
+
 import {
-  UserRole,
-  Permission,
-  hasPermission,
   getRolePermissions,
+  hasPermission,
+  Permission,
+  UserRole,
 } from './enums/user-role.enum'
 
 @Injectable()

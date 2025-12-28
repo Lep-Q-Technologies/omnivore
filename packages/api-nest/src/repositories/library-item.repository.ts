@@ -1,21 +1,22 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
-import {
-  LibraryItemEntity,
-  LibraryItemState,
-} from '../library/entities/library-item.entity'
+import { DataSource, Repository } from 'typeorm'
+
+import { FOLDERS } from '../constants/folders.constants'
 import {
   LibrarySearchInput,
   LibrarySortField,
   SortOrder,
 } from '../library/dto/library-inputs.type'
 import {
+  LibraryItemEntity,
+  LibraryItemState,
+} from '../library/entities/library-item.entity'
+import {
+  BulkOperationResult,
   ILibraryItemRepository,
   PaginatedResult,
-  BulkOperationResult,
 } from './interfaces/library-item-repository.interface'
-import { FOLDERS } from '../constants/folders.constants'
 
 /**
  * Repository for LibraryItem entity
@@ -48,10 +49,7 @@ export class LibraryItemRepository implements ILibraryItemRepository {
    * Find multiple library items by IDs and user ID
    * Uses a single query with IN clause for efficiency
    */
-  async findByIds(
-    ids: string[],
-    userId: string,
-  ): Promise<LibraryItemEntity[]> {
+  async findByIds(ids: string[], userId: string): Promise<LibraryItemEntity[]> {
     if (ids.length === 0) {
       return []
     }
@@ -97,20 +95,27 @@ export class LibraryItemRepository implements ILibraryItemRepository {
     // Note: folder is now a computed property derived from state and subscriptionId
     if (search?.folder && search.folder !== FOLDERS.ALL) {
       if (search.folder === FOLDERS.ARCHIVE) {
-        query.andWhere('item.state = :state', { state: LibraryItemState.ARCHIVED })
+        query.andWhere('item.state = :state', {
+          state: LibraryItemState.ARCHIVED,
+        })
       } else if (search.folder === FOLDERS.TRASH) {
-        query.andWhere('item.state = :state', { state: LibraryItemState.DELETED })
+        query.andWhere('item.state = :state', {
+          state: LibraryItemState.DELETED,
+        })
       } else if (search.folder === FOLDERS.FOLLOWING) {
         // Following folder: RSS feed items (with subscriptionId)
         query.andWhere('item.subscriptionId IS NOT NULL')
         query.andWhere('item.state NOT IN (:...excludedStates)', {
-          excludedStates: [LibraryItemState.ARCHIVED, LibraryItemState.DELETED]
+          excludedStates: [LibraryItemState.ARCHIVED, LibraryItemState.DELETED],
         })
       } else if (search.folder === FOLDERS.INBOX) {
         // Inbox folder: user-saved items (without subscriptionId)
         query.andWhere('item.subscriptionId IS NULL')
         query.andWhere('item.state IN (:...states)', {
-          states: [LibraryItemState.SUCCEEDED, LibraryItemState.CONTENT_NOT_FETCHED]
+          states: [
+            LibraryItemState.SUCCEEDED,
+            LibraryItemState.CONTENT_NOT_FETCHED,
+          ],
         })
       }
     }

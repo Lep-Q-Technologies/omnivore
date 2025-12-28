@@ -39,8 +39,12 @@ async function bootstrap() {
 
   // Configure CORS for frontend with credentials support
   const frontendUrl = configService.get<string>(EnvVariables.FRONTEND_URL)
+  // Support multiple origins (comma-separated for development: web-vite and omnivore-polish)
+  const allowedOrigins = frontendUrl
+    ? frontendUrl.split(',').map((url) => url.trim())
+    : []
   app.enableCors({
-    origin: frontendUrl,
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [

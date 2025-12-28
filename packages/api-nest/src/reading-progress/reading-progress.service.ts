@@ -1,15 +1,16 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
-  Logger,
   Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common'
-import { ReadingProgressEntity } from './entities/reading-progress.entity'
-import { UpdateReadingProgressInput } from './dto/reading-progress-inputs.type'
+
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
-import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import { UpdateReadingProgressInput } from './dto/reading-progress-inputs.type'
+import { ReadingProgressEntity } from './entities/reading-progress.entity'
 
 /**
  * Service for managing sentinel-based reading progress
@@ -137,7 +138,10 @@ export class ReadingProgressService {
     progress: ReadingProgressEntity,
     totalSentinels: number,
   ): number {
-    if (totalSentinels <= 0) return 0
+    if (totalSentinels <= 0) {
+      return 0
+    }
+
     return Math.min(
       100,
       Math.round((progress.highestSeenSentinel / totalSentinels) * 100),

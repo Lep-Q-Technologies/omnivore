@@ -1,15 +1,16 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
-  JoinColumn,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm'
+
 import { User } from '../../user/entities/index'
-import { Invite, GroupMembership } from './index'
+import { GroupMembership, Invite } from './index'
 
 @Entity({ name: 'group', schema: 'omnivore' })
 export class Group {

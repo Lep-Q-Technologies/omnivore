@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Logger, HttpStatus } from '@nestjs/common'
-import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger'
-import { OAuthAuthService } from '../services/oauth-auth.service'
-import { AuthService } from '../services/auth.service'
+import { Body, Controller, HttpStatus, Logger, Post } from '@nestjs/common'
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger'
+
 import { UserService } from '../../user/user.service'
+import { AuthService } from '../services/auth.service'
+import { OAuthAuthService } from '../services/oauth-auth.service'
 
 interface MobileSignInDto {
   token: string
@@ -74,15 +75,10 @@ export class MobileAuthController {
           body.token,
           body.isAndroid || false,
         )
-      } else if (body.provider === 'APPLE') {
-        result = await this.oauthAuthService.handleAppleMobileAuth(
-          body.token,
-          body.user,
-        )
       } else {
         return {
           statusCode: HttpStatus.BAD_REQUEST,
-          json: { error: 'Unsupported provider' },
+          json: { error: 'Unsupported provider. Only GOOGLE is supported.' },
         }
       }
 
@@ -103,6 +99,7 @@ export class MobileAuthController {
       }
     } catch (error) {
       this.logger.error('Error in mobile OAuth sign-in', error)
+
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         json: { error: 'Internal server error' },
@@ -156,6 +153,7 @@ export class MobileAuthController {
       }
     } catch (error) {
       this.logger.error('Error in mobile email sign-in', error)
+
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         json: { error: 'Internal server error' },

@@ -5,5 +5,7 @@ export interface EmailVerificationPayload {
 }
 
 export abstract class NotificationClient {
-  abstract sendEmailVerification(payload: EmailVerificationPayload): Promise<void>
+  abstract sendEmailVerification(
+    payload: EmailVerificationPayload,
+  ): Promise<void>
 }

@@ -6,8 +6,8 @@
 
 import { Injectable, Logger } from '@nestjs/common'
 import fetch from 'cross-fetch'
-import pdfParse from 'pdf-parse'
 import { createHash } from 'crypto'
+import pdfParse from 'pdf-parse'
 
 /**
  * Result of PDF extraction operation
@@ -197,7 +197,10 @@ export class PdfExtractorService {
    * Check if buffer is a valid PDF (starts with %PDF magic bytes)
    */
   private isPdfBuffer(buffer: Buffer): boolean {
-    if (buffer.length < 4) return false
+    if (buffer.length < 4) {
+      return false
+    }
+
     return buffer.toString('utf-8', 0, 4) === '%PDF'
   }
 
@@ -205,7 +208,9 @@ export class PdfExtractorService {
    * Clean up PDF text (remove excessive whitespace, normalize)
    */
   private cleanPdfText(text: string): string {
-    if (!text) return ''
+    if (!text) {
+      return ''
+    }
 
     return (
       text
@@ -228,7 +233,9 @@ export class PdfExtractorService {
    * Calculate word count from text
    */
   private calculateWordCount(text: string): number {
-    if (!text || text.trim().length === 0) return 0
+    if (!text || text.trim().length === 0) {
+      return 0
+    }
 
     const words = text
       .trim()
@@ -242,7 +249,9 @@ export class PdfExtractorService {
    * Generate SHA-256 hash of content
    */
   private generateContentHash(content: string): string {
-    if (!content) return ''
+    if (!content) {
+      return ''
+    }
 
     try {
       return createHash('sha256').update(content).digest('hex')
@@ -250,6 +259,7 @@ export class PdfExtractorService {
       this.logger.warn(
         `Failed to generate content hash: ${error instanceof Error ? error.message : String(error)}`,
       )
+
       return ''
     }
   }
@@ -284,7 +294,9 @@ export class PdfExtractorService {
    * Parse PDF date format (D:YYYYMMDDHHmmSS)
    */
   private parseDate(dateString: string | undefined): Date | undefined {
-    if (!dateString) return undefined
+    if (!dateString) {
+      return undefined
+    }
 
     try {
       // PDF date format: D:YYYYMMDDHHmmSS+HH'mm' or D:YYYYMMDDHHmmSSZ
@@ -293,6 +305,7 @@ export class PdfExtractorService {
       )
       if (match) {
         const [, year, month, day, hour, minute, second] = match
+
         return new Date(
           parseInt(year),
           parseInt(month) - 1,
@@ -305,6 +318,7 @@ export class PdfExtractorService {
 
       // Try parsing as ISO date
       const parsed = new Date(dateString)
+
       return isNaN(parsed.getTime()) ? undefined : parsed
     } catch {
       return undefined

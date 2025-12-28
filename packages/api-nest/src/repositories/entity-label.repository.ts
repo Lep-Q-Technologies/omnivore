@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, In } from 'typeorm'
+import { In, Repository } from 'typeorm'
+
 import { EntityLabel } from '../label/entities/entity-label.entity'
 import { IEntityLabelRepository } from './interfaces/entity-label-repository.interface'
 
@@ -12,7 +13,7 @@ import { IEntityLabelRepository } from './interfaces/entity-label-repository.int
 export class EntityLabelRepository implements IEntityLabelRepository {
   constructor(
     @InjectRepository(EntityLabel)
-    private readonly repository: Repository<EntityLabel>
+    private readonly repository: Repository<EntityLabel>,
   ) {}
 
   /**
@@ -50,7 +51,9 @@ export class EntityLabelRepository implements IEntityLabelRepository {
    * Batch find entity labels for multiple library items with label relations loaded
    * Used by DataLoader to prevent N+1 queries
    */
-  async findByLibraryItemIds(libraryItemIds: string[]): Promise<Map<string, EntityLabel[]>> {
+  async findByLibraryItemIds(
+    libraryItemIds: string[],
+  ): Promise<Map<string, EntityLabel[]>> {
     if (libraryItemIds.length === 0) {
       return new Map()
     }
@@ -65,7 +68,7 @@ export class EntityLabelRepository implements IEntityLabelRepository {
     for (const libraryItemId of libraryItemIds) {
       result.set(
         libraryItemId,
-        entityLabels.filter(el => el.libraryItemId === libraryItemId)
+        entityLabels.filter((el) => el.libraryItemId === libraryItemId),
       )
     }
 

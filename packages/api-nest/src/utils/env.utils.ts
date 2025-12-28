@@ -24,6 +24,7 @@
  */
 export function isTestEnvironment(): boolean {
   const testEnvs = ['test', 'e2e', 'integration'] // Future-proof
+
   return testEnvs.includes(process.env.NODE_ENV || '')
 }
 

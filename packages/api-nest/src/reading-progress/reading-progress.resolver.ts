@@ -1,12 +1,13 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql'
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
-import { ReadingProgressService } from './reading-progress.service'
 import { ReadingProgress } from './dto/reading-progress.type'
 import { UpdateReadingProgressInput } from './dto/reading-progress-inputs.type'
 import { ReadingProgressEntity } from './entities/reading-progress.entity'
+import { ReadingProgressService } from './reading-progress.service'
 
 /**
  * Map ReadingProgressEntity to GraphQL ReadingProgress type
@@ -55,6 +56,7 @@ export class ReadingProgressResolver {
       libraryItemId,
       contentVersion,
     )
+
     return entity ? mapEntityToGraph(entity) : null
   }
 
@@ -76,6 +78,7 @@ export class ReadingProgressResolver {
       user.id,
       input,
     )
+
     return mapEntityToGraph(entity)
   }
 }

@@ -3,8 +3,9 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing'
-import { ContentTypeDetectorService } from './content-type-detector.service'
+
 import { ContentType } from '../../library/entities/library-item.entity'
+import { ContentTypeDetectorService } from './content-type-detector.service'
 
 describe('ContentTypeDetectorService', () => {
   let service: ContentTypeDetectorService
@@ -14,9 +15,7 @@ describe('ContentTypeDetectorService', () => {
       providers: [ContentTypeDetectorService],
     }).compile()
 
-    service = module.get<ContentTypeDetectorService>(
-      ContentTypeDetectorService,
-    )
+    service = module.get<ContentTypeDetectorService>(ContentTypeDetectorService)
   })
 
   it('should be defined', () => {

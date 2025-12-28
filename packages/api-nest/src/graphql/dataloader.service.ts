@@ -1,13 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common'
 import DataLoader from 'dataloader'
+
+import { HighlightEntity } from '../highlight/entities/highlight.entity'
+import { Label } from '../label/entities/label.entity'
+import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 import { IEntityLabelRepository } from '../repositories/interfaces/entity-label-repository.interface'
 import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
 import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
-import { Label } from '../label/entities/label.entity'
-import { HighlightEntity } from '../highlight/entities/highlight.entity'
-import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
 import { User } from '../user/entities/user.entity'
-import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
 
 /**
  * Authenticated request object with user populated by JwtAuthGuard

@@ -1,5 +1,10 @@
 import { Readability } from '@mozilla/readability'
-import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq'
+import {
+  InjectQueue,
+  OnWorkerEvent,
+  Processor,
+  WorkerHost,
+} from '@nestjs/bullmq'
 import {
   Injectable,
   Logger,
@@ -18,7 +23,10 @@ import {
   LibraryItemState,
 } from '../../library/entities/library-item.entity'
 import { NewsletterPlatform } from '../../library/entities/pending-confirmation.entity'
-import { SubscriptionEntity } from '../../library/entities/subscription.entity'
+import {
+  SubscriptionEntity,
+  SubscriptionSourceType,
+} from '../../library/entities/subscription.entity'
 import { NewsletterSubscriptionService } from '../../library/services/newsletter-subscription.service'
 import { PendingConfirmationService } from '../../library/services/pending-confirmation.service'
 import { User } from '../../user/entities/user.entity'
@@ -136,29 +144,48 @@ export class EmailProcessorService
         `Newsletter from ${metadata.senderEmail}: "${metadata.title}"`,
       )
 
-      // 2. Find or resolve user from recipient email
-      const user = await this.resolveUserFromEmail(to)
-      if (!user) {
+      // 2. Resolve user AND subscription from recipient email (new secure routing)
+      const result = await this.resolveUserAndSubscription(to)
+      if (!result) {
         throw new Error(`Could not resolve user from email: ${to}`)
       }
 
-      // 3. Find or create newsletter subscription
-      const subscription = await this.newsletterService.findOrCreateByEmail(
-        user.id,
-        metadata.senderEmail,
-        {
-          title: metadata.title,
-          description: metadata.description,
-          siteUrl: metadata.siteUrl,
-          siteIcon: metadata.siteIcon,
-          unsubscribeMailTo: unsubMailTo,
-          unsubscribeHttpUrl: unsubHttpUrl,
-        },
-      )
+      const { user } = result
+      let { subscription } = result
 
       this.logger.log(
-        `Subscription: ${subscription.id} (${subscription.title})`,
+        `Subscription: ${subscription.id} (${subscription.title}) for user ${user.id}`,
       )
+
+      // 3. Update subscription with sender info if it's pending
+      if (subscription.sourceIdentifier.startsWith('pending:')) {
+        this.logger.log(
+          `Updating pending subscription ${subscription.id} with sender ${metadata.senderEmail}`,
+        )
+        subscription = await this.newsletterService.findOrCreateByEmail(
+          user.id,
+          metadata.senderEmail,
+          {
+            title: metadata.title,
+            description: metadata.description,
+            siteUrl: metadata.siteUrl,
+            siteIcon: metadata.siteIcon,
+            unsubscribeMailTo: unsubMailTo,
+            unsubscribeHttpUrl: unsubHttpUrl,
+          },
+        )
+      }
+
+      // Verify sender matches subscription (security check)
+      if (
+        !subscription.sourceIdentifier.startsWith('pending:') &&
+        subscription.sourceIdentifier !== metadata.senderEmail
+      ) {
+        this.logger.warn(
+          `Sender mismatch: expected ${subscription.sourceIdentifier}, got ${metadata.senderEmail}`,
+        )
+        // Still process but log the mismatch for security monitoring
+      }
 
       // 3a. Auto-confirm any pending confirmations for this newsletter
       const wasConfirmed =
@@ -222,7 +249,7 @@ export class EmailProcessorService
     from: string,
     subject: string,
     html?: string,
-    text?: string,
+    _text?: string,
   ): EmailMetadata {
     // Parse sender email and name
     const { email: senderEmail, name: senderName } =
@@ -311,25 +338,117 @@ export class EmailProcessorService
    * Resolve user from recipient email address
    * Supports both direct user emails and newsletter alias emails
    */
+  /**
+   * Resolve user and subscription from recipient email
+   * NEW: Uses subscription-only alias for better security
+   * Format: {subscriptionAlias}@inbox.omnivore.app
+   *
+   * @returns {user, subscription} or null if not found
+   */
+  private async resolveUserAndSubscription(
+    recipientEmail: string,
+  ): Promise<{ user: User; subscription: SubscriptionEntity } | null> {
+    const email = recipientEmail.toLowerCase()
+
+    // Extract alias from email
+    // Supports two formats:
+    // 1. Subscription-specific: {subscriptionAlias}@inbox.omnivore.app
+    // 2. User-level with subscription: {userAlias}+{subscriptionAlias}@inbox.omnivore.app
+    const match = email.match(/^([a-z0-9]+)(?:\+([a-z0-9]+))?@/)
+    if (!match) {
+      this.logger.warn(`Invalid email format: ${email}`)
+
+      return null
+    }
+
+    const userAlias = match[1]
+    const subscriptionAlias = match[2] // Optional
+
+    // If subscription alias is provided (format: user+subscription@), use that
+    const emailAlias = subscriptionAlias || userAlias
+
+    // Try to find subscription by email alias first
+    let subscription = await this.subscriptionRepository.findOne({
+      where: { emailAlias },
+      relations: ['user'],
+    })
+
+    if (subscription) {
+      // Get user from subscription
+      const user =
+        subscription.user ||
+        (await this.userRepository.findOne({
+          where: { id: subscription.userId },
+        }))
+
+      if (!user) {
+        this.logger.error(`User not found for subscription ${subscription.id}`)
+        return null
+      }
+
+      return { user, subscription }
+    }
+
+    // No subscription found - try to find user by email alias
+    // This handles the case where emails are sent to user's general newsletter address
+    const user = await this.userRepository.findOne({
+      where: { emailAlias: userAlias },
+    })
+
+    if (!user) {
+      this.logger.warn(
+        `No subscription or user found for alias: ${userAlias}`,
+      )
+      return null
+    }
+
+    // Check if user already has a pending subscription - reuse it instead of creating new one
+    const existingPendingSubscriptions = await this.subscriptionRepository.find(
+      {
+        where: { userId: user.id, sourceType: SubscriptionSourceType.NEWSLETTER },
+      },
+    )
+
+    const pendingSubscription = existingPendingSubscriptions.find((sub) =>
+      sub.sourceIdentifier.startsWith('pending:'),
+    )
+
+    if (pendingSubscription) {
+      this.logger.log(
+        `Reusing existing pending subscription ${pendingSubscription.id} for user ${user.id}`,
+      )
+      return { user, subscription: pendingSubscription }
+    }
+
+    // Auto-create a new pending subscription for this user
+    // This subscription will be updated with actual sender info when email is processed
+    this.logger.log(
+      `Auto-creating pending subscription for user ${user.id} with alias ${emailAlias}`,
+    )
+    subscription = await this.newsletterService.createNewsletterSlot(
+      user.id,
+      'Pending Newsletter',
+    )
+
+    return { user, subscription }
+  }
+
+  /**
+   * DEPRECATED: Legacy method for resolving user from email
+   * Kept for backward compatibility with confirmation email flow
+   */
   private async resolveUserFromEmail(
     recipientEmail: string,
   ): Promise<User | null> {
     const email = recipientEmail.toLowerCase()
 
-    // Check for newsletter alias format: {userAlias}+{subscriptionAlias}@inbox.omnivore.app
-    // or user email format: {userAlias}@inbox.omnivore.app
-    const match = email.match(/^([a-z0-9]+)(?:\+[a-z0-9]+)?@/)
-    if (match) {
-      const userAlias = match[1]
-      const user = await this.userRepository.findOne({
-        where: { emailAlias: userAlias },
-      })
-      if (user) {
-        return user
-      }
+    // Try new subscription-only alias format first
+    const result = await this.resolveUserAndSubscription(email)
+    if (result) {
+      return result.user
     }
 
-    // Fallback: try direct email lookup
+    // Fallback: try direct email lookup (for non-newsletter emails)
     return await this.userRepository.findOne({
       where: { email: recipientEmail },
     })
@@ -375,9 +494,9 @@ export class EmailProcessorService
     // Fallback: use plain text
     if (text) {
       const escapedText = this.escapeHtml(text)
-      const html = `<pre>${escapedText}</pre>`
+      const wrappedHtml = `<pre>${escapedText}</pre>`
 
-      return { html, wordCount: this.countWords(text) }
+      return { html: wrappedHtml, wordCount: this.countWords(text) }
     }
 
     return { html: '<p>No content</p>', wordCount: 0 }
@@ -516,7 +635,8 @@ export class EmailProcessorService
         forwardedTo: user.email,
         metadata: {
           originalHeaders: job.data.headers,
-          detectedPlatformFrom: platform !== NewsletterPlatform.UNKNOWN ? 'domain' : 'manual',
+          detectedPlatformFrom:
+            platform !== NewsletterPlatform.UNKNOWN ? 'domain' : 'manual',
         },
       })
 
@@ -532,7 +652,10 @@ export class EmailProcessorService
           to: user.email,
           from: `Omnivore Newsletters <newsletters@omnivore.app>`,
           subject: `[Newsletter Confirmation] ${subject}`,
-          html: this.wrapConfirmationEmail(html || text || '', metadata.senderName || metadata.senderEmail),
+          html: this.wrapConfirmationEmail(
+            html || text || '',
+            metadata.senderName || metadata.senderEmail,
+          ),
           text: text,
           replyTo: from,
         },
@@ -633,7 +756,10 @@ export class EmailProcessorService
         const href = link.getAttribute('href')
         const text = link.textContent?.trim() || ''
 
-        if (href && confirmationPatterns.some((p) => p.test(text) || p.test(href))) {
+        if (
+          href &&
+          confirmationPatterns.some((p) => p.test(text) || p.test(href))
+        ) {
           // Found a likely confirmation link
           return href
         }
@@ -643,7 +769,10 @@ export class EmailProcessorService
       const firstLink = links[0]
       if (firstLink) {
         const href = firstLink.getAttribute('href')
-        if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+        if (
+          href &&
+          (href.startsWith('http://') || href.startsWith('https://'))
+        ) {
           return href
         }
       }
@@ -657,14 +786,19 @@ export class EmailProcessorService
   /**
    * Wrap confirmation email with helpful context for the user
    */
-  private wrapConfirmationEmail(originalHtml: string, newsletterName: string): string {
+  private wrapConfirmationEmail(
+    originalHtml: string,
+    newsletterName: string,
+  ): string {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
         <div style="background-color: #4CAF50; color: white; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
           <h2 style="margin: 0;">Newsletter Confirmation Required</h2>
         </div>
         <div style="background-color: white; padding: 20px; border-radius: 0 0 8px 8px;">
-          <p style="font-size: 16px; color: #333;">You've subscribed to <strong>${this.escapeHtml(newsletterName)}</strong> using your Omnivore newsletter address.</p>
+          <p style="font-size: 16px; color: #333;">You've subscribed to <strong>${this.escapeHtml(
+            newsletterName,
+          )}</strong> using your Omnivore newsletter address.</p>
           <p style="font-size: 14px; color: #666;">To start receiving newsletters in your Omnivore library, please click the confirmation link below:</p>
           <div style="margin: 20px 0; padding: 20px; background-color: #f5f5f5; border-radius: 4px;">
             ${originalHtml}

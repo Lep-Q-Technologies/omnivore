@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
 import Redis from 'ioredis'
+
 import {
   VerificationTokenPayload,
   VerificationTokenStore,
@@ -35,6 +36,7 @@ export class RedisVerificationTokenStore
       return JSON.parse(raw) as VerificationTokenPayload
     } catch (err) {
       this.logger.warn(`Failed to parse verification token payload: ${err}`)
+
       return undefined
     }
   }

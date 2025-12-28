@@ -1,24 +1,25 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
-  Logger,
   Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common'
-import {
-  HighlightEntity,
-  HighlightType,
-  HighlightColor,
-  RepresentationType,
-} from './entities/highlight.entity'
-import { HighlightSelectors } from './entities/highlight-selector.interface'
+
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
+import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
 import {
   CreateHighlightInput,
   UpdateHighlightInput,
 } from './dto/highlight-inputs.type'
-import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
-import { IHighlightRepository } from '../repositories/interfaces/highlight-repository.interface'
-import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import {
+  HighlightColor,
+  HighlightEntity,
+  HighlightType,
+  RepresentationType,
+} from './entities/highlight.entity'
+import { HighlightSelectors } from './entities/highlight-selector.interface'
 
 @Injectable()
 export class HighlightService {
@@ -190,6 +191,7 @@ export class HighlightService {
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
+
     return result
   }
 }

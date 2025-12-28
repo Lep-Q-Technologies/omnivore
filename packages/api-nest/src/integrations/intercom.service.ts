@@ -21,7 +21,9 @@ export interface IntercomClient {
 @Injectable()
 export class IntercomService implements IntercomClient {
   private readonly logger = new Logger(IntercomService.name)
+
   private readonly enabled: boolean
+
   private readonly apiKey?: string
 
   constructor(private readonly configService: ConfigService) {
@@ -40,6 +42,7 @@ export class IntercomService implements IntercomClient {
           name: contact.name,
         },
       })
+
       return
     }
 
@@ -82,6 +85,7 @@ export class IntercomService implements IntercomClient {
         externalId,
         updates,
       })
+
       return
     }
 

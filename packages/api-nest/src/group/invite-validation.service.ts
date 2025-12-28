@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, EntityManager } from 'typeorm'
-import { Invite } from './entities/invite.entity'
+import { EntityManager, Repository } from 'typeorm'
+
 import { GroupMembership } from './entities/group-membership.entity'
+import { Invite } from './entities/invite.entity'
 
 export interface InviteValidationResult {
   isValid: boolean
@@ -45,6 +46,7 @@ export class InviteValidationService {
 
       if (!invite) {
         this.logger.debug(`Invite not found: ${inviteCode}`)
+
         return {
           isValid: false,
           reason: 'INVITE_NOT_FOUND',
@@ -57,6 +59,7 @@ export class InviteValidationService {
           inviteCode,
           expirationTime: invite.expirationTime,
         })
+
         return {
           isValid: false,
           invite,
@@ -75,6 +78,7 @@ export class InviteValidationService {
           memberCount,
           maxMembers: invite.maxMembers,
         })
+
         return {
           isValid: false,
           invite,
@@ -83,12 +87,14 @@ export class InviteValidationService {
       }
 
       this.logger.debug(`Invite validated successfully: ${inviteCode}`)
+
       return {
         isValid: true,
         invite,
       }
     } catch (error) {
       this.logger.error(`Error validating invite: ${inviteCode}`, error)
+
       return {
         isValid: false,
         reason: 'INVITE_VALIDATION_ERROR',

@@ -1,18 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { OAuth2Client } from 'google-auth-library'
+
 import { EnvVariables } from '../../config/env-variables'
 import {
   DecodeTokenResult,
   OAuthUserInfo,
-  GoogleWebAuthResponse,
 } from '../interfaces/oauth-types.interface'
 
 @Injectable()
 export class GoogleOAuthService {
   private readonly logger = new Logger(GoogleOAuthService.name)
+
   private readonly webClient: OAuth2Client
+
   private readonly iosClient: OAuth2Client
+
   private readonly androidClient: OAuth2Client
 
   constructor(private readonly configService: ConfigService) {
@@ -61,6 +64,7 @@ export class GoogleOAuthService {
       const payload = loginTicket.getPayload()
       if (!payload) {
         this.logger.warn('No payload in Google token')
+
         return { errorCode: 401 }
       }
 
@@ -70,12 +74,14 @@ export class GoogleOAuthService {
 
       if (!email || !sourceUserId) {
         this.logger.warn('Missing email or sourceUserId in Google token')
+
         return { errorCode: 401 }
       }
 
       return { email, sourceUserId, name }
     } catch (error) {
       this.logger.error('Error decoding Google token', error)
+
       return { errorCode: 500 }
     }
   }
@@ -97,6 +103,7 @@ export class GoogleOAuthService {
       const payload = loginTicket.getPayload()
       if (!payload) {
         this.logger.warn('No payload in Google web token')
+
         return null
       }
 
@@ -107,6 +114,7 @@ export class GoogleOAuthService {
 
       if (!email || !sourceUserId) {
         this.logger.warn('Missing email or sourceUserId in Google web token')
+
         return null
       }
 
@@ -118,6 +126,7 @@ export class GoogleOAuthService {
       }
     } catch (error) {
       this.logger.error('Error verifying Google web token', error)
+
       return null
     }
   }
@@ -164,6 +173,7 @@ export class GoogleOAuthService {
 
       if (!userInfo.email || !userInfo.id) {
         this.logger.warn('Missing email or id in Google user info')
+
         return null
       }
 
@@ -175,6 +185,7 @@ export class GoogleOAuthService {
       }
     } catch (error) {
       this.logger.error('Error exchanging Google auth code', error)
+
       return null
     }
   }

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+
 import { VideoExtractorService } from './video-extractor.service'
 
 describe('VideoExtractorService', () => {
@@ -34,7 +35,10 @@ describe('VideoExtractorService', () => {
         expect(result.duration).toBeGreaterThan(0)
       } catch (error) {
         // If network request fails in test environment, skip
-        console.warn('Video extraction test skipped due to network error:', error)
+        console.warn(
+          'Video extraction test skipped due to network error:',
+          error,
+        )
       }
     }, 30000) // 30 second timeout for network request
 
@@ -45,7 +49,8 @@ describe('VideoExtractorService', () => {
     })
 
     it('should handle unavailable video', async () => {
-      const unavailableUrl = 'https://www.youtube.com/watch?v=invalidvideohere123'
+      const unavailableUrl =
+        'https://www.youtube.com/watch?v=invalidvideohere123'
 
       await expect(service.extractYoutubeVideo(unavailableUrl)).rejects.toThrow(
         'Failed to extract video',
@@ -60,11 +65,7 @@ describe('VideoExtractorService', () => {
         { text: 'This is a test', start: 2.5, duration: 3 },
       ]
 
-      const html = service.formatTranscriptHtml(
-        transcript,
-        'Test Video',
-        true,
-      )
+      const html = service.formatTranscriptHtml(transcript, 'Test Video', true)
 
       expect(html).toContain('Test Video')
       expect(html).toContain('[0:00]')
@@ -76,11 +77,7 @@ describe('VideoExtractorService', () => {
     it('should format transcript without timestamps', () => {
       const transcript = [{ text: 'Hello world', start: 0, duration: 2 }]
 
-      const html = service.formatTranscriptHtml(
-        transcript,
-        'Test Video',
-        false,
-      )
+      const html = service.formatTranscriptHtml(transcript, 'Test Video', false)
 
       expect(html).not.toContain('[0:00]')
       expect(html).toContain('Hello world')

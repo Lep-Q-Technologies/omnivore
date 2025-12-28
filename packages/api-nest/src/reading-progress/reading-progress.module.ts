@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common'
-import { ReadingProgressService } from './reading-progress.service'
-import { ReadingProgressResolver } from './reading-progress.resolver'
+
 import { RepositoriesModule } from '../repositories/repositories.module'
+import { ReadingProgressResolver } from './reading-progress.resolver'
+import { ReadingProgressService } from './reading-progress.service'
 
 /**
  * ReadingProgressModule

@@ -31,13 +31,15 @@ export class NewsletterSubscriptionResolver {
    * Get user's unique newsletter email address
    */
   @Query(() => NewsletterEmailResult)
-  async newsletterEmail(@CurrentUser() user: User): Promise<NewsletterEmailResult> {
+  async newsletterEmail(
+    @CurrentUser() user: User,
+  ): Promise<NewsletterEmailResult> {
     if (!user.emailAlias) {
       throw new Error('User does not have a newsletter email address')
     }
 
     return {
-      newsletterEmail: user.newsletterEmail!,
+      newsletterEmail: user.newsletterEmail,
       emailAlias: user.emailAlias,
     }
   }
@@ -59,8 +61,8 @@ export class NewsletterSubscriptionResolver {
     return subscriptions.map((sub) => ({
       id: sub.id,
       userId: sub.userId,
-      senderEmail: sub.senderEmail!,
-      emailAlias: sub.emailAlias!,
+      senderEmail: sub.senderEmail,
+      emailAlias: sub.emailAlias,
       title: sub.title,
       description: sub.description,
       siteUrl: sub.siteUrl,
@@ -77,41 +79,34 @@ export class NewsletterSubscriptionResolver {
     }))
   }
 
-  /**
-   * Create a newsletter subscription
-   * This is typically called when the user first receives an email from a sender
-   */
   @Mutation(() => NewsletterSubscriptionResult)
-  async subscribeToNewsletter(
-    @Args('senderEmail') senderEmail: string,
-    @Args('title', { nullable: true }) title: string | undefined,
+  async createNewsletterSubscription(
+    @Args('name', { description: 'Newsletter name (e.g., "Morning Brew")' })
+    name: string,
     @CurrentUser() user: User,
   ): Promise<NewsletterSubscriptionResult> {
     try {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(senderEmail)) {
+      if (!name || name.trim().length === 0) {
         return {
           success: false,
-          message: 'Invalid sender email format',
-          errors: ['The provided email address is not valid'],
+          message: 'Newsletter name is required',
+          errors: ['Name cannot be empty'],
         }
       }
 
-      const subscription = await this.newsletterService.findOrCreateByEmail(
+      const subscription = await this.newsletterService.createNewsletterSlot(
         user.id,
-        senderEmail,
-        { title },
+        name.trim(),
       )
 
       return {
         success: true,
-        message: `Subscribed to newsletter from ${senderEmail}`,
+        message: `Newsletter subscription created. Use ${subscription.getNewsletterEmail()} to subscribe.`,
         subscription: {
           id: subscription.id,
           userId: subscription.userId,
-          senderEmail: subscription.senderEmail!,
-          emailAlias: subscription.emailAlias!,
+          senderEmail: subscription.senderEmail,
+          emailAlias: subscription.emailAlias,
           title: subscription.title,
           description: subscription.description,
           siteUrl: subscription.siteUrl,
@@ -130,10 +125,69 @@ export class NewsletterSubscriptionResolver {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to subscribe: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        errors: [
-          error instanceof Error ? error.message : 'Failed to create subscription',
-        ],
+        message: 'Failed to create newsletter subscription',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+      }
+    }
+  }
+
+  /**
+   * Subscribe to a newsletter by sender email address
+   */
+  @Mutation(() => NewsletterSubscriptionResult)
+  async subscribeToNewsletter(
+    @Args('senderEmail', { description: 'Newsletter sender email address' })
+    senderEmail: string,
+    @Args('title', {
+      nullable: true,
+      description: 'Optional newsletter title',
+    })
+    title?: string,
+    @CurrentUser() user?: User,
+  ): Promise<NewsletterSubscriptionResult> {
+    try {
+      if (!senderEmail || senderEmail.trim().length === 0) {
+        return {
+          success: false,
+          message: 'Sender email is required',
+          errors: ['Sender email cannot be empty'],
+        }
+      }
+
+      const subscription = await this.newsletterService.subscribeToNewsletter(
+        user.id,
+        senderEmail.trim(),
+        title?.trim(),
+      )
+
+      return {
+        success: true,
+        message: `Subscribed to newsletter from ${senderEmail}`,
+        subscription: {
+          id: subscription.id,
+          userId: subscription.userId,
+          senderEmail: subscription.senderEmail,
+          emailAlias: subscription.emailAlias,
+          title: subscription.title,
+          description: subscription.description,
+          siteUrl: subscription.siteUrl,
+          siteIcon: subscription.siteIcon,
+          lastReceivedAt: subscription.lastFetchedAt,
+          itemCount: subscription.itemCount,
+          active: subscription.active,
+          folder: subscription.folder,
+          autoAddLabels: subscription.autoAddLabels,
+          unsubscribeMailTo: subscription.unsubscribeMailTo,
+          unsubscribeHttpUrl: subscription.unsubscribeHttpUrl,
+          createdAt: subscription.createdAt,
+          updatedAt: subscription.updatedAt,
+        },
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to subscribe to newsletter',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
       }
     }
   }
@@ -147,7 +201,8 @@ export class NewsletterSubscriptionResolver {
     @Args('deleteItems', {
       type: () => Boolean,
       defaultValue: true,
-      description: 'Whether to delete library items from this newsletter (default: true)',
+      description:
+        'Whether to delete library items from this newsletter (default: true)',
     })
     deleteItems: boolean,
     @CurrentUser() user: User,
@@ -168,7 +223,9 @@ export class NewsletterSubscriptionResolver {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to unsubscribe: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Failed to unsubscribe: ${
+          error instanceof Error ? error.message : 'Failed to unsubscribe'
+        }`,
         errors: [
           error instanceof Error ? error.message : 'Failed to unsubscribe',
         ],
@@ -206,8 +263,8 @@ export class NewsletterSubscriptionResolver {
         subscription: {
           id: subscription.id,
           userId: subscription.userId,
-          senderEmail: subscription.senderEmail!,
-          emailAlias: subscription.emailAlias!,
+          senderEmail: subscription.senderEmail,
+          emailAlias: subscription.emailAlias,
           title: subscription.title,
           description: subscription.description,
           siteUrl: subscription.siteUrl,
@@ -226,7 +283,9 @@ export class NewsletterSubscriptionResolver {
     } catch (error) {
       return {
         success: false,
-        message: `Failed to update settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Failed to update settings: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
         errors: [
           error instanceof Error ? error.message : 'Failed to update settings',
         ],
@@ -235,18 +294,23 @@ export class NewsletterSubscriptionResolver {
   }
 
   /**
-   * Field resolver for newsletterEmail (computed from user + subscription aliases)
+   * Field resolver for newsletterEmail (subscription alias only for better security)
+   * Format: {subscriptionAlias}@inbox.omnivore.app
+   *
+   * Security: Using subscription-only alias (no user prefix) prevents:
+   * - User enumeration attacks
+   * - Pattern recognition across subscriptions
+   * - Privacy leaks when forwarding emails
    */
   @ResolveField('newsletterEmail', () => String, { nullable: true })
   async resolveNewsletterEmail(
     @Parent() subscription: NewsletterSubscription,
-    @CurrentUser() user: User,
   ): Promise<string | null> {
-    if (!subscription.emailAlias || !user.emailAlias) {
+    if (!subscription.emailAlias) {
       return null
     }
     // TODO: Make domain configurable via environment variable
-    return `${user.emailAlias}+${subscription.emailAlias}@inbox.omnivore.app`
+    return `${subscription.emailAlias}@inbox.omnivore.app` // TODO: Make domain configurable via environment variable
   }
 
   /**

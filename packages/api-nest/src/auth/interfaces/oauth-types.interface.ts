@@ -16,9 +16,8 @@ export interface PendingUserTokenPayload {
 }
 
 export interface GoogleWebAuthResponse {
-  redirectURL: string
+  success: boolean
   authToken?: string
-  pendingUserAuth?: string
 }
 
 export interface OAuthUserInfo {

@@ -1,12 +1,13 @@
+import { NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import { getRepositoryToken } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { ConfigService } from '@nestjs/config'
-import { NotFoundException } from '@nestjs/common'
-import { UserService } from './user.service'
-import { User, StatusType, RegistrationType } from './entities/user.entity'
-import { UserProfile } from './entities/profile.entity'
 import * as bcrypt from 'bcrypt'
+import { Repository } from 'typeorm'
+
+import { UserProfile } from './entities/profile.entity'
+import { RegistrationType, StatusType, User } from './entities/user.entity'
+import { UserService } from './user.service'
 
 // Mock bcrypt
 jest.mock('bcrypt', () => ({

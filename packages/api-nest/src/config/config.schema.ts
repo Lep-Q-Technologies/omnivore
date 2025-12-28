@@ -1,4 +1,5 @@
 import Joi from 'joi'
+
 import { EnvVariables } from './env-variables'
 
 export const configValidationSchema = Joi.object({
@@ -21,9 +22,24 @@ export const configValidationSchema = Joi.object({
         'JWT_EXPIRES_IN must be a valid time format (e.g., 1h, 30m, 7d)',
     }),
 
-  FRONTEND_URL: Joi.string().uri().default('http://localhost:3000').messages({
-    'string.uri': 'FRONTEND_URL must be a valid URL',
-  }),
+  FRONTEND_URL: Joi.string()
+    .custom((value, helpers) => {
+      // Support comma-separated URLs for multiple frontends (web-vite, omnivore-polish)
+      const urls = value.split(',').map((url: string) => url.trim())
+      for (const url of urls) {
+        try {
+          new URL(url)
+        } catch {
+          return helpers.error('string.invalidUrl', { url })
+        }
+      }
+
+      return value
+    })
+    .default('http://localhost:3000')
+    .messages({
+      'string.invalidUrl': 'FRONTEND_URL contains invalid URL: {{#url}}',
+    }),
 
   // Database Configuration
   [EnvVariables.DATABASE_HOST]: Joi.required(),

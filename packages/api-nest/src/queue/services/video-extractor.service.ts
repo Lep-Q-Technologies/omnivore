@@ -197,9 +197,9 @@ export class VideoExtractorService {
 
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-    } else {
-      return `${minutes}:${secs.toString().padStart(2, '0')}`
     }
+
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
   }
 
   /**
@@ -213,6 +213,7 @@ export class VideoExtractorService {
       '"': '&quot;',
       "'": '&#039;',
     }
+
     return text.replace(/[&<>"']/g, (char) => map[char])
   }
 }

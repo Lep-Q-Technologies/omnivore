@@ -1,8 +1,9 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { StructuredLogger } from './structured-logger.service'
+
 import { CorrelationIdMiddleware } from './correlation-id.middleware'
 import { RequestLoggingMiddleware } from './request-logging.middleware'
+import { StructuredLogger } from './structured-logger.service'
 
 @Module({
   imports: [ConfigModule],

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
 import { EnvVariables } from '../config/env-variables'
 
 export interface UserCreatedEvent {
@@ -39,7 +40,9 @@ export enum EntityType {
 @Injectable()
 export class PubSubService implements PubSubClient {
   private readonly logger = new Logger(PubSubService.name)
+
   private readonly enabled: boolean
+
   private readonly isLocal: boolean
 
   constructor(private readonly configService: ConfigService) {
@@ -62,6 +65,7 @@ export class PubSubService implements PubSubClient {
         data: eventData,
         service: 'pubsub',
       })
+
       return
     }
 
@@ -109,6 +113,7 @@ export class PubSubService implements PubSubClient {
         data: eventData,
         service: 'pubsub',
       })
+
       return
     }
 
@@ -151,6 +156,7 @@ export class PubSubService implements PubSubClient {
 
     if (this.isLocal || !this.enabled) {
       this.logger.debug(`PubSub Event: entityUpdated`, eventData)
+
       return
     }
 
@@ -185,6 +191,7 @@ export class PubSubService implements PubSubClient {
 
     if (this.isLocal || !this.enabled) {
       this.logger.debug(`PubSub Event: entityDeleted`, eventData)
+
       return
     }
 

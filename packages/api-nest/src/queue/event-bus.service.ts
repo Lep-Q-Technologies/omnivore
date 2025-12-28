@@ -6,26 +6,27 @@
  * operations while maintaining simplicity.
  */
 
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { Queue } from 'bullmq'
 import { EventEmitter } from 'events'
+
 import {
-  EVENT_NAMES,
-  ContentSaveRequestedEvent,
-  ContentFetchStartedEvent,
+  AppEvent,
   ContentFetchCompletedEvent,
   ContentFetchFailedEvent,
+  ContentFetchStartedEvent,
+  ContentSaveRequestedEvent,
+  EVENT_NAMES,
   LibraryItemCreatedEvent,
   NotificationRequestedEvent,
   SearchIndexUpdateRequestedEvent,
-  AppEvent,
 } from './events.constants'
 import {
-  QUEUE_NAMES,
-  JOB_TYPES,
-  JOB_PRIORITY,
   JOB_CONFIG,
+  JOB_PRIORITY,
+  JOB_TYPES,
+  QUEUE_NAMES,
 } from './queue.constants'
 
 @Injectable()
@@ -38,7 +39,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
     private readonly notificationQueue: Queue,
     @InjectQueue(QUEUE_NAMES.POST_PROCESSING)
-    private readonly postProcessingQueue: Queue
+    private readonly postProcessingQueue: Queue,
   ) {
     super()
     // Increase max listeners to prevent warnings (default is 10)
@@ -49,22 +50,45 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
    * Initialize event listeners on module startup
    */
   onModuleInit() {
-    this.logger.log('Initializing EventBusService and registering event handlers')
+    this.logger.log(
+      'Initializing EventBusService and registering event handlers',
+    )
 
     // Content processing events
-    this.on(EVENT_NAMES.CONTENT_SAVE_REQUESTED, this.handleContentSaveRequested.bind(this))
-    this.on(EVENT_NAMES.CONTENT_FETCH_STARTED, this.handleContentFetchStarted.bind(this))
-    this.on(EVENT_NAMES.CONTENT_FETCH_COMPLETED, this.handleContentFetchCompleted.bind(this))
-    this.on(EVENT_NAMES.CONTENT_FETCH_FAILED, this.handleContentFetchFailed.bind(this))
+    this.on(
+      EVENT_NAMES.CONTENT_SAVE_REQUESTED,
+      this.handleContentSaveRequested.bind(this),
+    )
+    this.on(
+      EVENT_NAMES.CONTENT_FETCH_STARTED,
+      this.handleContentFetchStarted.bind(this),
+    )
+    this.on(
+      EVENT_NAMES.CONTENT_FETCH_COMPLETED,
+      this.handleContentFetchCompleted.bind(this),
+    )
+    this.on(
+      EVENT_NAMES.CONTENT_FETCH_FAILED,
+      this.handleContentFetchFailed.bind(this),
+    )
 
     // Library events
-    this.on(EVENT_NAMES.LIBRARY_ITEM_CREATED, this.handleLibraryItemCreated.bind(this))
+    this.on(
+      EVENT_NAMES.LIBRARY_ITEM_CREATED,
+      this.handleLibraryItemCreated.bind(this),
+    )
 
     // Notification events
-    this.on(EVENT_NAMES.NOTIFICATION_REQUESTED, this.handleNotificationRequested.bind(this))
+    this.on(
+      EVENT_NAMES.NOTIFICATION_REQUESTED,
+      this.handleNotificationRequested.bind(this),
+    )
 
     // Post-processing events
-    this.on(EVENT_NAMES.SEARCH_INDEX_UPDATE_REQUESTED, this.handleSearchIndexUpdateRequested.bind(this))
+    this.on(
+      EVENT_NAMES.SEARCH_INDEX_UPDATE_REQUESTED,
+      this.handleSearchIndexUpdateRequested.bind(this),
+    )
 
     this.logger.log('EventBusService initialized successfully')
   }
@@ -74,37 +98,51 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
    */
 
   emitContentSaveRequested(event: ContentSaveRequestedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.CONTENT_SAVE_REQUESTED} for item ${event.libraryItemId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.CONTENT_SAVE_REQUESTED} for item ${event.libraryItemId}`,
+    )
     this.emit(EVENT_NAMES.CONTENT_SAVE_REQUESTED, event)
   }
 
   emitContentFetchStarted(event: ContentFetchStartedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.CONTENT_FETCH_STARTED} for item ${event.libraryItemId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.CONTENT_FETCH_STARTED} for item ${event.libraryItemId}`,
+    )
     this.emit(EVENT_NAMES.CONTENT_FETCH_STARTED, event)
   }
 
   emitContentFetchCompleted(event: ContentFetchCompletedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.CONTENT_FETCH_COMPLETED} for item ${event.libraryItemId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.CONTENT_FETCH_COMPLETED} for item ${event.libraryItemId}`,
+    )
     this.emit(EVENT_NAMES.CONTENT_FETCH_COMPLETED, event)
   }
 
   emitContentFetchFailed(event: ContentFetchFailedEvent) {
-    this.logger.warn(`Emitting ${EVENT_NAMES.CONTENT_FETCH_FAILED} for item ${event.libraryItemId}: ${event.error}`)
+    this.logger.warn(
+      `Emitting ${EVENT_NAMES.CONTENT_FETCH_FAILED} for item ${event.libraryItemId}: ${event.error}`,
+    )
     this.emit(EVENT_NAMES.CONTENT_FETCH_FAILED, event)
   }
 
   emitLibraryItemCreated(event: LibraryItemCreatedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.LIBRARY_ITEM_CREATED} for item ${event.libraryItemId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.LIBRARY_ITEM_CREATED} for item ${event.libraryItemId}`,
+    )
     this.emit(EVENT_NAMES.LIBRARY_ITEM_CREATED, event)
   }
 
   emitNotificationRequested(event: NotificationRequestedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.NOTIFICATION_REQUESTED} for user ${event.userId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.NOTIFICATION_REQUESTED} for user ${event.userId}`,
+    )
     this.emit(EVENT_NAMES.NOTIFICATION_REQUESTED, event)
   }
 
   emitSearchIndexUpdateRequested(event: SearchIndexUpdateRequestedEvent) {
-    this.logger.debug(`Emitting ${EVENT_NAMES.SEARCH_INDEX_UPDATE_REQUESTED} for item ${event.libraryItemId}`)
+    this.logger.debug(
+      `Emitting ${EVENT_NAMES.SEARCH_INDEX_UPDATE_REQUESTED} for item ${event.libraryItemId}`,
+    )
     this.emit(EVENT_NAMES.SEARCH_INDEX_UPDATE_REQUESTED, event)
   }
 
@@ -133,14 +171,20 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
             type: JOB_CONFIG.RETRY_BACKOFF_TYPE,
             delay: JOB_CONFIG.RETRY_BACKOFF_DELAY,
           },
-        }
+        },
       )
 
-      this.logger.log(`Enqueued content fetch job ${job.id} for item ${event.libraryItemId}`)
+      this.logger.log(
+        `Enqueued content fetch job ${job.id} for item ${event.libraryItemId}`,
+      )
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : undefined
-      this.logger.error(`Failed to enqueue content fetch job: ${errorMessage}`, errorStack)
+      this.logger.error(
+        `Failed to enqueue content fetch job: ${errorMessage}`,
+        errorStack,
+      )
       // Don't throw - log error and continue gracefully
     }
   }
@@ -152,7 +196,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
 
   private async handleContentFetchCompleted(event: ContentFetchCompletedEvent) {
     this.logger.log(
-      `Content fetch completed for item ${event.libraryItemId} in ${event.processingTime}ms`
+      `Content fetch completed for item ${event.libraryItemId} in ${event.processingTime}ms`,
     )
 
     // Trigger post-processing tasks
@@ -165,19 +209,23 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
         },
         {
           priority: JOB_PRIORITY.LOW,
-        }
+        },
       )
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : undefined
-      this.logger.error(`Failed to enqueue post-processing job: ${errorMessage}`, errorStack)
+      this.logger.error(
+        `Failed to enqueue post-processing job: ${errorMessage}`,
+        errorStack,
+      )
     }
   }
 
   private async handleContentFetchFailed(event: ContentFetchFailedEvent) {
     this.logger.error(
       `Content fetch failed for item ${event.libraryItemId}: ${event.error} ` +
-      `(retry ${event.retryCount}, will retry: ${event.willRetry})`
+        `(retry ${event.retryCount}, will retry: ${event.willRetry})`,
     )
 
     // Could send notification to user if final failure
@@ -218,18 +266,24 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
         {
           priority: JOB_PRIORITY.HIGH,
           attempts: 5,
-        }
+        },
       )
 
       this.logger.log(`Enqueued notification for user ${event.userId}`)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : undefined
-      this.logger.error(`Failed to enqueue notification: ${errorMessage}`, errorStack)
+      this.logger.error(
+        `Failed to enqueue notification: ${errorMessage}`,
+        errorStack,
+      )
     }
   }
 
-  private async handleSearchIndexUpdateRequested(event: SearchIndexUpdateRequestedEvent) {
+  private async handleSearchIndexUpdateRequested(
+    event: SearchIndexUpdateRequestedEvent,
+  ) {
     try {
       await this.postProcessingQueue.add(
         JOB_TYPES.UPDATE_SEARCH_INDEX,
@@ -240,14 +294,20 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
         },
         {
           priority: JOB_PRIORITY.LOW,
-        }
+        },
       )
 
-      this.logger.log(`Enqueued search index update for item ${event.libraryItemId}`)
+      this.logger.log(
+        `Enqueued search index update for item ${event.libraryItemId}`,
+      )
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : undefined
-      this.logger.error(`Failed to enqueue search index update: ${errorMessage}`, errorStack)
+      this.logger.error(
+        `Failed to enqueue search index update: ${errorMessage}`,
+        errorStack,
+      )
     }
   }
 

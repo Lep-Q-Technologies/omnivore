@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
-import {
-  PendingUserTokenPayload,
-  isPendingUserTokenPayload,
-} from '../interfaces/oauth-types.interface'
+import { JwtService } from '@nestjs/jwt'
+
 import { EnvVariables } from '../../config/env-variables'
+import {
+  isPendingUserTokenPayload,
+  PendingUserTokenPayload,
+} from '../interfaces/oauth-types.interface'
 
 @Injectable()
 export class PendingUserService {
@@ -36,6 +37,7 @@ export class PendingUserService {
       return token
     } catch (error) {
       this.logger.error('Error creating pending user token', error)
+
       return null
     }
   }
@@ -54,9 +56,11 @@ export class PendingUserService {
       }
 
       this.logger.warn('Invalid pending user token payload structure')
+
       return null
     } catch (error) {
       this.logger.error('Error decoding pending user token', error)
+
       return null
     }
   }

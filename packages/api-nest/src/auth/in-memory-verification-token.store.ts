@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+
 import {
   VerificationTokenPayload,
   VerificationTokenStore,
@@ -6,7 +7,10 @@ import {
 
 @Injectable()
 export class InMemoryVerificationTokenStore implements VerificationTokenStore {
-  private readonly store = new Map<string, { payload: VerificationTokenPayload; expiresAt: number }>()
+  private readonly store = new Map<
+    string,
+    { payload: VerificationTokenPayload; expiresAt: number }
+  >()
 
   async write(
     token: string,
@@ -24,8 +28,10 @@ export class InMemoryVerificationTokenStore implements VerificationTokenStore {
     }
     if (Date.now() > record.expiresAt) {
       this.store.delete(token)
+
       return undefined
     }
+
     return record.payload
   }
 

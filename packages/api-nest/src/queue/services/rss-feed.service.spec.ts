@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+
 import { RssFeedService } from './rss-feed.service'
 
 describe('RssFeedService', () => {
@@ -19,13 +20,9 @@ describe('RssFeedService', () => {
   describe('isLikelyFeedUrl', () => {
     it('should identify RSS feed URLs', () => {
       expect(service.isLikelyFeedUrl('https://example.com/rss')).toBe(true)
-      expect(service.isLikelyFeedUrl('https://example.com/feed.rss')).toBe(
-        true,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/feed.rss')).toBe(true)
       expect(service.isLikelyFeedUrl('https://example.com/rss.xml')).toBe(true)
-      expect(service.isLikelyFeedUrl('https://example.com/blog/rss')).toBe(
-        true,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/blog/rss')).toBe(true)
     })
 
     it('should identify Atom feed URLs', () => {
@@ -33,32 +30,24 @@ describe('RssFeedService', () => {
       expect(service.isLikelyFeedUrl('https://example.com/feed.atom')).toBe(
         true,
       )
-      expect(service.isLikelyFeedUrl('https://example.com/atom.xml')).toBe(
-        true,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/atom.xml')).toBe(true)
     })
 
     it('should identify generic feed URLs', () => {
       expect(service.isLikelyFeedUrl('https://example.com/feed')).toBe(true)
       expect(service.isLikelyFeedUrl('https://example.com/feed/')).toBe(true)
-      expect(service.isLikelyFeedUrl('https://example.com/feed.xml')).toBe(
-        true,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/feed.xml')).toBe(true)
     })
 
     it('should reject non-feed URLs', () => {
       expect(service.isLikelyFeedUrl('https://example.com')).toBe(false)
-      expect(service.isLikelyFeedUrl('https://example.com/article')).toBe(
-        false,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/article')).toBe(false)
       expect(service.isLikelyFeedUrl('https://example.com/blog')).toBe(false)
     })
 
     it('should be case-insensitive', () => {
       expect(service.isLikelyFeedUrl('https://example.com/RSS')).toBe(true)
-      expect(service.isLikelyFeedUrl('https://example.com/Feed.XML')).toBe(
-        true,
-      )
+      expect(service.isLikelyFeedUrl('https://example.com/Feed.XML')).toBe(true)
       expect(service.isLikelyFeedUrl('https://example.com/ATOM')).toBe(true)
     })
   })

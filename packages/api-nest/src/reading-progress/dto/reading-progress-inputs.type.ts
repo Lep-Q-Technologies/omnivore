@@ -1,5 +1,5 @@
-import { InputType, Field, Int } from '@nestjs/graphql'
-import { IsString, IsOptional, IsInt, Min } from 'class-validator'
+import { Field, InputType, Int } from '@nestjs/graphql'
+import { IsInt, IsOptional, IsString, Min } from 'class-validator'
 
 /**
  * Input type for updating reading progress with sentinel positions

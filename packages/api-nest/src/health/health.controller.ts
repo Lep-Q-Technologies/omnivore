@@ -1,12 +1,13 @@
 import { Controller, Get } from '@nestjs/common'
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import {
   HealthCheck,
   HealthCheckService,
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus'
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger'
-import { RedisHealthIndicator } from './redis-health.indicator'
+
 import { QueueHealthIndicator } from '../queue/queue-health.indicator'
+import { RedisHealthIndicator } from './redis-health.indicator'
 
 @ApiTags('health')
 @Controller('health')
@@ -164,10 +165,18 @@ export class HealthController {
     const seconds = Math.floor(uptimeSeconds % 60)
 
     const parts: string[] = []
-    if (days > 0) parts.push(`${days}d`)
-    if (hours > 0) parts.push(`${hours}h`)
-    if (minutes > 0) parts.push(`${minutes}m`)
-    if (seconds > 0) parts.push(`${seconds}s`)
+    if (days > 0) {
+      parts.push(`${days}d`)
+    }
+    if (hours > 0) {
+      parts.push(`${hours}h`)
+    }
+    if (minutes > 0) {
+      parts.push(`${minutes}m`)
+    }
+    if (seconds > 0) {
+      parts.push(`${seconds}s`)
+    }
 
     return parts.join(' ') || '0s'
   }

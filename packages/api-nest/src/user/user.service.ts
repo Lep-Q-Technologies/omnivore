@@ -1,18 +1,19 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
 import { ConfigService } from '@nestjs/config'
+import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt'
-import { User, StatusType, RegistrationType } from './entities/user.entity'
-import { UserProfile } from './entities/profile.entity'
-import { UserRole, Permission, hasPermission } from './enums/user-role.enum'
+import { Repository } from 'typeorm'
+
+import { EnvVariables } from '../config/env-variables'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
-import { EnvVariables } from '../config/env-variables'
+import { UserProfile } from './entities/profile.entity'
+import { RegistrationType, StatusType, User } from './entities/user.entity'
+import { hasPermission, Permission, UserRole } from './enums/user-role.enum'
 
 // Import RegisterDto from auth module
 export interface RegisterDto {
@@ -227,6 +228,7 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { id },
     })
+
     return user || null
   }
 
@@ -237,6 +239,7 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { email },
     })
+
     return user || null
   }
 
@@ -253,6 +256,7 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { email, source },
     })
+
     return user || null
   }
 

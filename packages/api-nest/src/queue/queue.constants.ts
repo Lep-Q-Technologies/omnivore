@@ -84,6 +84,7 @@ export const REDIS_CONFIG = {
   SENTINELS: process.env.REDIS_SENTINELS
     ? process.env.REDIS_SENTINELS.split(',').map((s) => {
         const [host, port] = s.split(':')
+
         return { host, port: parseInt(port, 10) }
       })
     : undefined,

@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common'
-import { LabelService } from './label.service'
-import { LabelResolver } from './label.resolver'
+
 import { RepositoriesModule } from '../repositories/repositories.module'
+import { LabelResolver } from './label.resolver'
+import { LabelService } from './label.service'
 
 @Module({
   imports: [

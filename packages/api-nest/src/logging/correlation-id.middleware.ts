@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common'
-import { Request, Response, NextFunction } from 'express'
 import { randomUUID } from 'crypto'
+import { NextFunction, Request, Response } from 'express'
 
 export interface RequestWithCorrelationId extends Request {
   correlationId: string

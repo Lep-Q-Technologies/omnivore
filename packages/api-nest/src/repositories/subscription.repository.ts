@@ -370,4 +370,13 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       updateData,
     )
   }
+
+  async updateSourceIdentifier(
+    subscriptionId: string,
+    senderEmail: string,
+  ): Promise<void> {
+    await this.repository.update(subscriptionId, {
+      sourceIdentifier: senderEmail,
+    })
+  }
 }

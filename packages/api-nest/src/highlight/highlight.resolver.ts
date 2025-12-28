@@ -1,26 +1,27 @@
+import { UseGuards } from '@nestjs/common'
 import {
   Args,
-  Mutation,
-  Query,
-  Resolver,
-  ResolveField,
-  Parent,
   Int,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
 } from '@nestjs/graphql'
-import { UseGuards } from '@nestjs/common'
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { DeleteResult } from '../library/dto/library-inputs.type'
+import { LibraryItem } from '../library/dto/library-item.type'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
-import { HighlightService } from './highlight.service'
 import { Highlight, HighlightsConnection } from './dto/highlight.type'
 import {
   CreateHighlightInput,
   UpdateHighlightInput,
 } from './dto/highlight-inputs.type'
-import { DeleteResult } from '../library/dto/library-inputs.type'
 import { HighlightColor, HighlightEntity } from './entities/highlight.entity'
-import { LibraryItem } from '../library/dto/library-item.type'
-import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { HighlightService } from './highlight.service'
 
 /**
  * Highlight with optional eager-loaded library item relation
@@ -53,6 +54,7 @@ export class HighlightResolver {
       user.id,
       libraryItemId,
     )
+
     return entities.map(mapEntityToGraph)
   }
 
@@ -67,6 +69,7 @@ export class HighlightResolver {
     id: string,
   ): Promise<Highlight | null> {
     const entity = await this.highlightService.findById(user.id, id)
+
     return entity ? mapEntityToGraph(entity) : null
   }
 
@@ -96,6 +99,7 @@ export class HighlightResolver {
       first,
       after,
     )
+
     return {
       highlights: result.highlights.map(mapEntityToGraph),
       nextCursor: result.nextCursor,
@@ -137,6 +141,7 @@ export class HighlightResolver {
     input: CreateHighlightInput,
   ): Promise<Highlight> {
     const entity = await this.highlightService.createHighlight(user.id, input)
+
     return mapEntityToGraph(entity)
   }
 
@@ -159,6 +164,7 @@ export class HighlightResolver {
       id,
       input,
     )
+
     return mapEntityToGraph(entity)
   }
 

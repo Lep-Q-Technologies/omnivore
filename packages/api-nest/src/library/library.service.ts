@@ -1,28 +1,29 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
-  Logger,
   ConflictException,
   Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common'
-import {
-  LibraryItemEntity,
-  LibraryItemState,
-  ContentType,
-} from './entities/library-item.entity'
+
+import { FOLDERS, VALID_FOLDERS } from '../constants/folders.constants'
+import { EventBusService } from '../queue/event-bus.service'
+import { EVENT_NAMES } from '../queue/events.constants'
+import { JOB_PRIORITY } from '../queue/queue.constants'
+import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
+import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
 import {
   LibrarySearchInput,
   SaveUrlInput,
   UpdateLibraryItemInput,
 } from './dto/library-inputs.type'
-import { EventBusService } from '../queue/event-bus.service'
-import { EVENT_NAMES } from '../queue/events.constants'
-import { JOB_PRIORITY } from '../queue/queue.constants'
-import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
-import { IReadingProgressRepository } from '../repositories/interfaces/reading-progress-repository.interface'
-import { FOLDERS, VALID_FOLDERS } from '../constants/folders.constants'
-import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import {
+  ContentType,
+  LibraryItemEntity,
+  LibraryItemState,
+} from './entities/library-item.entity'
 
 @Injectable()
 export class LibraryService {
@@ -114,6 +115,7 @@ export class LibraryService {
     if (item.folder === FOLDERS.TRASH) {
       item.state = LibraryItemState.DELETED
       await this.libraryRepository.save(item)
+
       return {
         success: true,
         message: 'Item permanently deleted',
@@ -169,6 +171,7 @@ export class LibraryService {
     }
 
     await this.libraryRepository.save(item)
+
     return item
   }
 
@@ -427,6 +430,7 @@ export class LibraryService {
     item.noteUpdatedAt = new Date()
 
     await this.libraryRepository.save(item)
+
     return item
   }
 
@@ -472,6 +476,7 @@ export class LibraryService {
     item.updatedAt = new Date()
 
     await this.libraryRepository.save(item)
+
     return item
   }
 
@@ -504,6 +509,7 @@ export class LibraryService {
 
       // Add timestamp to ensure uniqueness
       const timestamp = Date.now()
+
       return `${slug}-${timestamp}`
     } catch {
       return `url-${Date.now()}`

@@ -1,9 +1,10 @@
-import { Controller, Post, UseGuards, HttpCode } from '@nestjs/common'
+import { Controller, HttpCode, Post, UseGuards } from '@nestjs/common'
 import { DataSource } from 'typeorm'
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { seedLibraryItems } from '../database/seeds/library-items.seed'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
-import { seedLibraryItems } from '../database/seeds/library-items.seed'
 
 @Controller('library')
 export class LibraryController {
