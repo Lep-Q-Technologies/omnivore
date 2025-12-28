@@ -23,16 +23,24 @@ import {
   LibraryItemState,
 } from '../../library/entities/library-item.entity'
 import { NewsletterPlatform } from '../../library/entities/pending-confirmation.entity'
-import {
-  SubscriptionEntity,
-  SubscriptionSourceType,
-} from '../../library/entities/subscription.entity'
+import { SubscriptionEntity } from '../../library/entities/subscription.entity'
 import { NewsletterSubscriptionService } from '../../library/services/newsletter-subscription.service'
 import { PendingConfirmationService } from '../../library/services/pending-confirmation.service'
 import { User } from '../../user/entities/user.entity'
 import { EventBusService } from '../event-bus.service'
 import { JOB_PRIORITY, JOB_TYPES, QUEUE_NAMES } from '../queue.constants'
 import { HtmlSanitizerService } from '../services/html-sanitizer.service'
+
+/**
+ * Result interface for email processing jobs
+ */
+export interface EmailProcessingResult {
+  success: boolean
+  libraryItemId?: string
+  subscriptionId?: string
+  error?: string
+  message?: string
+}
 
 /**
  * Job data interface for save-newsletter jobs
@@ -56,12 +64,19 @@ export interface SaveNewsletterJobData {
  */
 interface EmailMetadata {
   senderEmail: string
-  senderName?: string
+  senderName: string | null
   subject: string
   title: string
-  description?: string
-  siteUrl?: string
-  siteIcon?: string
+  description: string | null
+  siteUrl: string | null
+  siteIcon: string | null
+}
+
+interface HtmlMetadataExtraction {
+  title: string
+  description: string | null
+  siteUrl: string | null
+  siteIcon: string | null
 }
 
 @Injectable()
@@ -108,7 +123,9 @@ export class EmailProcessorService
   /**
    * Main job processing method
    */
-  async process(job: Job<SaveNewsletterJobData, any, string>): Promise<any> {
+  async process(
+    job: Job<SaveNewsletterJobData, EmailProcessingResult, string>,
+  ): Promise<EmailProcessingResult> {
     this.logger.log(`Processing ${job.name} job ${job.id}`)
 
     switch (job.name) {
@@ -133,7 +150,7 @@ export class EmailProcessorService
    */
   private async handleSaveNewsletter(
     job: Job<SaveNewsletterJobData>,
-  ): Promise<any> {
+  ): Promise<EmailProcessingResult> {
     const { from, to, subject, html, text, unsubMailTo, unsubHttpUrl } =
       job.data
 
@@ -257,54 +274,16 @@ export class EmailProcessorService
 
     // Use subject as title, or try to extract from HTML
     let title = subject || 'Untitled Newsletter'
-    let description: string | undefined
-    let siteUrl: string | undefined
-    let siteIcon: string | undefined
+    let description: string | null = null
+    let siteUrl: string | null = null
+    let siteIcon: string | null = null
 
     if (html) {
-      try {
-        const { document } = parseHTML(html)
-
-        // Try to extract title from HTML
-        const h1 = document.querySelector('h1')
-        if (h1?.textContent) {
-          title = h1.textContent.trim()
-        }
-
-        // Try to extract meta description
-        const metaDesc = document.querySelector('meta[name="description"]')
-        if (metaDesc) {
-          description = metaDesc.getAttribute('content') || undefined
-        }
-
-        // Try to extract site URL from links
-        const links = document.querySelectorAll('a[href]')
-        for (const link of Array.from(links)) {
-          const href = link.getAttribute('href')
-          if (
-            href &&
-            (href.startsWith('http://') || href.startsWith('https://'))
-          ) {
-            try {
-              const url = new URL(href)
-              siteUrl = `${url.protocol}//${url.host}`
-              break
-            } catch {
-              // Invalid URL, continue
-            }
-          }
-        }
-
-        // Try to extract favicon
-        const favicon = document.querySelector(
-          'link[rel="icon"], link[rel="shortcut icon"]',
-        )
-        if (favicon) {
-          siteIcon = favicon.getAttribute('href') || undefined
-        }
-      } catch (error) {
-        this.logger.warn(`Failed to extract HTML metadata: ${error}`)
-      }
+      const extracted = this.extractHtmlMetadata(html, title)
+      title = extracted.title
+      description = extracted.description
+      siteUrl = extracted.siteUrl
+      siteIcon = extracted.siteIcon
     }
 
     return {
@@ -319,19 +298,88 @@ export class EmailProcessorService
   }
 
   /**
+   * Extract metadata from HTML content
+   * Separated to reduce nesting depth in extractEmailMetadata
+   */
+  private extractHtmlMetadata(
+    html: string,
+    defaultTitle: string,
+  ): HtmlMetadataExtraction {
+    let title = defaultTitle
+    let description: string | null = null
+    let siteUrl: string | null = null
+    let siteIcon: string | null = null
+
+    try {
+      const { document } = parseHTML(html)
+
+      // Try to extract title from HTML
+      const h1 = document.querySelector('h1')
+      if (h1?.textContent) {
+        title = h1.textContent.trim()
+      }
+
+      // Try to extract meta description
+      const metaDesc = document.querySelector('meta[name="description"]')
+      if (metaDesc) {
+        description = metaDesc.getAttribute('content') ?? null
+      }
+
+      // Try to extract site URL from links
+      siteUrl = this.extractSiteUrlFromLinks(document)
+
+      // Try to extract favicon
+      const favicon = document.querySelector(
+        'link[rel="icon"], link[rel="shortcut icon"]',
+      )
+      if (favicon) {
+        siteIcon = favicon.getAttribute('href') ?? null
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to extract HTML metadata: ${error}`)
+    }
+
+    return { title, description, siteUrl, siteIcon }
+  }
+
+  /**
+   * Extract site URL from document links
+   */
+  private extractSiteUrlFromLinks(document: Document): string | null {
+    const links = document.querySelectorAll('a[href]')
+    for (const link of Array.from(links)) {
+      const href = link.getAttribute('href')
+      if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+        try {
+          const url = new URL(href)
+
+          return `${url.protocol}//${url.host}`
+        } catch {
+          // Invalid URL, continue
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
    * Parse email address into name and email
    */
-  private parseEmailAddress(address: string): { email: string; name?: string } {
+  private parseEmailAddress(address: string): {
+    email: string
+    name: string | null
+  } {
     // Handle formats like: "Name <email@example.com>" or "email@example.com"
     const match = address.match(/^(?:"?([^"]*)"?\s)?<?([^@]+@[^>]+)>?$/)
     if (match) {
       return {
-        name: match[1]?.trim() || undefined,
+        name: match[1]?.trim() ?? null,
         email: match[2].trim(),
       }
     }
 
-    return { email: address.trim() }
+    return { email: address.trim(), name: null }
   }
 
   /**
@@ -340,8 +388,10 @@ export class EmailProcessorService
    */
   /**
    * Resolve user and subscription from recipient email
-   * NEW: Uses subscription-only alias for better security
+   * SECURE: Only accepts subscription-specific aliases
    * Format: {subscriptionAlias}@inbox.omnivore.app
+   *
+   * Security: No user-level addresses, no auto-creation, prevents email enumeration
    *
    * @returns {user, subscription} or null if not found
    */
@@ -350,85 +400,43 @@ export class EmailProcessorService
   ): Promise<{ user: User; subscription: SubscriptionEntity } | null> {
     const email = recipientEmail.toLowerCase()
 
-    // Extract alias from email
-    // Supports two formats:
-    // 1. Subscription-specific: {subscriptionAlias}@inbox.omnivore.app
-    // 2. User-level with subscription: {userAlias}+{subscriptionAlias}@inbox.omnivore.app
-    const match = email.match(/^([a-z0-9]+)(?:\+([a-z0-9]+))?@/)
+    // Extract subscription alias from email
+    // ONLY accepts subscription-specific format: {subscriptionAlias}@inbox.omnivore.app
+    const match = email.match(/^([a-z0-9]+)@/)
     if (!match) {
       this.logger.warn(`Invalid email format: ${email}`)
 
       return null
     }
 
-    const userAlias = match[1]
-    const subscriptionAlias = match[2] // Optional
+    const emailAlias = match[1]
 
-    // If subscription alias is provided (format: user+subscription@), use that
-    const emailAlias = subscriptionAlias || userAlias
-
-    // Try to find subscription by email alias first
-    let subscription = await this.subscriptionRepository.findOne({
+    // Find subscription by email alias
+    const subscription = await this.subscriptionRepository.findOne({
       where: { emailAlias },
       relations: ['user'],
     })
 
-    if (subscription) {
-      // Get user from subscription
-      const user =
-        subscription.user ||
-        (await this.userRepository.findOne({
-          where: { id: subscription.userId },
-        }))
-
-      if (!user) {
-        this.logger.error(`User not found for subscription ${subscription.id}`)
-        return null
-      }
-
-      return { user, subscription }
-    }
-
-    // No subscription found - try to find user by email alias
-    // This handles the case where emails are sent to user's general newsletter address
-    const user = await this.userRepository.findOne({
-      where: { emailAlias: userAlias },
-    })
-
-    if (!user) {
+    if (!subscription) {
       this.logger.warn(
-        `No subscription or user found for alias: ${userAlias}`,
+        `No subscription found for alias: ${emailAlias}. Email will be rejected.`,
       )
+
       return null
     }
 
-    // Check if user already has a pending subscription - reuse it instead of creating new one
-    const existingPendingSubscriptions = await this.subscriptionRepository.find(
-      {
-        where: { userId: user.id, sourceType: SubscriptionSourceType.NEWSLETTER },
-      },
-    )
+    // Get user from subscription
+    const user =
+      subscription.user ||
+      (await this.userRepository.findOne({
+        where: { id: subscription.userId },
+      }))
 
-    const pendingSubscription = existingPendingSubscriptions.find((sub) =>
-      sub.sourceIdentifier.startsWith('pending:'),
-    )
+    if (!user) {
+      this.logger.error(`User not found for subscription ${subscription.id}`)
 
-    if (pendingSubscription) {
-      this.logger.log(
-        `Reusing existing pending subscription ${pendingSubscription.id} for user ${user.id}`,
-      )
-      return { user, subscription: pendingSubscription }
+      return null
     }
-
-    // Auto-create a new pending subscription for this user
-    // This subscription will be updated with actual sender info when email is processed
-    this.logger.log(
-      `Auto-creating pending subscription for user ${user.id} with alias ${emailAlias}`,
-    )
-    subscription = await this.newsletterService.createNewsletterSlot(
-      user.id,
-      'Pending Newsletter',
-    )
 
     return { user, subscription }
   }
@@ -449,7 +457,7 @@ export class EmailProcessorService
     }
 
     // Fallback: try direct email lookup (for non-newsletter emails)
-    return await this.userRepository.findOne({
+    return this.userRepository.findOne({
       where: { email: recipientEmail },
     })
   }
@@ -585,7 +593,7 @@ export class EmailProcessorService
    */
   private async handleForwardEmail(
     job: Job<SaveNewsletterJobData>,
-  ): Promise<any> {
+  ): Promise<EmailProcessingResult> {
     this.logger.log(`Forward email job ${job.id} - not implemented yet`)
 
     return { success: true, message: 'Email forwarding not implemented' }
@@ -597,7 +605,7 @@ export class EmailProcessorService
    */
   private async handleConfirmationEmail(
     job: Job<SaveNewsletterJobData>,
-  ): Promise<any> {
+  ): Promise<EmailProcessingResult> {
     const { from, to, subject, html, text } = job.data
 
     try {
@@ -735,9 +743,9 @@ export class EmailProcessorService
   /**
    * Extract confirmation URL from HTML content
    */
-  private extractConfirmationUrl(html?: string): string | undefined {
+  private extractConfirmationUrl(html?: string): string | null {
     if (!html) {
-      return undefined
+      return null
     }
 
     try {
@@ -780,7 +788,7 @@ export class EmailProcessorService
       this.logger.warn(`Failed to extract confirmation URL: ${error}`)
     }
 
-    return undefined
+    return null
   }
 
   /**
@@ -814,7 +822,9 @@ export class EmailProcessorService
   /**
    * Handle save-attachment jobs (placeholder)
    */
-  private async handleSaveAttachment(job: Job<any>): Promise<any> {
+  private async handleSaveAttachment(
+    job: Job<SaveNewsletterJobData>,
+  ): Promise<EmailProcessingResult> {
     this.logger.log(`Save attachment job ${job.id} - not implemented yet`)
 
     return { success: true, message: 'Attachment saving not implemented' }

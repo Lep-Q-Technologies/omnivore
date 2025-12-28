@@ -132,67 +132,6 @@ export class NewsletterSubscriptionResolver {
   }
 
   /**
-   * Subscribe to a newsletter by sender email address
-   */
-  @Mutation(() => NewsletterSubscriptionResult)
-  async subscribeToNewsletter(
-    @Args('senderEmail', { description: 'Newsletter sender email address' })
-    senderEmail: string,
-    @Args('title', {
-      nullable: true,
-      description: 'Optional newsletter title',
-    })
-    title?: string,
-    @CurrentUser() user?: User,
-  ): Promise<NewsletterSubscriptionResult> {
-    try {
-      if (!senderEmail || senderEmail.trim().length === 0) {
-        return {
-          success: false,
-          message: 'Sender email is required',
-          errors: ['Sender email cannot be empty'],
-        }
-      }
-
-      const subscription = await this.newsletterService.subscribeToNewsletter(
-        user.id,
-        senderEmail.trim(),
-        title?.trim(),
-      )
-
-      return {
-        success: true,
-        message: `Subscribed to newsletter from ${senderEmail}`,
-        subscription: {
-          id: subscription.id,
-          userId: subscription.userId,
-          senderEmail: subscription.senderEmail,
-          emailAlias: subscription.emailAlias,
-          title: subscription.title,
-          description: subscription.description,
-          siteUrl: subscription.siteUrl,
-          siteIcon: subscription.siteIcon,
-          lastReceivedAt: subscription.lastFetchedAt,
-          itemCount: subscription.itemCount,
-          active: subscription.active,
-          folder: subscription.folder,
-          autoAddLabels: subscription.autoAddLabels,
-          unsubscribeMailTo: subscription.unsubscribeMailTo,
-          unsubscribeHttpUrl: subscription.unsubscribeHttpUrl,
-          createdAt: subscription.createdAt,
-          updatedAt: subscription.updatedAt,
-        },
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to subscribe to newsletter',
-        errors: [error instanceof Error ? error.message : 'Unknown error'],
-      }
-    }
-  }
-
-  /**
    * Unsubscribe from a newsletter
    */
   @Mutation(() => NewsletterSubscriptionResult)
@@ -309,8 +248,9 @@ export class NewsletterSubscriptionResolver {
     if (!subscription.emailAlias) {
       return null
     }
+
     // TODO: Make domain configurable via environment variable
-    return `${subscription.emailAlias}@inbox.omnivore.app` // TODO: Make domain configurable via environment variable
+    return `${subscription.emailAlias}@inbox.omnivore.app`
   }
 
   /**

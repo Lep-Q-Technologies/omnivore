@@ -67,64 +67,6 @@ export class NewsletterSubscriptionService {
   }
 
   /**
-   * Subscribe to a newsletter by sender email address
-   * This is used when user explicitly wants to subscribe to a specific newsletter
-   *
-   * @param userId - User ID
-   * @param senderEmail - Newsletter sender email (e.g., "writer@substack.com")
-   * @param title - Optional newsletter title
-   * @returns Newsletter subscription (existing or newly created)
-   */
-  async subscribeToNewsletter(
-    userId: string,
-    senderEmail: string,
-    title?: string,
-  ): Promise<SubscriptionEntity> {
-    this.logger.log(
-      `User ${userId} subscribing to newsletter from ${senderEmail}`,
-    )
-
-    // Validate email format
-    if (!senderEmail || !senderEmail.includes('@')) {
-      throw new Error('Invalid email address')
-    }
-
-    // Check if already subscribed
-    let existing = await this.subscriptionRepository.findBySource(
-      userId,
-      SubscriptionSourceType.NEWSLETTER,
-      senderEmail,
-    )
-
-    if (existing) {
-      // Reactivate if inactive
-      if (!existing.active) {
-        await this.subscriptionRepository.activate(existing.id)
-        this.logger.log(`Reactivated newsletter subscription: ${existing.id}`)
-      }
-      return existing
-    }
-
-    // Create new subscription
-    const emailAlias = await this.generateUniqueEmailAlias()
-    const subscription = await this.subscriptionRepository.createNewsletter(
-      userId,
-      senderEmail,
-      emailAlias,
-      {
-        title: title || this.extractTitleFromEmail(senderEmail),
-        description: `Newsletter from ${senderEmail}`,
-      },
-    )
-
-    this.logger.log(
-      `Created newsletter subscription ${subscription.id} for ${senderEmail}`,
-    )
-
-    return subscription
-  }
-
-  /**
    * Find or create a newsletter subscription by sender email
    * This is called when an email arrives from a newsletter
    *
@@ -365,6 +307,7 @@ export class NewsletterSubscriptionService {
     let attempts = 0
     const maxAttempts = 10
 
+    // eslint-disable-next-line no-await-in-loop -- Sequential collision detection required
     while (attempts < maxAttempts) {
       const alias = generateEmailAlias()
 
