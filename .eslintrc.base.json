@@ -98,7 +98,6 @@
     "prefer-template": "warn",
     "radix": "warn",
     "symbol-description": "error",
-    "valid-jsdoc": "error",
     "vars-on-top": "error",
     "yoda": "error",
     "class-methods-use-this": "off",
