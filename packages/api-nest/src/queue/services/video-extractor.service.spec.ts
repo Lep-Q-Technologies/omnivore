@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { VideoExtractorService } from './video-extractor.service'
 
 describe('VideoExtractorService', () => {
-  let service: VideoExtractorService
+  let service: VideoExtractorService | null = null
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

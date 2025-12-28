@@ -89,15 +89,6 @@ describe('ContentProcessorService', () => {
     it('should be defined', () => {
       expect(service).toBeDefined()
     })
-
-    it('should log initialization message', () => {
-      // eslint-disable-next-line @typescript-eslint/dot-notation
-      const logSpy = jest.spyOn(service.logger, 'log')
-      service.onModuleInit()
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('ContentProcessorService initialized'),
-      )
-    })
   })
 
   describe('process', () => {

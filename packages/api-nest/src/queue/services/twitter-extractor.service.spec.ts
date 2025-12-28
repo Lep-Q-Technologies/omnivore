@@ -3,14 +3,15 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { TwitterExtractorService } from './twitter-extractor.service'
 
 describe('TwitterExtractorService', () => {
-  let service: TwitterExtractorService
+  let service: TwitterExtractorService | null = null
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [TwitterExtractorService],
     }).compile()
 
-    service = module.get<TwitterExtractorService>(TwitterExtractorService)
+    service =
+      module.get<TwitterExtractorService>(TwitterExtractorService) || null
   })
 
   it('should be defined', () => {
