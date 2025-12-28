@@ -6,8 +6,16 @@
 
 import { Injectable, Logger } from '@nestjs/common'
 import fetch from 'cross-fetch'
-import { createHash } from 'crypto'
 import pdfParse from 'pdf-parse'
+
+import {
+  calculateWordCount,
+  cleanPdfText,
+  extractTitle,
+  generateContentHash,
+  isPdfBuffer,
+  parseDate,
+} from './pdf-extractor.utils'
 
 /**
  * Result of PDF extraction operation
@@ -68,7 +76,9 @@ export class PdfExtractorService {
       }
 
       this.logger.debug(
-        `Downloaded PDF: ${pdfBuffer.length} bytes (${(pdfBuffer.length / 1024).toFixed(2)} KB)`,
+        `Downloaded PDF: ${pdfBuffer.length} bytes (${(
+          pdfBuffer.length / 1024
+        ).toFixed(2)} KB)`,
       )
 
       // Step 2: Parse PDF with pdf-parse
@@ -86,7 +96,7 @@ export class PdfExtractorService {
       let textContent = pdfData.text || ''
 
       // Clean up excessive whitespace
-      textContent = this.cleanPdfText(textContent)
+      textContent = cleanPdfText(textContent)
 
       if (!textContent || textContent.trim().length === 0) {
         warnings.push(
@@ -98,17 +108,17 @@ export class PdfExtractorService {
       }
 
       // Step 5: Calculate word count
-      const wordCount = this.calculateWordCount(textContent)
+      const wordCount = calculateWordCount(textContent)
 
       // Step 6: Generate content hash
-      const contentHash = this.generateContentHash(textContent)
+      const contentHash = generateContentHash(textContent)
 
       // Step 7: Extract title (from metadata or URL)
-      const title = this.extractTitle(metadata, url)
+      const title = extractTitle(metadata, url)
 
       // Step 8: Extract dates
-      const createdDate = this.parseDate(metadata.CreationDate)
-      const modifiedDate = this.parseDate(metadata.ModDate)
+      const createdDate = parseDate(metadata.CreationDate)
+      const modifiedDate = parseDate(metadata.ModDate)
 
       this.logger.log(
         `Successfully extracted PDF: ${pdfData.numpages} pages, ${wordCount} words`,
@@ -169,7 +179,10 @@ export class PdfExtractorService {
 
       // Check file size
       const contentLength = response.headers.get('content-length')
-      if (contentLength && parseInt(contentLength) > this.config.maxSizeBytes) {
+      if (
+        contentLength &&
+        parseInt(contentLength, 10) > this.config.maxSizeBytes
+      ) {
         throw new Error(
           `PDF file too large: ${contentLength} bytes (max: ${this.config.maxSizeBytes})`,
         )
@@ -180,7 +193,7 @@ export class PdfExtractorService {
       const buffer = Buffer.from(arrayBuffer)
 
       // Verify it's actually a PDF (check magic bytes)
-      if (!this.isPdfBuffer(buffer)) {
+      if (!isPdfBuffer(buffer)) {
         throw new Error('Downloaded file is not a valid PDF (invalid header)')
       }
 
@@ -190,138 +203,6 @@ export class PdfExtractorService {
         throw new Error(`PDF download timeout after ${this.config.timeoutMs}ms`)
       }
       throw error
-    }
-  }
-
-  /**
-   * Check if buffer is a valid PDF (starts with %PDF magic bytes)
-   */
-  private isPdfBuffer(buffer: Buffer): boolean {
-    if (buffer.length < 4) {
-      return false
-    }
-
-    return buffer.toString('utf-8', 0, 4) === '%PDF'
-  }
-
-  /**
-   * Clean up PDF text (remove excessive whitespace, normalize)
-   */
-  private cleanPdfText(text: string): string {
-    if (!text) {
-      return ''
-    }
-
-    return (
-      text
-        // Replace multiple spaces with single space
-        .replace(/ {2,}/g, ' ')
-        // Replace multiple newlines with double newline (paragraph break)
-        .replace(/\n{3,}/g, '\n\n')
-        // Remove carriage returns
-        .replace(/\r/g, '')
-        // Trim whitespace from each line
-        .split('\n')
-        .map((line) => line.trim())
-        .join('\n')
-        // Final trim
-        .trim()
-    )
-  }
-
-  /**
-   * Calculate word count from text
-   */
-  private calculateWordCount(text: string): number {
-    if (!text || text.trim().length === 0) {
-      return 0
-    }
-
-    const words = text
-      .trim()
-      .split(/\s+/)
-      .filter((word) => word.length > 0)
-
-    return words.length
-  }
-
-  /**
-   * Generate SHA-256 hash of content
-   */
-  private generateContentHash(content: string): string {
-    if (!content) {
-      return ''
-    }
-
-    try {
-      return createHash('sha256').update(content).digest('hex')
-    } catch (error) {
-      this.logger.warn(
-        `Failed to generate content hash: ${error instanceof Error ? error.message : String(error)}`,
-      )
-
-      return ''
-    }
-  }
-
-  /**
-   * Extract title from PDF metadata or URL
-   */
-  private extractTitle(metadata: any, url: string): string {
-    // Try metadata title first
-    if (metadata.Title && metadata.Title.trim()) {
-      return metadata.Title.trim()
-    }
-
-    // Try subject
-    if (metadata.Subject && metadata.Subject.trim()) {
-      return metadata.Subject.trim()
-    }
-
-    // Fall back to filename from URL
-    try {
-      const urlObj = new URL(url)
-      const pathname = urlObj.pathname
-      const filename = pathname.split('/').pop() || 'Untitled PDF'
-      // Remove .pdf extension
-      return filename.replace(/\.pdf$/i, '')
-    } catch {
-      return 'Untitled PDF'
-    }
-  }
-
-  /**
-   * Parse PDF date format (D:YYYYMMDDHHmmSS)
-   */
-  private parseDate(dateString: string | undefined): Date | undefined {
-    if (!dateString) {
-      return undefined
-    }
-
-    try {
-      // PDF date format: D:YYYYMMDDHHmmSS+HH'mm' or D:YYYYMMDDHHmmSSZ
-      const match = dateString.match(
-        /D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,
-      )
-      if (match) {
-        const [, year, month, day, hour, minute, second] = match
-
-        return new Date(
-          parseInt(year),
-          parseInt(month) - 1,
-          parseInt(day),
-          parseInt(hour),
-          parseInt(minute),
-          parseInt(second),
-        )
-      }
-
-      // Try parsing as ISO date
-      const parsed = new Date(dateString)
-
-      return isNaN(parsed.getTime()) ? undefined : parsed
-    } catch {
-      return undefined
     }
   }
 }
