@@ -145,7 +145,7 @@ export class ContentProcessorService
   private async handleFetchContent(
     job: Job<FetchContentJobData>,
   ): Promise<ContentFetchResult> {
-    const { libraryItemId, url, userId } = job.data
+    const { libraryItemId, url } = job.data
     const startTime = Date.now()
 
     try {
@@ -154,7 +154,7 @@ export class ContentProcessorService
         eventType: EVENT_NAMES.CONTENT_FETCH_STARTED,
         libraryItemId,
         url,
-        jobId: job.id!,
+        jobId: job.id ?? 'unknown',
         timestamp: new Date(),
       })
 
@@ -176,7 +176,7 @@ export class ContentProcessorService
       await job.updateProgress(20)
 
       // Route to appropriate content extractor based on type
-      let result: ContentFetchResult
+      let result: ContentFetchResult = { success: false }
       switch (detection.contentType) {
         case ContentType.PDF:
           result = await this.fetchPdfContent(url, job)
@@ -221,8 +221,8 @@ export class ContentProcessorService
       this.eventBus.emitContentFetchCompleted({
         eventType: EVENT_NAMES.CONTENT_FETCH_COMPLETED,
         libraryItemId,
-        jobId: job.id!,
-        contentLength: result.content?.length || 0,
+        jobId: job.id ?? 'unknown',
+        contentLength: result.content?.length ?? 0,
         processingTime,
         timestamp: new Date(),
       })
@@ -256,8 +256,8 @@ export class ContentProcessorService
       this.eventBus.emitContentFetchFailed({
         eventType: EVENT_NAMES.CONTENT_FETCH_FAILED,
         libraryItemId,
-        jobId: job.id!,
-        userId,
+        jobId: job.id ?? 'unknown',
+        userId: job.data.userId,
         error: errorMessage,
         retryCount: job.attemptsMade + 1,
         willRetry,
@@ -313,7 +313,7 @@ export class ContentProcessorService
       // Generate description from first 200 characters
       const description = pdfResult.content
         ? `${pdfResult.content.substring(0, 200).trim()}...`
-        : undefined
+        : ''
 
       this.logger.log(
         `Successfully extracted PDF: ${pdfResult.pageCount} pages, ${pdfResult.wordCount} words`,
@@ -702,7 +702,7 @@ export class ContentProcessorService
           siteIcon: ogData.favicon,
           publishedDate: ogData.publishedTime
             ? new Date(ogData.publishedTime)
-            : undefined,
+            : new Date(),
           wordCount: calculateWordCount(sanitizedFallback),
           contentHash,
         }
@@ -750,8 +750,8 @@ export class ContentProcessorService
         publishedDate:
           (jsonLdData.publishedTime
             ? new Date(jsonLdData.publishedTime)
-            : undefined) ||
-          (ogData.publishedTime ? new Date(ogData.publishedTime) : undefined),
+            : null) ||
+          (ogData.publishedTime ? new Date(ogData.publishedTime) : null),
         wordCount: actualWordCount,
         contentHash,
       }
@@ -792,19 +792,19 @@ export class ContentProcessorService
     publishedTime?: string
     favicon?: string
   } {
-    const getMeta = (property: string): string | undefined => {
+    const getMeta = (property: string): string | null => {
       const element = document.querySelector(
         `meta[property="${property}"], meta[name="${property}"]`,
       )
 
-      return element?.getAttribute('content') || undefined
+      return element?.getAttribute('content') || null
     }
 
-    const getLink = (rel: string): string | undefined => {
+    const getLink = (rel: string): string | null => {
       const element = document.querySelector(`link[rel="${rel}"]`)
       const href = element?.getAttribute('href')
       if (!href) {
-        return undefined
+        return null
       }
 
       // Convert relative URLs to absolute
@@ -869,7 +869,7 @@ export class ContentProcessorService
                   ? data.image
                   : Array.isArray(data.image)
                     ? data.image[0]
-                    : data.image?.url,
+                    : data.image?.url || null,
             }
           }
         } catch (e) {
