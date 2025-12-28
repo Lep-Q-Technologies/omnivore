@@ -18,18 +18,6 @@ interface GoogleWebAuthDto {
   idToken: string
 }
 
-interface GoogleMobileAuthDto {
-  idToken: string
-  isAndroid: boolean
-}
-
-interface CompletePendingRegistrationDto {
-  pendingToken: string
-  name?: string
-  username?: string
-  bio?: string
-}
-
 @ApiTags('google-oauth')
 @Controller('auth')
 export class GoogleOAuthController {
@@ -94,13 +82,13 @@ export class GoogleOAuthController {
         return res.redirect('/login?errorCodes=GoogleAuthError')
       }
 
-      const result = await this.oauthAuthService.handleGoogleWebAuth(
-        userInfo.email,
-      )
+      // Use the already-verified user info directly
+      const result =
+        await this.oauthAuthService.handleVerifiedOAuthUser(userInfo)
 
-      if (result.success && result.authToken) {
+      if (result.success && result.accessToken) {
         // Set auth cookie and redirect
-        res.cookie('auth', result.authToken, {
+        res.cookie('auth', result.accessToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
@@ -132,7 +120,7 @@ export class GoogleOAuthController {
         body.idToken,
       )
 
-      if (!result.success || !result.authToken) {
+      if (!result.success) {
         return res.status(HttpStatus.UNAUTHORIZED).json({
           success: false,
           error: 'Authentication failed',
@@ -140,16 +128,14 @@ export class GoogleOAuthController {
       }
 
       // Set auth cookie for session management
-      res.cookie('auth', result.authToken, {
+      res.cookie('auth', result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
       })
 
-      return res.status(HttpStatus.OK).json({
-        success: true,
-        authToken: result.authToken,
-      })
+      // Return unified response (same as email login)
+      return res.status(HttpStatus.OK).json(result)
     } catch (error) {
       this.logger.error('Error in Google web sign-in', error)
 
@@ -157,104 +143,6 @@ export class GoogleOAuthController {
         success: false,
         error: 'Authentication failed',
       })
-    }
-  }
-
-  @Post('google-mobile-signin')
-  @ApiOperation({ summary: 'Google mobile authentication' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        idToken: { type: 'string' },
-        isAndroid: { type: 'boolean' },
-      },
-      required: ['idToken', 'isAndroid'],
-    },
-  })
-  async googleMobileSignIn(@Body() body: GoogleMobileAuthDto) {
-    try {
-      const result = await this.oauthAuthService.handleGoogleMobileAuth(
-        body.idToken,
-        body.isAndroid,
-      )
-
-      if (!result.success) {
-        return {
-          statusCode: HttpStatus.UNAUTHORIZED,
-          json: { error: 'Authentication failed' },
-        }
-      }
-
-      return {
-        statusCode: HttpStatus.OK,
-        json: {
-          success: true,
-          authToken: result.authToken,
-          pendingUserAuth: result.pendingUserAuth,
-        },
-      }
-    } catch (error) {
-      this.logger.error('Error in Google mobile sign-in', error)
-
-      return {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        json: { error: 'Internal server error' },
-      }
-    }
-  }
-
-  @Post('complete-oauth-registration')
-  @ApiOperation({ summary: 'Complete OAuth registration from pending token' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        pendingToken: { type: 'string' },
-        name: { type: 'string' },
-        username: { type: 'string' },
-        bio: { type: 'string' },
-      },
-      required: ['pendingToken'],
-    },
-  })
-  async completePendingRegistration(
-    @Body() body: CompletePendingRegistrationDto,
-  ) {
-    try {
-      const result =
-        await this.oauthAuthService.completePendingUserRegistration(
-          body.pendingToken,
-          {
-            name: body.name,
-            username: body.username,
-            bio: body.bio,
-          },
-        )
-
-      return {
-        success: true,
-        user: result.user,
-        accessToken: result.accessToken,
-        expiresIn: result.expiresIn,
-      }
-    } catch (error) {
-      this.logger.error('Error completing OAuth registration', error)
-
-      if (
-        error instanceof Error &&
-        error.message.includes('Invalid or expired')
-      ) {
-        return {
-          success: false,
-          error: 'Invalid or expired pending user token',
-        }
-      }
-
-      return {
-        success: false,
-        error: 'Registration failed',
-      }
     }
   }
 }

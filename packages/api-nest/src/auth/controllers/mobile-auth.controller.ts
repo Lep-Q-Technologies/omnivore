@@ -9,13 +9,6 @@ interface MobileSignInDto {
   token: string
   provider: 'GOOGLE' | 'APPLE'
   isAndroid?: boolean
-  user?: {
-    name?: {
-      firstName?: string
-      lastName?: string
-    }
-    email?: string
-  }
 }
 
 interface MobileEmailSignInDto {
@@ -49,38 +42,23 @@ export class MobileAuthController {
         token: { type: 'string' },
         provider: { type: 'string', enum: ['GOOGLE', 'APPLE'] },
         isAndroid: { type: 'boolean' },
-        user: {
-          type: 'object',
-          properties: {
-            name: {
-              type: 'object',
-              properties: {
-                firstName: { type: 'string' },
-                lastName: { type: 'string' },
-              },
-            },
-            email: { type: 'string' },
-          },
-        },
       },
       required: ['token', 'provider'],
     },
   })
   async mobileSignIn(@Body() body: MobileSignInDto) {
     try {
-      let result
-
-      if (body.provider === 'GOOGLE') {
-        result = await this.oauthAuthService.handleGoogleMobileAuth(
-          body.token,
-          body.isAndroid || false,
-        )
-      } else {
+      if (body.provider !== 'GOOGLE') {
         return {
           statusCode: HttpStatus.BAD_REQUEST,
           json: { error: 'Unsupported provider. Only GOOGLE is supported.' },
         }
       }
+
+      const result = await this.oauthAuthService.handleGoogleMobileAuth(
+        body.token,
+        body.isAndroid || false,
+      )
 
       if (!result.success) {
         return {
@@ -89,13 +67,10 @@ export class MobileAuthController {
         }
       }
 
+      // Return unified response (same structure as email login)
       return {
         statusCode: HttpStatus.OK,
-        json: {
-          success: true,
-          authToken: result.authToken,
-          pendingUserAuth: result.pendingUserAuth,
-        },
+        json: result,
       }
     } catch (error) {
       this.logger.error('Error in mobile OAuth sign-in', error)
@@ -142,14 +117,10 @@ export class MobileAuthController {
 
       const loginResult = await this.authService.login(user)
 
+      // Return unified response (same structure as OAuth)
       return {
         statusCode: HttpStatus.OK,
-        json: {
-          success: true,
-          user: loginResult.user,
-          authToken: loginResult.accessToken,
-          expiresIn: loginResult.expiresIn,
-        },
+        json: loginResult,
       }
     } catch (error) {
       this.logger.error('Error in mobile email sign-in', error)
@@ -187,19 +158,15 @@ export class MobileAuthController {
           statusCode: HttpStatus.OK,
           json: {
             success: true,
-            pendingEmailVerification: registerResult.pendingEmailVerification,
+            pendingEmailVerification: true,
           },
         }
       }
 
+      // Return unified response (same structure as login)
       return {
         statusCode: HttpStatus.OK,
-        json: {
-          success: true,
-          user: registerResult.user,
-          authToken: registerResult.accessToken,
-          expiresIn: registerResult.expiresIn,
-        },
+        json: registerResult,
       }
     } catch (error) {
       this.logger.error('Error in mobile email sign-up', error)
