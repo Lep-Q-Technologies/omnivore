@@ -137,12 +137,12 @@ describe('PDF Extractor Utilities', () => {
       expect(parsed?.getMinutes()).toBe(30)
     })
 
-    it('should handle undefined date', () => {
-      expect(parseDate(undefined)).toBeUndefined()
+    it('should handle null date', () => {
+      expect(parseDate(null)).toBeNull()
     })
 
     it('should handle invalid date format', () => {
-      expect(parseDate('invalid-date')).toBeUndefined()
+      expect(parseDate('invalid-date')).toBeNull()
     })
 
     it('should try parsing as ISO date', () => {

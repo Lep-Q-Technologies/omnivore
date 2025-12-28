@@ -16,7 +16,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Job } from 'bullmq'
 import fetch from 'cross-fetch'
-import { createHash } from 'crypto'
 import { parseHTML } from 'linkedom'
 import { Repository } from 'typeorm'
 
@@ -31,9 +30,15 @@ import { JOB_CONFIG, JOB_TYPES, QUEUE_NAMES } from '../queue.constants'
 import { ContentTypeDetectorService } from '../services/content-type-detector.service'
 import { HtmlSanitizerService } from '../services/html-sanitizer.service'
 import { PdfExtractorService } from '../services/pdf-extractor.service'
-import { RssFeedService } from '../services/rss-feed.service'
+import { RssFeedResult, RssFeedService } from '../services/rss-feed.service'
 import { TwitterExtractorService } from '../services/twitter-extractor.service'
 import { VideoExtractorService } from '../services/video-extractor.service'
+import {
+  calculateWordCount,
+  convertPdfTextToHtml,
+  escapeHtml,
+  generateContentHash,
+} from './content-processor.utils'
 
 /**
  * Job data interface for fetch-content jobs
@@ -112,8 +117,10 @@ export class ContentProcessorService
    * Main job processing method
    * Called by BullMQ for each job
    */
-  async process(job: Job<FetchContentJobData, any, string>): Promise<any> {
-    const { libraryItemId, url, userId, source } = job.data
+  async process(
+    job: Job<FetchContentJobData, ContentFetchResult, string>,
+  ): Promise<ContentFetchResult> {
+    const { libraryItemId } = job.data
 
     this.logger.log(
       `Processing job ${job.id} for item ${libraryItemId} (attempt ${
@@ -266,10 +273,11 @@ export class ContentProcessorService
    */
   private async handleParseContent(
     job: Job<FetchContentJobData>,
-  ): Promise<any> {
+  ): Promise<ContentFetchResult> {
     this.logger.log(`Parse content job ${job.id} - Not implemented yet`)
     // TODO: Implement content parsing in Phase 3
-    return { success: true, message: 'Parsing not implemented yet' }
+
+    return { success: true }
   }
 
   /**
@@ -297,7 +305,7 @@ export class ContentProcessorService
       }
 
       // Convert PDF text to HTML format for storage
-      const htmlContent = this.convertPdfTextToHtml(
+      const htmlContent = convertPdfTextToHtml(
         pdfResult.content || '',
         pdfResult.pageCount,
       )
@@ -342,44 +350,6 @@ export class ContentProcessorService
   }
 
   /**
-   * Convert PDF plain text to HTML format for consistent storage
-   */
-  private convertPdfTextToHtml(text: string, pageCount?: number): string {
-    if (!text) {
-      return ''
-    }
-
-    // Split into paragraphs (double newline = paragraph break)
-    const paragraphs = text.split('\n\n').filter((p) => p.trim().length > 0)
-
-    // Wrap each paragraph in <p> tags
-    const htmlParagraphs = paragraphs
-      .map((para) => {
-        // Replace single newlines with <br> within paragraphs
-        const withBreaks = para.replace(/\n/g, '<br>')
-
-        return `<p>${withBreaks}</p>`
-      })
-      .join('\n')
-
-    // Wrap in a div with metadata
-    let html = '<div class="pdf-content">\n'
-
-    if (pageCount) {
-      html += `<div class="pdf-metadata">Pages: ${pageCount}</div>\n`
-    }
-
-    html += htmlParagraphs
-    html += '\n</div>'
-
-    return html
-  }
-
-  /**
-   * Fetch RSS feed content
-   * TODO: Implement in Phase 3
-   */
-  /**
    * Fetch and parse RSS/Atom feed
    */
   private async fetchRssFeed(
@@ -399,7 +369,7 @@ export class ContentProcessorService
       await job.updateProgress(60)
 
       // Calculate word count from all item descriptions
-      const wordCount = this.calculateWordCount(
+      const wordCount = calculateWordCount(
         feed.items.map((item) => item.description || '').join(' '),
       )
 
@@ -433,22 +403,22 @@ export class ContentProcessorService
   /**
    * Generate HTML representation of RSS feed
    */
-  private generateFeedHtml(feed: any): string {
+  private generateFeedHtml(feed: RssFeedResult): string {
     const items = feed.items
       .slice(0, 50) // Limit to 50 most recent items
       .map(
-        (item: any) => `
+        (item) => `
       <article style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb;">
         <h2 style="margin: 0 0 0.5rem 0;">
-          <a href="${this.escapeHtml(
+          <a href="${escapeHtml(
             item.link,
           )}" target="_blank" rel="noopener noreferrer">
-            ${this.escapeHtml(item.title)}
+            ${escapeHtml(item.title)}
           </a>
         </h2>
         ${
           item.author
-            ? `<p style="color: #6b7280; margin: 0.25rem 0;">By ${this.escapeHtml(
+            ? `<p style="color: #6b7280; margin: 0.25rem 0;">By ${escapeHtml(
                 item.author,
               )}</p>`
             : ''
@@ -462,7 +432,7 @@ export class ContentProcessorService
         }
         ${
           item.description
-            ? `<p style="margin: 0.75rem 0 0 0;">${this.escapeHtml(
+            ? `<p style="margin: 0.75rem 0 0 0;">${escapeHtml(
                 item.description,
               )}</p>`
             : ''
@@ -477,16 +447,14 @@ export class ContentProcessorService
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>${this.escapeHtml(feed.title)}</title>
+          <title>${escapeHtml(feed.title)}</title>
         </head>
         <body style="font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem;">
           <header style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
-            <h1 style="margin: 0 0 0.5rem 0;">${this.escapeHtml(
-              feed.title,
-            )}</h1>
+            <h1 style="margin: 0 0 0.5rem 0;">${escapeHtml(feed.title)}</h1>
             ${
               feed.description
-                ? `<p style="color: #6b7280; margin: 0.5rem 0;">${this.escapeHtml(
+                ? `<p style="color: #6b7280; margin: 0.5rem 0;">${escapeHtml(
                     feed.description,
                   )}</p>`
                 : ''
@@ -503,7 +471,7 @@ export class ContentProcessorService
             </p>
             ${
               feed.link
-                ? `<p style="margin: 0.5rem 0;"><a href="${this.escapeHtml(
+                ? `<p style="margin: 0.5rem 0;"><a href="${escapeHtml(
                     feed.link,
                   )}" target="_blank" rel="noopener noreferrer">Visit website →</a></p>`
                 : ''
@@ -518,27 +486,12 @@ export class ContentProcessorService
   }
 
   /**
-   * Escape HTML special characters to prevent XSS
-   */
-  private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    }
-
-    return text.replace(/[&<>"']/g, (char) => map[char])
-  }
-
-  /**
    * Fetch video transcript content
    */
   private async fetchVideoTranscript(
     url: string,
     job: Job<FetchContentJobData>,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): Promise<ContentFetchResult> {
     this.logger.log(`Fetching video transcript: ${url}`)
     await job.updateProgress(30)
@@ -570,7 +523,7 @@ export class ContentProcessorService
       const transcriptText = video.transcript
         .map((segment) => segment.text)
         .join(' ')
-      const wordCount = this.calculateWordCount(transcriptText)
+      const wordCount = calculateWordCount(transcriptText)
 
       this.logger.log(
         `Successfully extracted video "${video.title}" (${video.transcript.length} transcript segments)`,
@@ -605,7 +558,7 @@ export class ContentProcessorService
   private async fetchTwitterThread(
     url: string,
     job: Job<FetchContentJobData>,
-    metadata?: Record<string, any>,
+    _metadata?: Record<string, unknown>,
   ): Promise<ContentFetchResult> {
     this.logger.log(`Fetching Twitter thread: ${url}`)
     await job.updateProgress(30)
@@ -621,7 +574,7 @@ export class ContentProcessorService
 
       // Calculate word count from all tweets
       const allText = thread.tweets.map((tweet) => tweet.text).join(' ')
-      const wordCount = this.calculateWordCount(allText)
+      const wordCount = calculateWordCount(allText)
 
       this.logger.log(
         `Successfully extracted Twitter thread by @${thread.author.username} (${thread.tweets.length} tweets)`,
@@ -735,7 +688,7 @@ export class ContentProcessorService
           ? `<p>${ogData.description}</p>`
           : ''
         const sanitizedFallback = this.htmlSanitizer.sanitize(fallbackContent)
-        const contentHash = this.generateContentHash(sanitizedFallback)
+        const contentHash = generateContentHash(sanitizedFallback)
 
         return {
           success: true,
@@ -750,7 +703,7 @@ export class ContentProcessorService
           publishedDate: ogData.publishedTime
             ? new Date(ogData.publishedTime)
             : undefined,
-          wordCount: this.calculateWordCount(sanitizedFallback),
+          wordCount: calculateWordCount(sanitizedFallback),
           contentHash,
         }
       }
@@ -761,10 +714,10 @@ export class ContentProcessorService
       )
 
       // Phase 6: Generate content hash for duplicate detection
-      const contentHash = this.generateContentHash(sanitizedContent)
+      const contentHash = generateContentHash(sanitizedContent)
 
       // Phase 7: Calculate accurate word count from sanitized content
-      const actualWordCount = this.calculateWordCount(sanitizedContent)
+      const actualWordCount = calculateWordCount(sanitizedContent)
 
       // Cross-check: Readability also provides textContent (plain text)
       // This helps verify our HTML-to-text word counting is accurate
@@ -821,79 +774,6 @@ export class ContentProcessorService
         success: false,
         error: errorMessage,
       }
-    }
-  }
-
-  /**
-   * Generate SHA-256 hash of content for duplicate detection
-   *
-   * @param content - Content to hash
-   * @returns SHA-256 hash as hex string
-   */
-  private generateContentHash(content: string): string {
-    if (!content) {
-      return ''
-    }
-
-    try {
-      return createHash('sha256').update(content).digest('hex')
-    } catch (error) {
-      this.logger.warn(
-        `Failed to generate content hash: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      )
-
-      return ''
-    }
-  }
-
-  /**
-   * Calculate word count from HTML content
-   * Parses HTML to decode entities (e.g., &nbsp;, &amp;) before counting words
-   *
-   * @param htmlContent - HTML content to count words from
-   * @returns Actual word count
-   * @internal - Public for testing purposes only, not part of public API
-   */
-  public calculateWordCount(htmlContent: string): number {
-    if (!htmlContent) {
-      this.logger.debug('[calculateWordCount] No HTML content provided')
-
-      return 0
-    }
-
-    try {
-      // Readability returns HTML fragment (DIV), not a complete document
-      // Wrap it in a proper HTML structure so linkedom can parse it correctly
-      const wrappedHtml = `<!DOCTYPE html><html><body>${htmlContent}</body></html>`
-
-      // Parse HTML to decode entities and extract text content
-      const { document } = parseHTML(wrappedHtml)
-      const textOnly = document.body?.textContent || ''
-
-      this.logger.debug(
-        `[calculateWordCount] HTML length: ${htmlContent.length}, Text length: ${textOnly.length}`,
-      )
-
-      // Remove extra whitespace and normalize
-      const normalized = textOnly.replace(/\s+/g, ' ').trim()
-      if (!normalized) {
-        this.logger.debug('[calculateWordCount] Normalized text is empty')
-
-        return 0
-      }
-
-      // Split by whitespace and count non-empty words
-      const words = normalized.split(' ').filter((word) => word.length > 0)
-
-      this.logger.debug(`[calculateWordCount] Word count: ${words.length}`)
-
-      return words.length
-    } catch (error) {
-      this.logger.warn(`Failed to calculate word count: ${error}`)
-
-      return 0
     }
   }
 
