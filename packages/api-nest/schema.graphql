@@ -347,13 +347,6 @@ type Mutation {
 
   """Set labels for a library item (replaces existing labels)"""
   setLibraryItemLabels(itemId: String!, labelIds: [String!]!): [Label!]!
-  subscribeToNewsletter(
-    """Newsletter sender email address"""
-    senderEmail: String!
-
-    """Optional newsletter title"""
-    title: String
-  ): NewsletterSubscriptionResult!
   subscribeToRssFeed(feedUrl: String!, importItems: Boolean! = true): RssFeedResult!
   unsubscribeFromNewsletter(
     """Whether to delete library items from this newsletter (default: true)"""

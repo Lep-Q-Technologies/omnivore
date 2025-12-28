@@ -1,13 +1,22 @@
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 
-import { REPOSITORY_TOKENS } from '../src/repositories/injection-tokens'
-import {
-  ILibraryItemRepository,
-  ISubscriptionRepository,
-} from '../src/repositories/interfaces'
 import { SubscriptionSourceType } from '../src/library/entities/subscription.entity'
+import { REPOSITORY_TOKENS } from '../src/repositories/injection-tokens'
+import { ISubscriptionRepository } from '../src/repositories/interfaces'
 import { createE2EAppWithModule } from './helpers/create-e2e-app'
+
+interface NewsletterSubscription {
+  id: string
+  senderEmail: string | null
+  emailAlias: string
+  title: string
+  itemCount: number
+  active: boolean
+  folder: string | null
+  autoAddLabels: string[] | null
+  unreadCount: number
+}
 
 const NEWSLETTER_EMAIL_QUERY = `
   query NewsletterEmail {
@@ -34,9 +43,9 @@ const NEWSLETTER_SUBSCRIPTIONS_QUERY = `
   }
 `
 
-const SUBSCRIBE_TO_NEWSLETTER_MUTATION = `
-  mutation SubscribeToNewsletter($senderEmail: String!, $title: String) {
-    subscribeToNewsletter(senderEmail: $senderEmail, title: $title) {
+const CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION = `
+  mutation CreateNewsletterSubscription($name: String!) {
+    createNewsletterSubscription(name: $name) {
       success
       message
       subscription {
@@ -77,11 +86,10 @@ const UPDATE_NEWSLETTER_SETTINGS_MUTATION = `
 `
 
 describe('Newsletter Subscription GraphQL (e2e)', () => {
-  let app: INestApplication
-  let authToken: string
-  let userId: string
-  let libraryRepository: ILibraryItemRepository
-  let subscriptionRepository: ISubscriptionRepository
+  let app: INestApplication | null = null
+  let authToken = ''
+  let userId = ''
+  let subscriptionRepository: ISubscriptionRepository | null = null
 
   beforeAll(async () => {
     // Set required environment variables for tests
@@ -91,10 +99,6 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
 
     const { app: testApp, moduleFixture } = await createE2EAppWithModule()
     app = testApp
-
-    libraryRepository = moduleFixture.get<ILibraryItemRepository>(
-      REPOSITORY_TOKENS.ILibraryItemRepository,
-    )
 
     subscriptionRepository = moduleFixture.get<ISubscriptionRepository>(
       REPOSITORY_TOKENS.ISubscriptionRepository,
@@ -115,14 +119,24 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
   })
 
   afterAll(async () => {
-    await app.close()
+    if (app) {
+      await app.close()
+    }
   }, 30000)
+
+  const getApp = (): INestApplication => {
+    if (!app) {
+      throw new Error('App not initialized')
+    }
+
+    return app
+  }
 
   const executeQuery = (
     query: string,
     variables: Record<string, unknown> = {},
   ) =>
-    request(app.getHttpServer())
+    request(getApp().getHttpServer())
       .post('/api/graphql')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ query, variables })
@@ -132,13 +146,12 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
 
     expect(response.status).toBe(200)
 
-    // If there's an error or unexpected response, log it for debugging
-    if (response.body.errors || !response.body.data?.newsletterEmail) {
-      console.log('Full response:', JSON.stringify(response.body, null, 2))
-    }
-
+    // Fail test if there's an error or unexpected response
+    expect(response.body.errors).toBeFalsy()
     expect(response.body.data?.newsletterEmail).toBeDefined()
-    expect(response.body.data.newsletterEmail.newsletterEmail).toContain('@inbox.omnivore.app')
+    expect(response.body.data.newsletterEmail.newsletterEmail).toContain(
+      '@inbox.omnivore.app',
+    )
     expect(response.body.data.newsletterEmail.emailAlias).toBeTruthy()
     expect(response.body.data.newsletterEmail.emailAlias).toHaveLength(8)
   })
@@ -152,65 +165,88 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
     expect(response.body.data.newsletterSubscriptions).toEqual([])
   })
 
-  describe('Newsletter Subscription and Management', () => {
-    let subscriptionId: string
+  const getSubscriptionRepo = (): ISubscriptionRepository => {
+    if (!subscriptionRepository) {
+      throw new Error('Subscription repository not initialized')
+    }
 
-    it('should subscribe to a newsletter', async () => {
-      const response = await executeQuery(SUBSCRIBE_TO_NEWSLETTER_MUTATION, {
-        senderEmail: 'writer@substack.com',
-        title: 'Test Newsletter',
-      })
+    return subscriptionRepository
+  }
+
+  describe('Newsletter Subscription and Management', () => {
+    let subscriptionId = ''
+
+    it('should create a newsletter subscription slot', async () => {
+      const response = await executeQuery(
+        CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
+        {
+          name: 'Test Newsletter',
+        },
+      )
 
       expect(response.status).toBe(200)
-      expect(response.body.data.subscribeToNewsletter.success).toBe(true)
+      expect(response.body.data.createNewsletterSubscription.success).toBe(true)
       expect(
-        response.body.data.subscribeToNewsletter.subscription.senderEmail,
-      ).toBe('writer@substack.com')
-      expect(
-        response.body.data.subscribeToNewsletter.subscription.title,
+        response.body.data.createNewsletterSubscription.subscription.title,
       ).toBe('Test Newsletter')
       expect(
-        response.body.data.subscribeToNewsletter.subscription.emailAlias,
+        response.body.data.createNewsletterSubscription.subscription.emailAlias,
       ).toBeTruthy()
+      expect(
+        response.body.data.createNewsletterSubscription.subscription.emailAlias,
+      ).toHaveLength(8)
 
       subscriptionId =
-        response.body.data.subscribeToNewsletter.subscription.id
+        response.body.data.createNewsletterSubscription.subscription.id
 
-      // Verify in database
-      const dbSubscription = await subscriptionRepository.findBySource(
+      // Verify in database - should be pending
+      const dbSubscription = await getSubscriptionRepo().findById(
+        subscriptionId,
         userId,
-        SubscriptionSourceType.NEWSLETTER,
-        'writer@substack.com',
       )
       expect(dbSubscription).toBeTruthy()
       expect(dbSubscription?.sourceType).toBe(SubscriptionSourceType.NEWSLETTER)
       expect(dbSubscription?.emailAlias).toBeTruthy()
+      expect(dbSubscription?.sourceIdentifier).toContain('pending:')
+      expect(dbSubscription?.active).toBe(true)
     })
 
-    it('should return existing subscription when subscribing twice', async () => {
+    it('should create multiple subscription slots with unique aliases', async () => {
       const firstResponse = await executeQuery(
-        SUBSCRIBE_TO_NEWSLETTER_MUTATION,
+        CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
         {
-          senderEmail: 'duplicate@test.com',
-          title: 'First Subscribe',
+          name: 'First Newsletter',
         },
       )
 
       const secondResponse = await executeQuery(
-        SUBSCRIBE_TO_NEWSLETTER_MUTATION,
+        CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
         {
-          senderEmail: 'duplicate@test.com',
-          title: 'Second Subscribe',
+          name: 'Second Newsletter',
         },
       )
 
-      expect(firstResponse.body.data.subscribeToNewsletter.success).toBe(true)
-      expect(secondResponse.body.data.subscribeToNewsletter.success).toBe(true)
-
-      // Should return the same subscription
+      expect(firstResponse.body.data.createNewsletterSubscription.success).toBe(
+        true,
+      )
       expect(
-        firstResponse.body.data.subscribeToNewsletter.subscription.id,
-      ).toBe(secondResponse.body.data.subscribeToNewsletter.subscription.id)
+        secondResponse.body.data.createNewsletterSubscription.success,
+      ).toBe(true)
+
+      // Should create different subscriptions with unique aliases
+      const firstAlias =
+        firstResponse.body.data.createNewsletterSubscription.subscription
+          .emailAlias
+      const secondAlias =
+        secondResponse.body.data.createNewsletterSubscription.subscription
+          .emailAlias
+
+      expect(firstAlias).not.toBe(secondAlias)
+      expect(
+        firstResponse.body.data.createNewsletterSubscription.subscription.id,
+      ).not.toBe(
+        secondResponse.body.data.createNewsletterSubscription.subscription.id,
+      )
     })
 
     it('should list newsletter subscriptions', async () => {
@@ -223,22 +259,27 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
         0,
       )
 
+      // Find the subscription we created in the first test
       const subscription = response.body.data.newsletterSubscriptions.find(
-        (s: any) => s.senderEmail === 'writer@substack.com',
+        (s: NewsletterSubscription) => s.title === 'Test Newsletter',
       )
       expect(subscription).toBeDefined()
-      expect(subscription.title).toBe('Test Newsletter')
+      expect(subscription.emailAlias).toBeTruthy()
+      expect(subscription.active).toBe(true)
     })
 
     it('should update newsletter settings', async () => {
       // First create a subscription if we don't have one
       let testSubscriptionId = subscriptionId
       if (!testSubscriptionId) {
-        const createResponse = await executeQuery(SUBSCRIBE_TO_NEWSLETTER_MUTATION, {
-          senderEmail: 'settings-test@newsletter.com',
-          title: 'Settings Test',
-        })
-        testSubscriptionId = createResponse.body.data.subscribeToNewsletter.subscription.id
+        const createResponse = await executeQuery(
+          CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
+          {
+            name: 'Settings Test',
+          },
+        )
+        testSubscriptionId =
+          createResponse.body.data.createNewsletterSubscription.subscription.id
       }
 
       const response = await executeQuery(UPDATE_NEWSLETTER_SETTINGS_MUTATION, {
@@ -252,12 +293,12 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.data.updateNewsletterSettings.success).toBe(true)
-      expect(response.body.data.updateNewsletterSettings.subscription.title).toBe(
-        'Updated Newsletter Title',
-      )
-      expect(response.body.data.updateNewsletterSettings.subscription.folder).toBe(
-        'Tech News',
-      )
+      expect(
+        response.body.data.updateNewsletterSettings.subscription.title,
+      ).toBe('Updated Newsletter Title')
+      expect(
+        response.body.data.updateNewsletterSettings.subscription.folder,
+      ).toBe('Tech News')
       expect(
         response.body.data.updateNewsletterSettings.subscription.autoAddLabels,
       ).toEqual(['newsletter', 'tech'])
@@ -266,14 +307,14 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
     it('should unsubscribe from newsletter and delete items', async () => {
       // Create a subscription to unsubscribe from
       const subscribeResponse = await executeQuery(
-        SUBSCRIBE_TO_NEWSLETTER_MUTATION,
+        CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
         {
-          senderEmail: 'delete-test@newsletter.com',
-          title: 'To Be Deleted',
+          name: 'To Be Deleted',
         },
       )
 
-      const subId = subscribeResponse.body.data.subscribeToNewsletter.subscription.id
+      const subId =
+        subscribeResponse.body.data.createNewsletterSubscription.subscription.id
 
       // Unsubscribe
       const response = await executeQuery(
@@ -288,10 +329,9 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
       expect(response.body.data.unsubscribeFromNewsletter.success).toBe(true)
 
       // Verify subscription is deleted (not just deactivated)
-      const dbSubscription = await subscriptionRepository.findBySource(
+      const dbSubscription = await subscriptionRepository.findById(
+        subId,
         userId,
-        SubscriptionSourceType.NEWSLETTER,
-        'delete-test@newsletter.com',
       )
       expect(dbSubscription).toBeNull()
     })
@@ -299,14 +339,14 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
     it('should unsubscribe but keep items when deleteItems = false', async () => {
       // Create a subscription
       const subscribeResponse = await executeQuery(
-        SUBSCRIBE_TO_NEWSLETTER_MUTATION,
+        CREATE_NEWSLETTER_SUBSCRIPTION_MUTATION,
         {
-          senderEmail: 'keep-items@newsletter.com',
-          title: 'Keep Items Test',
+          name: 'Keep Items Test',
         },
       )
 
-      const subId = subscribeResponse.body.data.subscribeToNewsletter.subscription.id
+      const subId =
+        subscribeResponse.body.data.createNewsletterSubscription.subscription.id
 
       // Unsubscribe without deleting items
       const response = await executeQuery(
@@ -322,17 +362,6 @@ describe('Newsletter Subscription GraphQL (e2e)', () => {
       expect(response.body.data.unsubscribeFromNewsletter.message).toContain(
         'items preserved',
       )
-    })
-
-    it('should reject invalid email format', async () => {
-      const response = await executeQuery(SUBSCRIBE_TO_NEWSLETTER_MUTATION, {
-        senderEmail: 'not-an-email',
-        title: 'Invalid Test',
-      })
-
-      expect(response.status).toBe(200)
-      expect(response.body.data.subscribeToNewsletter.success).toBe(false)
-      expect(response.body.data.subscribeToNewsletter.errors).toBeTruthy()
     })
   })
 })
