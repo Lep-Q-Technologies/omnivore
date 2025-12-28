@@ -18,6 +18,7 @@ import { NewsletterSubscriptionService } from '../library/services/newsletter-su
 import { PendingConfirmationService } from '../library/services/pending-confirmation.service'
 import { RepositoriesModule } from '../repositories/repositories.module'
 import { User } from '../user/entities/user.entity'
+import { WebhookController } from './controllers/webhook.controller'
 import { EventBusService } from './event-bus.service'
 import { ContentProcessorService } from './processors/content-processor.service'
 import { EmailProcessorService } from './processors/email-processor.service'
@@ -124,6 +125,7 @@ import { VideoExtractorService } from './services/video-extractor.service'
       },
     ),
   ],
+  controllers: [WebhookController],
   providers: [
     EventBusService,
     QueueHealthIndicator,
