@@ -161,4 +161,4 @@ export type AppEvent =
 /**
  * Type exports for type-safe usage
  */
-export type EventName = typeof EVENT_NAMES[keyof typeof EVENT_NAMES]
+export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES]

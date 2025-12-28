@@ -4,24 +4,25 @@
 
 import { Test, TestingModule } from '@nestjs/testing'
 import { getRepositoryToken } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
 import { Job } from 'bullmq'
-import {
-  ContentProcessorService,
-  FetchContentJobData,
-} from './content-processor.service'
+import { Repository } from 'typeorm'
+
 import {
   LibraryItemEntity,
   LibraryItemState,
 } from '../../library/entities/library-item.entity'
 import { EventBusService } from '../event-bus.service'
-import { HtmlSanitizerService } from '../services/html-sanitizer.service'
+import { JOB_TYPES } from '../queue.constants'
 import { ContentTypeDetectorService } from '../services/content-type-detector.service'
+import { HtmlSanitizerService } from '../services/html-sanitizer.service'
 import { PdfExtractorService } from '../services/pdf-extractor.service'
 import { RssFeedService } from '../services/rss-feed.service'
-import { VideoExtractorService } from '../services/video-extractor.service'
 import { TwitterExtractorService } from '../services/twitter-extractor.service'
-import { JOB_TYPES } from '../queue.constants'
+import { VideoExtractorService } from '../services/video-extractor.service'
+import {
+  ContentProcessorService,
+  FetchContentJobData,
+} from './content-processor.service'
 
 // Mock logger to suppress console output during tests
 const mockLogger = {
@@ -87,7 +88,7 @@ describe('ContentProcessorService', () => {
     })
 
     it('should log initialization message', () => {
-      const logSpy = jest.spyOn(service['logger'], 'log')
+      const logSpy = jest.spyOn(service.logger, 'log')
       service.onModuleInit()
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining('ContentProcessorService initialized'),
@@ -157,7 +158,7 @@ describe('ContentProcessorService', () => {
 
       const mockJob = createMockJob(JOB_TYPES.FETCH_CONTENT, jobData)
 
-      const result = await service['handleFetchContent'](mockJob)
+      const result = await service.handleFetchContent(mockJob)
 
       expect(result.success).toBe(true)
       expect(result.title).toBeDefined()
@@ -207,7 +208,7 @@ describe('ContentProcessorService', () => {
 
       const mockJob = createMockJob(JOB_TYPES.FETCH_CONTENT, jobData)
 
-      await service['handleFetchContent'](mockJob)
+      await service.handleFetchContent(mockJob)
 
       expect(mockJob.updateProgress).toHaveBeenCalledWith(10)
       expect(mockJob.updateProgress).toHaveBeenCalledWith(20)
@@ -234,7 +235,7 @@ describe('ContentProcessorService', () => {
         .spyOn(service as any, 'fetchWebArticle')
         .mockRejectedValueOnce(new Error('Network error'))
 
-      await expect(service['handleFetchContent'](mockJob)).rejects.toThrow(
+      await expect(service.handleFetchContent(mockJob)).rejects.toThrow(
         'Network error',
       )
 
@@ -272,7 +273,7 @@ describe('ContentProcessorService', () => {
         .spyOn(service as any, 'fetchWebArticle')
         .mockRejectedValueOnce(new Error('Final error'))
 
-      await expect(service['handleFetchContent'](mockJob)).rejects.toThrow(
+      await expect(service.handleFetchContent(mockJob)).rejects.toThrow(
         'Final error',
       )
 
@@ -305,7 +306,7 @@ describe('ContentProcessorService', () => {
         thumbnail: 'https://example.com/thumb.jpg',
       }
 
-      await service['saveContent']('item-123', result)
+      await service.saveContent('item-123', result)
 
       expect(repository.update).toHaveBeenCalledWith('item-123', {
         title: 'Test Title',
@@ -326,7 +327,7 @@ describe('ContentProcessorService', () => {
         content: '<p>Test content</p>',
       }
 
-      await expect(service['saveContent']('item-123', result)).rejects.toThrow(
+      await expect(service.saveContent('item-123', result)).rejects.toThrow(
         'Database error',
       )
     })
@@ -334,7 +335,7 @@ describe('ContentProcessorService', () => {
 
   describe('updateLibraryItemState', () => {
     it('should update state to PROCESSING', async () => {
-      await service['updateLibraryItemState'](
+      await service.updateLibraryItemState(
         'item-123',
         LibraryItemState.PROCESSING,
       )
@@ -345,7 +346,7 @@ describe('ContentProcessorService', () => {
     })
 
     it('should update state to SUCCEEDED', async () => {
-      await service['updateLibraryItemState'](
+      await service.updateLibraryItemState(
         'item-123',
         LibraryItemState.SUCCEEDED,
       )
@@ -356,10 +357,7 @@ describe('ContentProcessorService', () => {
     })
 
     it('should update state to FAILED', async () => {
-      await service['updateLibraryItemState'](
-        'item-123',
-        LibraryItemState.FAILED,
-      )
+      await service.updateLibraryItemState('item-123', LibraryItemState.FAILED)
 
       expect(repository.update).toHaveBeenCalledWith('item-123', {
         state: LibraryItemState.FAILED,
@@ -370,10 +368,7 @@ describe('ContentProcessorService', () => {
       repository.update.mockRejectedValueOnce(new Error('Update failed'))
 
       await expect(
-        service['updateLibraryItemState'](
-          'item-123',
-          LibraryItemState.PROCESSING,
-        ),
+        service.updateLibraryItemState('item-123', LibraryItemState.PROCESSING),
       ).rejects.toThrow('Update failed')
     })
   })
@@ -406,7 +401,8 @@ describe('ContentProcessorService', () => {
 
     describe('HTML parsing', () => {
       it('should strip HTML tags from content', () => {
-        const html = '<div><h1>Title</h1><p>Paragraph with <strong>bold</strong> text</p></div>'
+        const html =
+          '<div><h1>Title</h1><p>Paragraph with <strong>bold</strong> text</p></div>'
         const count = service.calculateWordCount(html)
         expect(count).toBe(4) // Title Paragraph bold text (note: 'with' counted separately)
       })
@@ -439,7 +435,8 @@ describe('ContentProcessorService', () => {
       })
 
       it('should handle HTML with inline styles and attributes', () => {
-        const html = '<div style="color: red;" data-id="123"><p class="text">Content here</p></div>'
+        const html =
+          '<div style="color: red;" data-id="123"><p class="text">Content here</p></div>'
         const count = service.calculateWordCount(html)
         expect(count).toBe(2) // Content here
       })

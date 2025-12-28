@@ -1,16 +1,17 @@
 import {
+  BadRequestException,
+  ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
-  ConflictException,
-  BadRequestException,
-  Inject,
 } from '@nestjs/common'
-import { Label } from './entities/label.entity'
-import { CreateLabelInput, UpdateLabelInput } from './dto/label-inputs.type'
-import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
-import { ILabelRepository } from '../repositories/interfaces/label-repository.interface'
-import { IEntityLabelRepository } from '../repositories/interfaces/entity-label-repository.interface'
+
 import { REPOSITORY_TOKENS } from '../repositories/injection-tokens'
+import { IEntityLabelRepository } from '../repositories/interfaces/entity-label-repository.interface'
+import { ILabelRepository } from '../repositories/interfaces/label-repository.interface'
+import { ILibraryItemRepository } from '../repositories/interfaces/library-item-repository.interface'
+import { CreateLabelInput, UpdateLabelInput } from './dto/label-inputs.type'
+import { Label } from './entities/label.entity'
 
 @Injectable()
 export class LabelService {
@@ -93,9 +94,15 @@ export class LabelService {
     }
 
     // Update fields
-    if (input.name !== undefined) label.name = input.name
-    if (input.color !== undefined) label.color = input.color
-    if (input.description !== undefined) label.description = input.description
+    if (input.name !== undefined) {
+      label.name = input.name
+    }
+    if (input.color !== undefined) {
+      label.color = input.color
+    }
+    if (input.description !== undefined) {
+      label.description = input.description
+    }
 
     return this.labelRepository.save(label)
   }
@@ -112,6 +119,7 @@ export class LabelService {
     }
 
     await this.labelRepository.remove(label)
+
     return true
   }
 

@@ -1,22 +1,21 @@
 import {
+  Body,
   Controller,
   Get,
+  HttpStatus,
+  Logger,
   Post,
-  Body,
   Query,
   Res,
-  Logger,
-  HttpStatus,
 } from '@nestjs/common'
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Response } from 'express'
-import { ApiTags, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger'
-import { OAuthAuthService } from '../services/oauth-auth.service'
+
 import { GoogleOAuthService } from '../services/google-oauth.service'
+import { OAuthAuthService } from '../services/oauth-auth.service'
 
 interface GoogleWebAuthDto {
   idToken: string
-  isLocal?: boolean
-  isVercel?: boolean
 }
 
 interface GoogleMobileAuthDto {
@@ -58,9 +57,11 @@ export class GoogleOAuthController {
       )
 
       this.logger.log('Redirecting to Google OAuth', { redirectUri })
+
       return res.redirect(authUrl)
     } catch (error) {
       this.logger.error('Error initiating Google OAuth', error)
+
       return res.redirect('/login?errorCodes=AuthFailed')
     }
   }
@@ -77,6 +78,7 @@ export class GoogleOAuthController {
     try {
       if (!code) {
         this.logger.warn('No authorization code provided')
+
         return res.redirect('/login?errorCodes=AuthFailed')
       }
 
@@ -88,19 +90,15 @@ export class GoogleOAuthController {
 
       if (!userInfo || !userInfo.email) {
         this.logger.warn('Failed to get user info from Google')
+
         return res.redirect('/login?errorCodes=GoogleAuthError')
       }
 
-      // Handle the authentication using the ID token approach
-      // Note: In a full implementation, we'd need to generate an ID token from userInfo
-      // For now, we'll use the web auth flow directly
       const result = await this.oauthAuthService.handleGoogleWebAuth(
-        '', // We don't have idToken from code flow, need to adapt
-        false, // isLocal
-        false, // isVercel
+        userInfo.email,
       )
 
-      if (result.authToken) {
+      if (result.success && result.authToken) {
         // Set auth cookie and redirect
         res.cookie('auth', result.authToken, {
           httpOnly: true,
@@ -109,9 +107,10 @@ export class GoogleOAuthController {
         })
       }
 
-      return res.redirect(result.redirectURL)
+      return res.redirect('/library')
     } catch (error) {
       this.logger.error('Error in Google OAuth callback', error)
+
       return res.redirect('/login?errorCodes=AuthFailed')
     }
   }
@@ -123,8 +122,6 @@ export class GoogleOAuthController {
       type: 'object',
       properties: {
         idToken: { type: 'string' },
-        isLocal: { type: 'boolean' },
-        isVercel: { type: 'boolean' },
       },
       required: ['idToken'],
     },
@@ -133,25 +130,29 @@ export class GoogleOAuthController {
     try {
       const result = await this.oauthAuthService.handleGoogleWebAuth(
         body.idToken,
-        body.isLocal || false,
-        body.isVercel || false,
       )
 
-      if (result.authToken) {
-        res.cookie('auth', result.authToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+      if (!result.success || !result.authToken) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          success: false,
+          error: 'Authentication failed',
         })
       }
 
+      // Set auth cookie for session management
+      res.cookie('auth', result.authToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+      })
+
       return res.status(HttpStatus.OK).json({
         success: true,
-        redirectURL: result.redirectURL,
-        pendingUserAuth: result.pendingUserAuth,
+        authToken: result.authToken,
       })
     } catch (error) {
       this.logger.error('Error in Google web sign-in', error)
+
       return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: 'Authentication failed',
@@ -195,6 +196,7 @@ export class GoogleOAuthController {
       }
     } catch (error) {
       this.logger.error('Error in Google mobile sign-in', error)
+
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         json: { error: 'Internal server error' },

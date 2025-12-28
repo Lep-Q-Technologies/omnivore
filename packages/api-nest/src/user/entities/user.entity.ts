@@ -5,6 +5,7 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql'
+import { customAlphabet } from 'nanoid'
 import {
   BeforeInsert,
   Column,
@@ -15,7 +16,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
-import { customAlphabet } from 'nanoid'
 
 import { UserRole } from '../enums/user-role.enum'
 

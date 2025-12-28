@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
 import { EnvVariables } from '../config/env-variables'
 
 export interface AnalyticsEvent {
@@ -16,7 +17,9 @@ export interface AnalyticsClient {
 @Injectable()
 export class AnalyticsService implements AnalyticsClient {
   private readonly logger = new Logger(AnalyticsService.name)
+
   private readonly enabled: boolean
+
   private readonly environment: string
 
   constructor(private readonly configService: ConfigService) {

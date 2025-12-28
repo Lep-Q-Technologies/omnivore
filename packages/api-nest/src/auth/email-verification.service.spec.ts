@@ -1,5 +1,6 @@
-import { Test } from '@nestjs/testing'
 import { ConfigModule } from '@nestjs/config'
+import { Test } from '@nestjs/testing'
+
 import { EmailVerificationService } from './email-verification.service'
 import { VerificationTokenStore } from './interfaces/verification-token-store.interface'
 

@@ -107,6 +107,7 @@ export abstract class BasePoller<T extends PollerItem = PollerItem> {
 
       if (items.length === 0) {
         result.duration = Date.now() - startTime
+
         return result
       }
 

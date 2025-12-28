@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-import { RssFeedEntity } from '../library/entities/rss-feed.entity'
+
 import { LibraryItemEntity } from '../library/entities/library-item.entity'
+import { RssFeedEntity } from '../library/entities/rss-feed.entity'
 import { IRssFeedRepository } from './interfaces'
 
 /**

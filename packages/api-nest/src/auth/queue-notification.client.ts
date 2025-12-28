@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import {
-  NotificationClient,
-  EmailVerificationPayload,
-} from './interfaces/notification-client.interface'
+
 import { EnvVariables } from '../config/env-variables'
+import {
+  EmailVerificationPayload,
+  NotificationClient,
+} from './interfaces/notification-client.interface'
 
 // Job data structure matching the legacy system
 export interface SendEmailJobData {

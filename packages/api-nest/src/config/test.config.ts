@@ -1,17 +1,18 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 import { DataSource, DataSourceOptions } from 'typeorm'
-import { User } from '../user/entities/user.entity'
-import { UserProfile } from '../user/entities/profile.entity'
-import { UserPersonalization } from '../user/entities/user-personalization.entity'
+
 import { Filter } from '../filter/entities/filter.entity'
 import { Group } from '../group/entities/group.entity'
-import { Invite } from '../group/entities/invite.entity'
 import { GroupMembership } from '../group/entities/group-membership.entity'
-import { LibraryItemEntity } from '../library/entities/library-item.entity'
-import { Label } from '../label/entities/label.entity'
-import { EntityLabel } from '../label/entities/entity-label.entity'
+import { Invite } from '../group/entities/invite.entity'
 import { HighlightEntity } from '../highlight/entities/highlight.entity'
+import { EntityLabel } from '../label/entities/entity-label.entity'
+import { Label } from '../label/entities/label.entity'
+import { LibraryItemEntity } from '../library/entities/library-item.entity'
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
+import { UserProfile } from '../user/entities/profile.entity'
+import { User } from '../user/entities/user.entity'
+import { UserPersonalization } from '../user/entities/user-personalization.entity'
 
 /**
  * Validates test database configuration to prevent accidental production DB connections
@@ -22,8 +23,8 @@ import { ReadingProgressEntity } from '../reading-progress/entities/reading-prog
 function validateTestDatabaseName(dbName: string | undefined): string {
   // Production database names that must never be used in tests
   const FORBIDDEN_DB_NAMES = [
-    'omnivore',            // Main production DB
-    'omnivore_prod',       // Production variant
+    'omnivore', // Main production DB
+    'omnivore_prod', // Production variant
     'omnivore_production', // Production variant
   ]
 
@@ -31,15 +32,15 @@ function validateTestDatabaseName(dbName: string | undefined): string {
   if (!dbName) {
     throw new Error(
       '🚨 CRITICAL: TEST_DATABASE_NAME is not set!\n' +
-      'Tests cannot run without a database configuration.\n\n' +
-      'For E2E tests with testcontainers (recommended):\n' +
-      '  - This should be set automatically by global-setup.ts\n' +
-      '  - Check that Jest globalSetup is configured correctly in jest-e2e.json\n\n' +
-      'For manual test database:\n' +
-      '  - Copy .env.test.example to .env.test\n' +
-      '  - Set TEST_DATABASE_NAME=omnivore_test\n' +
-      '  - Create database: psql -U postgres -c "CREATE DATABASE omnivore_test;"\n' +
-      '  - Run migrations: TEST_DATABASE_NAME=omnivore_test npm run migration:run\n'
+        'Tests cannot run without a database configuration.\n\n' +
+        'For E2E tests with testcontainers (recommended):\n' +
+        '  - This should be set automatically by global-setup.ts\n' +
+        '  - Check that Jest globalSetup is configured correctly in jest-e2e.json\n\n' +
+        'For manual test database:\n' +
+        '  - Copy .env.test.example to .env.test\n' +
+        '  - Set TEST_DATABASE_NAME=omnivore_test\n' +
+        '  - Create database: psql -U postgres -c "CREATE DATABASE omnivore_test;"\n' +
+        '  - Run migrations: TEST_DATABASE_NAME=omnivore_test npm run migration:run\n',
     )
   }
 
@@ -48,11 +49,11 @@ function validateTestDatabaseName(dbName: string | undefined): string {
   if (FORBIDDEN_DB_NAMES.includes(normalizedDbName)) {
     throw new Error(
       `🚨 CRITICAL: Tests attempting to connect to PRODUCTION database "${dbName}"!\n\n` +
-      `This would corrupt production data. Tests have been BLOCKED.\n\n` +
-      `Use a dedicated test database instead:\n` +
-      `  - For testcontainers: Global setup handles this automatically\n` +
-      `  - For manual DB: Set TEST_DATABASE_NAME=omnivore_test in .env.test\n\n` +
-      `Forbidden database names: ${FORBIDDEN_DB_NAMES.join(', ')}`
+        `This would corrupt production data. Tests have been BLOCKED.\n\n` +
+        `Use a dedicated test database instead:\n` +
+        `  - For testcontainers: Global setup handles this automatically\n` +
+        `  - For manual DB: Set TEST_DATABASE_NAME=omnivore_test in .env.test\n\n` +
+        `Forbidden database names: ${FORBIDDEN_DB_NAMES.join(', ')}`,
     )
   }
 
@@ -60,7 +61,7 @@ function validateTestDatabaseName(dbName: string | undefined): string {
   if (!normalizedDbName.includes('test')) {
     console.warn(
       `⚠️  WARNING: Test database name "${dbName}" doesn't contain "test".\n` +
-      `   This might not be a dedicated test database. Recommended: omnivore_test\n`
+        `   This might not be a dedicated test database. Recommended: omnivore_test\n`,
     )
   }
 
@@ -87,22 +88,22 @@ const getTestDatabaseConfig = (): TypeOrmModuleOptions => {
     username,
     password,
     database,
-  entities: [
-    User,
-    UserProfile,
-    UserPersonalization,
-    Filter,
-    Group,
-    Invite,
-    GroupMembership,
-    LibraryItemEntity,
-    Label,
-    EntityLabel,
-    HighlightEntity,
-    ReadingProgressEntity,
-  ],
-  synchronize: false, // Schema managed by migrations
-  logging: false,     // Reduce test noise
+    entities: [
+      User,
+      UserProfile,
+      UserPersonalization,
+      Filter,
+      Group,
+      Invite,
+      GroupMembership,
+      LibraryItemEntity,
+      Label,
+      EntityLabel,
+      HighlightEntity,
+      ReadingProgressEntity,
+    ],
+    synchronize: false, // Schema managed by migrations
+    logging: false, // Reduce test noise
   }
 }
 

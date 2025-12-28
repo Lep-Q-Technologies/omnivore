@@ -82,6 +82,7 @@ export class PendingConfirmationResolver {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
+
       return {
         success: false,
         errors: [message],
@@ -108,6 +109,7 @@ export class PendingConfirmationResolver {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
+
       return {
         success: false,
         errors: [message],

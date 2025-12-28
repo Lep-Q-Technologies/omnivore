@@ -65,12 +65,6 @@ export class SubscriptionEntity {
   @Column({ name: 'source_identifier', type: 'varchar', length: 2048 })
   sourceIdentifier!: string
 
-  /**
-   * Unique email alias for newsletter subscriptions
-   * Format: {subscription.emailAlias} becomes part of full email
-   * Example: "b3n5p8q2" in "{user.emailAlias}+b3n5p8q2@inbox.omnivore.app"
-   * NULL for RSS subscriptions
-   */
   @Column({
     name: 'email_alias',
     type: 'varchar',
@@ -80,18 +74,15 @@ export class SubscriptionEntity {
   })
   emailAlias?: string | null
 
-  /**
-   * Get the full newsletter email address for this subscription
-   * Combines user email alias + subscription email alias
-   * @param userEmailAlias - The user's base email alias
-   * @returns Full newsletter email address or null for RSS subscriptions
-   */
-  getNewsletterEmail(userEmailAlias: string): string | null {
-    if (!this.emailAlias || this.sourceType !== SubscriptionSourceType.NEWSLETTER) {
+  getNewsletterEmail(): string | null {
+    if (
+      !this.emailAlias ||
+      this.sourceType !== SubscriptionSourceType.NEWSLETTER
+    ) {
       return null
     }
     // TODO: Make domain configurable via environment variable
-    return `${userEmailAlias}+${this.emailAlias}@inbox.omnivore.app`
+    return `${this.emailAlias}@inbox.omnivore.app`
   }
 
   /**

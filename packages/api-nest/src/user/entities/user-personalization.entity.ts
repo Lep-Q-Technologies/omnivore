@@ -1,12 +1,13 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
+  Entity,
   JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm'
+
 import { User } from './user.entity'
 
 @Entity({ name: 'user_personalization', schema: 'omnivore' })
@@ -18,7 +19,7 @@ export class UserPersonalization {
   @Column('uuid', { unique: true })
   userId!: string
 
-  @Column('integer', {name: 'font_size', nullable: true })
+  @Column('integer', { name: 'font_size', nullable: true })
   fontSize?: number
 
   @Column('text', { name: 'font_family', nullable: true })

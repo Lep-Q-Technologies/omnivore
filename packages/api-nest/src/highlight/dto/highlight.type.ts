@@ -8,13 +8,13 @@ import {
 } from '@nestjs/graphql'
 import { GraphQLJSON } from 'graphql-scalars'
 
+import { LibraryItem } from '../../library/dto/library-item.type'
 import {
   HighlightColor,
   HighlightType,
   RepresentationType,
 } from '../entities/highlight.entity'
 import { HighlightSelectors } from '../entities/highlight-selector.interface'
-import { LibraryItem } from '../../library/dto/library-item.type'
 
 registerEnumType(HighlightType, {
   name: 'HighlightType',

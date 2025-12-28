@@ -1,15 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { BadRequestException, UnauthorizedException } from '@nestjs/common'
+import { Test, TestingModule } from '@nestjs/testing'
+
 import { AuthController } from './auth.controller'
-import { AuthService } from './services/auth.service'
+import { ConfirmEmailDto } from './dto/confirm-email.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
-import { ConfirmEmailDto } from './dto/confirm-email.dto'
 import { ResendVerificationDto } from './dto/resend-verification.dto'
+import { AuthService } from './services/auth.service'
 
 describe('AuthController', () => {
-  let controller: AuthController
-  let authService: AuthService
+  let controller: AuthController = null
+  let authService: AuthService = null
 
   const mockAuthService = {
     validateUser: jest.fn(),
@@ -19,10 +20,6 @@ describe('AuthController', () => {
     resendVerification: jest.fn(),
     refreshToken: jest.fn(),
   }
-
-  const mockResponse = {
-    cookie: jest.fn(),
-  } as any
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -66,7 +63,7 @@ describe('AuthController', () => {
       mockAuthService.validateUser.mockResolvedValue(mockUser)
       mockAuthService.login.mockResolvedValue(mockResult)
 
-      const result = await controller.login(loginDto, mockResponse)
+      const result = await controller.login(loginDto)
 
       expect(authService.validateUser).toHaveBeenCalledWith(
         loginDto.email,
@@ -79,7 +76,7 @@ describe('AuthController', () => {
     it('should throw UnauthorizedException when credentials are invalid', async () => {
       mockAuthService.validateUser.mockResolvedValue(null)
 
-      const result = await controller.login(loginDto, mockResponse)
+      const result = await controller.login(loginDto)
 
       expect(result).toEqual({
         success: false,

@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common'
-import { HighlightService } from './highlight.service'
-import { HighlightResolver } from './highlight.resolver'
+
 import { RepositoriesModule } from '../repositories/repositories.module'
+import { HighlightResolver } from './highlight.resolver'
+import { HighlightService } from './highlight.service'
 
 @Module({
   imports: [

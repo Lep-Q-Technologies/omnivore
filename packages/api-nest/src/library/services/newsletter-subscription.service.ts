@@ -38,6 +38,92 @@ export class NewsletterSubscriptionService {
     private readonly libraryItemRepository: ILibraryItemRepository,
   ) {}
 
+  async createNewsletterSlot(
+    userId: string,
+    newsletterName?: string,
+  ): Promise<SubscriptionEntity> {
+    this.logger.log(`Creating newsletter subscription slot for user ${userId}`)
+
+    const emailAlias = await this.generateUniqueEmailAlias()
+
+    // Use email alias as temporary source_identifier to avoid unique constraint violations
+    // This allows multiple pending subscriptions per user
+    // Will be updated to actual sender email when first newsletter arrives
+    const subscription = await this.subscriptionRepository.createNewsletter(
+      userId,
+      `pending:${emailAlias}`, // Unique placeholder per subscription
+      emailAlias,
+      {
+        title: newsletterName || 'New Newsletter',
+        description: 'Waiting for first newsletter email...',
+      },
+    )
+
+    this.logger.log(
+      `Created newsletter slot ${subscription.id} with alias ${emailAlias}`,
+    )
+
+    return subscription
+  }
+
+  /**
+   * Subscribe to a newsletter by sender email address
+   * This is used when user explicitly wants to subscribe to a specific newsletter
+   *
+   * @param userId - User ID
+   * @param senderEmail - Newsletter sender email (e.g., "writer@substack.com")
+   * @param title - Optional newsletter title
+   * @returns Newsletter subscription (existing or newly created)
+   */
+  async subscribeToNewsletter(
+    userId: string,
+    senderEmail: string,
+    title?: string,
+  ): Promise<SubscriptionEntity> {
+    this.logger.log(
+      `User ${userId} subscribing to newsletter from ${senderEmail}`,
+    )
+
+    // Validate email format
+    if (!senderEmail || !senderEmail.includes('@')) {
+      throw new Error('Invalid email address')
+    }
+
+    // Check if already subscribed
+    let existing = await this.subscriptionRepository.findBySource(
+      userId,
+      SubscriptionSourceType.NEWSLETTER,
+      senderEmail,
+    )
+
+    if (existing) {
+      // Reactivate if inactive
+      if (!existing.active) {
+        await this.subscriptionRepository.activate(existing.id)
+        this.logger.log(`Reactivated newsletter subscription: ${existing.id}`)
+      }
+      return existing
+    }
+
+    // Create new subscription
+    const emailAlias = await this.generateUniqueEmailAlias()
+    const subscription = await this.subscriptionRepository.createNewsletter(
+      userId,
+      senderEmail,
+      emailAlias,
+      {
+        title: title || this.extractTitleFromEmail(senderEmail),
+        description: `Newsletter from ${senderEmail}`,
+      },
+    )
+
+    this.logger.log(
+      `Created newsletter subscription ${subscription.id} for ${senderEmail}`,
+    )
+
+    return subscription
+  }
+
   /**
    * Find or create a newsletter subscription by sender email
    * This is called when an email arrives from a newsletter
@@ -56,8 +142,8 @@ export class NewsletterSubscriptionService {
       `Finding or creating newsletter subscription for ${userId} from ${senderEmail}`,
     )
 
-    // Check if already subscribed
-    const existing = await this.subscriptionRepository.findBySource(
+    // Check if already subscribed by sender email
+    let existing = await this.subscriptionRepository.findBySource(
       userId,
       SubscriptionSourceType.NEWSLETTER,
       senderEmail,
@@ -73,25 +159,58 @@ export class NewsletterSubscriptionService {
       return existing
     }
 
-    // Generate unique email alias for this subscription
-    const emailAlias = await this.generateUniqueEmailAlias()
-
-    // Create new subscription
-    const subscription = await this.subscriptionRepository.createNewsletter(
+    // Check for pending subscriptions that haven't received their first email yet
+    // These are created via createNewsletterSlot() with source_identifier = 'pending:{emailAlias}'
+    // We need to find ALL pending subscriptions and pick the first one to update
+    const allUserSubscriptions = await this.subscriptionRepository.findByUser(
       userId,
-      senderEmail,
-      emailAlias,
-      {
-        ...metadata,
-        title: metadata?.title || this.extractTitleFromEmail(senderEmail),
-      },
+      SubscriptionSourceType.NEWSLETTER,
+      true, // activeOnly
     )
 
-    this.logger.log(
-      `Auto-created newsletter subscription ${subscription.id} for ${senderEmail}`,
+    const pendingSubscription = allUserSubscriptions.find((sub) =>
+      sub.sourceIdentifier.startsWith('pending:'),
     )
 
-    return subscription
+    if (pendingSubscription) {
+      // Update the pending subscription with the actual sender
+      await this.subscriptionRepository.updateSettings(
+        pendingSubscription.id,
+        userId,
+        {
+          ...metadata,
+          title: metadata?.title || this.extractTitleFromEmail(senderEmail),
+        },
+      )
+
+      await this.subscriptionRepository.updateSourceIdentifier(
+        pendingSubscription.id,
+        senderEmail,
+      )
+
+      this.logger.log(
+        `Updated pending subscription ${pendingSubscription.id} with sender ${senderEmail}`,
+      )
+
+      // Return the updated subscription
+      existing = await this.subscriptionRepository.findById(
+        pendingSubscription.id,
+        userId,
+      )
+      if (existing) {
+        return existing
+      }
+    }
+
+    // If we get here, no subscription exists for this sender
+    // We should NOT auto-create subscriptions - user must create them via UI
+    this.logger.warn(
+      `No subscription found for sender ${senderEmail}, user ${userId}. Email will be ignored.`,
+    )
+
+    throw new Error(
+      `No newsletter subscription found for ${senderEmail}. Please create a subscription first via the UI.`,
+    )
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, In } from 'typeorm'
+import { In, Repository } from 'typeorm'
+
 import { Label } from '../label/entities/label.entity'
 import { ILabelRepository } from './interfaces/label-repository.interface'
 

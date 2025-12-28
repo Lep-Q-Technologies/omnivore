@@ -6,8 +6,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common'
-import { parseHTML } from 'linkedom'
 import createDOMPurify from 'dompurify'
+import { parseHTML } from 'linkedom'
 
 // Create DOMPurify instance with linkedom window
 // linkedom provides a DOM-compatible window object for Node.js
@@ -38,7 +38,8 @@ export class HtmlSanitizerService {
   /**
    * Default safe HTML tags for article content
    * Based on common article formatting needs while preventing XSS
-   */unkn
+   */ unkn
+
   private readonly DEFAULT_ALLOWED_TAGS = [
     // Paragraphs and text formatting
     'p',
@@ -237,6 +238,7 @@ export class HtmlSanitizerService {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to strip tags from HTML: ${errorMessage}`)
+
       return ''
     }
   }
@@ -257,9 +259,11 @@ export class HtmlSanitizerService {
 
       // If sanitization removed >50% of content, it's suspicious
       const removedRatio = 1 - sanitized.length / html.length
+
       return removedRatio < 0.5
     } catch (error) {
       this.logger.error('Error checking HTML safety', error)
+
       return false
     }
   }
@@ -280,12 +284,14 @@ export class HtmlSanitizerService {
       const urlObj = new URL(url)
       if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
         this.logger.warn(`Blocked non-HTTP(S) URL: ${url}`)
+
         return ''
       }
 
       return url
     } catch (error) {
       this.logger.warn(`Invalid URL rejected: ${url}`)
+
       return ''
     }
   }

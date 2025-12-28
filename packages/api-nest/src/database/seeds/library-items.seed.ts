@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto'
 import { DataSource } from 'typeorm'
+
+import { FOLDERS } from '../../constants/folders.constants'
 import {
+  ContentReaderType,
   LibraryItemEntity,
   LibraryItemState,
-  ContentReaderType,
 } from '../../library/entities/library-item.entity'
-import { FOLDERS } from '../../constants/folders.constants'
 
 /**
  * Seed example library items for a user (for testing)
@@ -124,15 +125,18 @@ export async function seedLibraryItems(
       console.error(`[Seed] ✗ Failed to create item "${itemData.title}":`)
       console.error(`[Seed] Error name: ${error?.name}`)
       console.error(`[Seed] Error message: ${error?.message}`)
-      if (error?.detail) console.error(`[Seed] Error detail: ${error.detail}`)
-      if (error?.constraint)
+      if (error?.detail) {
+        console.error(`[Seed] Error detail: ${error.detail}`)
+      }
+      if (error?.constraint) {
         console.error(`[Seed] Constraint: ${error.constraint}`)
+      }
       console.error(`[Seed] Full error:`, error)
     }
   }
 
   console.log(
-    `✅ [Seed] Completed: ${createdItems.length}/${sampleItems.length} items created for user ${userId}`
+    `✅ [Seed] Completed: ${createdItems.length}/${sampleItems.length} items created for user ${userId}`,
   )
 
   return createdItems

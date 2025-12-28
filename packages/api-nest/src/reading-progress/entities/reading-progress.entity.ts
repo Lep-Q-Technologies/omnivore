@@ -1,15 +1,16 @@
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  Index,
   CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
+  Entity,
+  Index,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm'
-import { User } from '../../user/entities/user.entity'
+
 import { LibraryItemEntity } from '../../library/entities/library-item.entity'
+import { User } from '../../user/entities/user.entity'
 
 /**
  * Reading progress tracking using I/O sentinels for stable, content-aware positioning

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+
 import { ReadingProgressEntity } from '../reading-progress/entities/reading-progress.entity'
 import { IReadingProgressRepository } from './interfaces/reading-progress-repository.interface'
 
@@ -92,6 +93,7 @@ export class ReadingProgressRepository implements IReadingProgressRepository {
         existing.highestSeenSentinel,
         highestSeenSentinel,
       )
+
       return this.save(existing)
     }
 

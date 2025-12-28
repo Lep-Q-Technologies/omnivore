@@ -1,18 +1,19 @@
 import {
+  createUnionType,
   Field,
   Float,
   ID,
   Int,
   ObjectType,
   registerEnumType,
-  createUnionType,
 } from '@nestjs/graphql'
+
+import { Label } from '../../label/dto/label.type'
 import {
-  LibraryItemState,
   ContentReaderType,
   ContentType,
+  LibraryItemState,
 } from '../entities/library-item.entity'
-import { Label } from '../../label/dto/label.type'
 import { RssFeed } from './rss-feed.type'
 
 registerEnumType(LibraryItemState, {
@@ -142,6 +143,7 @@ export class LibraryItem {
         return 'ARTICLE'
     }
   }
+
   @Field({
     nullable: true,
     name: 'image',
@@ -254,6 +256,7 @@ export const SearchResult = createUnionType({
     if ('errorCodes' in value) {
       return SearchError
     }
+
     return null
   },
 })

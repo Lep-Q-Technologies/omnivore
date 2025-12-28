@@ -2,12 +2,13 @@
  * QueueHealthIndicator Unit Tests
  */
 
-import { Test, TestingModule } from '@nestjs/testing'
-import { Logger } from '@nestjs/common'
 import { getQueueToken } from '@nestjs/bullmq'
+import { Logger } from '@nestjs/common'
+import { Test, TestingModule } from '@nestjs/testing'
 import { Queue } from 'bullmq'
-import { QueueHealthIndicator } from './queue-health.indicator'
+
 import { QUEUE_NAMES } from './queue.constants'
+import { QueueHealthIndicator } from './queue-health.indicator'
 
 type MockQueue = jest.Mocked<
   Pick<

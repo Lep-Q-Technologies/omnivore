@@ -5,7 +5,6 @@ import { EntityLabel } from '../../label/entities/entity-label.entity'
  * Manages the many-to-many relationship between library items and labels
  */
 export interface IEntityLabelRepository {
-
   /**
    * Find entity labels for a library item with label relations loaded
    * @param libraryItemId - Library item ID
@@ -39,5 +38,7 @@ export interface IEntityLabelRepository {
    * @param libraryItemIds - Array of library item IDs
    * @returns Map of library item ID to array of entity labels with label relations
    */
-  findByLibraryItemIds(libraryItemIds: string[]): Promise<Map<string, EntityLabel[]>>
+  findByLibraryItemIds(
+    libraryItemIds: string[],
+  ): Promise<Map<string, EntityLabel[]>>
 }

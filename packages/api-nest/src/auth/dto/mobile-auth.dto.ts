@@ -1,12 +1,12 @@
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  ValidateNested,
-  IsEnum,
-} from 'class-validator'
-import { Type } from 'class-transformer'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator'
 
 class MobileUserNameDto {
   @ApiPropertyOptional({

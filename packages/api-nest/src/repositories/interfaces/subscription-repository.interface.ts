@@ -6,6 +6,10 @@ import {
 import { SubscriptionMetadata } from '../subscription.repository'
 
 export interface ISubscriptionRepository {
+  updateSourceIdentifier(
+    subscriptionId: string,
+    senderEmail: string,
+  ): Promise<void>
   findById(id: string, userId: string): Promise<SubscriptionEntity | null>
   findBySource(
     userId: string,

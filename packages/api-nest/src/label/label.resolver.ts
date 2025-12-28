@@ -1,12 +1,13 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql'
 import { UseGuards } from '@nestjs/common'
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql'
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { DeleteResult } from '../library/dto/library-inputs.type'
 import { CurrentUser } from '../user/decorators/current-user.decorator'
 import { User } from '../user/entities/user.entity'
-import { LabelService } from './label.service'
 import { Label } from './dto/label.type'
 import { CreateLabelInput, UpdateLabelInput } from './dto/label-inputs.type'
-import { DeleteResult } from '../library/dto/library-inputs.type'
+import { LabelService } from './label.service'
 
 @Resolver(() => Label)
 export class LabelResolver {
@@ -60,9 +61,12 @@ export class LabelResolver {
     @Args('id', { type: () => String }) id: string,
   ): Promise<DeleteResult> {
     const success = await this.labelService.delete(user.id, id)
+
     return {
       success,
-      message: success ? 'Label deleted successfully' : 'Failed to delete label',
+      message: success
+        ? 'Label deleted successfully'
+        : 'Failed to delete label',
       itemId: id,
     }
   }

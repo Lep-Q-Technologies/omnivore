@@ -1,5 +1,12 @@
 import { Field, InputType, ObjectType, registerEnumType } from '@nestjs/graphql'
-import { IsBoolean, IsEnum, IsIn, IsOptional, IsString, IsUrl } from 'class-validator'
+import {
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator'
 
 import { ALL_FOLDERS, FOLDERS } from '../../constants/folders.constants'
 import { LibraryItemState } from '../entities/library-item.entity'

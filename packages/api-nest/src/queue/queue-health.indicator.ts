@@ -7,14 +7,15 @@
  * - Worker status
  */
 
-import { Injectable, Logger } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
-import { Queue } from 'bullmq'
+import { Injectable, Logger } from '@nestjs/common'
 import {
+  HealthCheckError,
   HealthIndicator,
   HealthIndicatorResult,
-  HealthCheckError,
 } from '@nestjs/terminus'
+import { Queue } from 'bullmq'
+
 import { QUEUE_NAMES } from './queue.constants'
 
 @Injectable()
@@ -27,7 +28,7 @@ export class QueueHealthIndicator extends HealthIndicator {
     @InjectQueue(QUEUE_NAMES.NOTIFICATIONS)
     private readonly notificationQueue: Queue,
     @InjectQueue(QUEUE_NAMES.POST_PROCESSING)
-    private readonly postProcessingQueue: Queue
+    private readonly postProcessingQueue: Queue,
   ) {
     super()
   }
@@ -70,6 +71,7 @@ export class QueueHealthIndicator extends HealthIndicator {
       }
 
       const result = this.getStatus(key, allHealthy, details)
+
       return result
     } catch (error) {
       const responseTime = Date.now() - startTime
@@ -120,10 +122,7 @@ export class QueueHealthIndicator extends HealthIndicator {
       // - Queue is paused
       // - Too many failed jobs (more than 100)
       // - Too many waiting jobs (more than 1000)
-      const healthy =
-        !isPaused &&
-        failed < 100 &&
-        waiting < 1000
+      const healthy = !isPaused && failed < 100 && waiting < 1000
 
       return {
         healthy,
@@ -138,7 +137,7 @@ export class QueueHealthIndicator extends HealthIndicator {
     } catch (error) {
       this.logger.error(
         `Failed to get metrics for queue ${queue.name}`,
-        error instanceof Error ? error.message : error
+        error instanceof Error ? error.message : error,
       )
 
       return {

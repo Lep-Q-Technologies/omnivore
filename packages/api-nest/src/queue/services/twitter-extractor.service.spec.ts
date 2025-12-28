@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+
 import { TwitterExtractorService } from './twitter-extractor.service'
 
 describe('TwitterExtractorService', () => {
@@ -19,8 +20,7 @@ describe('TwitterExtractorService', () => {
   describe('extractThread', () => {
     it('should extract tweet data', async () => {
       // Note: This test may fail if the syndication API changes or is rate-limited
-      const testTweetUrl =
-        'https://twitter.com/jack/status/20' // Jack's first tweet
+      const testTweetUrl = 'https://twitter.com/jack/status/20' // Jack's first tweet
 
       try {
         const result = await service.extractThread(testTweetUrl)

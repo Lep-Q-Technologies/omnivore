@@ -1,5 +1,6 @@
 import { Injectable, LoggerService, Scope } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
 import { EnvVariables } from '../config/env-variables'
 
 export interface LogContext {
@@ -27,7 +28,9 @@ export interface StructuredLogEntry {
 @Injectable({ scope: Scope.TRANSIENT })
 export class StructuredLogger implements LoggerService {
   private context: LogContext = {}
+
   private readonly serviceName: string
+
   private readonly environment: string
 
   constructor(private readonly configService: ConfigService) {
@@ -154,12 +157,23 @@ export class StructuredLogger implements LoggerService {
 
     // Build compact context string
     const contextParts: string[] = []
-    if (operation) contextParts.push(`[${operation}]`)
-    if (method && url) contextParts.push(`${method} ${url}`)
-    if (statusCode) contextParts.push(`${statusCode}`)
-    if (duration) contextParts.push(`${duration}ms`)
-    if (userId) contextParts.push(`user:${userId}`)
-    else if (email) contextParts.push(`${email}`)
+    if (operation) {
+      contextParts.push(`[${operation}]`)
+    }
+    if (method && url) {
+      contextParts.push(`${method} ${url}`)
+    }
+    if (statusCode) {
+      contextParts.push(`${statusCode}`)
+    }
+    if (duration) {
+      contextParts.push(`${duration}ms`)
+    }
+    if (userId) {
+      contextParts.push(`user:${userId}`)
+    } else if (email) {
+      contextParts.push(`${email}`)
+    }
 
     const context = contextParts.length > 0 ? ` ${contextParts.join(' ')}` : ''
 
@@ -187,6 +201,7 @@ export class StructuredLogger implements LoggerService {
     }
     const reset = '\x1b[0m'
     const color = colors[level] || ''
+
     return `${color}${level.toUpperCase().padEnd(7)}${reset}`
   }
 }

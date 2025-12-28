@@ -5,34 +5,35 @@
  * web content for saved library items.
  */
 
+import { Readability } from '@mozilla/readability'
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq'
 import {
   Injectable,
   Logger,
-  OnModuleInit,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common'
-import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq'
-import { Job } from 'bullmq'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Readability } from '@mozilla/readability'
-import { parseHTML } from 'linkedom'
+import { Job } from 'bullmq'
 import fetch from 'cross-fetch'
 import { createHash } from 'crypto'
+import { parseHTML } from 'linkedom'
+import { Repository } from 'typeorm'
+
 import {
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
-  ContentType,
 } from '../../library/entities/library-item.entity'
 import { EventBusService } from '../event-bus.service'
-import { HtmlSanitizerService } from '../services/html-sanitizer.service'
+import { EVENT_NAMES } from '../events.constants'
+import { JOB_CONFIG, JOB_TYPES, QUEUE_NAMES } from '../queue.constants'
 import { ContentTypeDetectorService } from '../services/content-type-detector.service'
+import { HtmlSanitizerService } from '../services/html-sanitizer.service'
 import { PdfExtractorService } from '../services/pdf-extractor.service'
 import { RssFeedService } from '../services/rss-feed.service'
-import { VideoExtractorService } from '../services/video-extractor.service'
 import { TwitterExtractorService } from '../services/twitter-extractor.service'
-import { EVENT_NAMES } from '../events.constants'
-import { QUEUE_NAMES, JOB_TYPES, JOB_CONFIG } from '../queue.constants'
+import { VideoExtractorService } from '../services/video-extractor.service'
 
 /**
  * Job data interface for fetch-content jobs
@@ -115,7 +116,9 @@ export class ContentProcessorService
     const { libraryItemId, url, userId, source } = job.data
 
     this.logger.log(
-      `Processing job ${job.id} for item ${libraryItemId} (attempt ${job.attemptsMade + 1}/${job.opts.attempts})`,
+      `Processing job ${job.id} for item ${libraryItemId} (attempt ${
+        job.attemptsMade + 1
+      }/${job.opts.attempts})`,
     )
 
     // Route to appropriate handler based on job name
@@ -229,7 +232,9 @@ export class ContentProcessorService
 
       this.logger.error(
         `Job ${job.id} failed for item ${libraryItemId}: ${errorMessage} ` +
-          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts}, will retry: ${willRetry})`,
+          `(attempt ${job.attemptsMade + 1}/${
+            job.opts.attempts
+          }, will retry: ${willRetry})`,
       )
 
       // Update library item state to FAILED if final attempt
@@ -299,7 +304,7 @@ export class ContentProcessorService
 
       // Generate description from first 200 characters
       const description = pdfResult.content
-        ? pdfResult.content.substring(0, 200).trim() + '...'
+        ? `${pdfResult.content.substring(0, 200).trim()}...`
         : undefined
 
       this.logger.log(
@@ -340,7 +345,9 @@ export class ContentProcessorService
    * Convert PDF plain text to HTML format for consistent storage
    */
   private convertPdfTextToHtml(text: string, pageCount?: number): string {
-    if (!text) return ''
+    if (!text) {
+      return ''
+    }
 
     // Split into paragraphs (double newline = paragraph break)
     const paragraphs = text.split('\n\n').filter((p) => p.trim().length > 0)
@@ -350,6 +357,7 @@ export class ContentProcessorService
       .map((para) => {
         // Replace single newlines with <br> within paragraphs
         const withBreaks = para.replace(/\n/g, '<br>')
+
         return `<p>${withBreaks}</p>`
       })
       .join('\n')
@@ -412,9 +420,12 @@ export class ContentProcessorService
       }
     } catch (error) {
       this.logger.error(`Failed to parse RSS feed ${url}:`, error)
+
       return {
         success: false,
-        error: `RSS feed parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `RSS feed parsing failed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       }
     }
   }
@@ -429,13 +440,33 @@ export class ContentProcessorService
         (item: any) => `
       <article style="margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb;">
         <h2 style="margin: 0 0 0.5rem 0;">
-          <a href="${this.escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">
+          <a href="${this.escapeHtml(
+            item.link,
+          )}" target="_blank" rel="noopener noreferrer">
             ${this.escapeHtml(item.title)}
           </a>
         </h2>
-        ${item.author ? `<p style="color: #6b7280; margin: 0.25rem 0;">By ${this.escapeHtml(item.author)}</p>` : ''}
-        ${item.publishedAt ? `<p style="color: #9ca3af; font-size: 0.875rem; margin: 0.25rem 0;">${new Date(item.publishedAt).toLocaleDateString()}</p>` : ''}
-        ${item.description ? `<p style="margin: 0.75rem 0 0 0;">${this.escapeHtml(item.description)}</p>` : ''}
+        ${
+          item.author
+            ? `<p style="color: #6b7280; margin: 0.25rem 0;">By ${this.escapeHtml(
+                item.author,
+              )}</p>`
+            : ''
+        }
+        ${
+          item.publishedAt
+            ? `<p style="color: #9ca3af; font-size: 0.875rem; margin: 0.25rem 0;">${new Date(
+                item.publishedAt,
+              ).toLocaleDateString()}</p>`
+            : ''
+        }
+        ${
+          item.description
+            ? `<p style="margin: 0.75rem 0 0 0;">${this.escapeHtml(
+                item.description,
+              )}</p>`
+            : ''
+        }
       </article>
     `,
       )
@@ -450,13 +481,33 @@ export class ContentProcessorService
         </head>
         <body style="font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem;">
           <header style="margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 2px solid #e5e7eb;">
-            <h1 style="margin: 0 0 0.5rem 0;">${this.escapeHtml(feed.title)}</h1>
-            ${feed.description ? `<p style="color: #6b7280; margin: 0.5rem 0;">${this.escapeHtml(feed.description)}</p>` : ''}
+            <h1 style="margin: 0 0 0.5rem 0;">${this.escapeHtml(
+              feed.title,
+            )}</h1>
+            ${
+              feed.description
+                ? `<p style="color: #6b7280; margin: 0.5rem 0;">${this.escapeHtml(
+                    feed.description,
+                  )}</p>`
+                : ''
+            }
             <p style="color: #9ca3af; font-size: 0.875rem; margin: 0.5rem 0;">
               ${feed.items.length} ${feed.items.length === 1 ? 'item' : 'items'}
-              ${feed.lastBuildDate ? ` • Last updated: ${new Date(feed.lastBuildDate).toLocaleString()}` : ''}
+              ${
+                feed.lastBuildDate
+                  ? ` • Last updated: ${new Date(
+                      feed.lastBuildDate,
+                    ).toLocaleString()}`
+                  : ''
+              }
             </p>
-            ${feed.link ? `<p style="margin: 0.5rem 0;"><a href="${this.escapeHtml(feed.link)}" target="_blank" rel="noopener noreferrer">Visit website →</a></p>` : ''}
+            ${
+              feed.link
+                ? `<p style="margin: 0.5rem 0;"><a href="${this.escapeHtml(
+                    feed.link,
+                  )}" target="_blank" rel="noopener noreferrer">Visit website →</a></p>`
+                : ''
+            }
           </header>
           <main>
             ${items}
@@ -477,6 +528,7 @@ export class ContentProcessorService
       '"': '&quot;',
       "'": '&#039;',
     }
+
     return text.replace(/[&<>"']/g, (char) => map[char])
   }
 
@@ -496,7 +548,9 @@ export class ContentProcessorService
       if (metadata?.platform !== 'youtube') {
         return {
           success: false,
-          error: `Unsupported video platform: ${metadata?.platform || 'unknown'}. Only YouTube is currently supported.`,
+          error: `Unsupported video platform: ${
+            metadata?.platform || 'unknown'
+          }. Only YouTube is currently supported.`,
         }
       }
 
@@ -535,9 +589,12 @@ export class ContentProcessorService
       }
     } catch (error) {
       this.logger.error(`Failed to extract video transcript ${url}:`, error)
+
       return {
         success: false,
-        error: `Video transcript extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `Video transcript extraction failed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       }
     }
   }
@@ -582,9 +639,12 @@ export class ContentProcessorService
       }
     } catch (error) {
       this.logger.error(`Failed to extract Twitter thread ${url}:`, error)
+
       return {
         success: false,
-        error: `Twitter thread extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}. Note: Full thread unrolling requires Twitter API access which may be limited.`,
+        error: `Twitter thread extraction failed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }. Note: Full thread unrolling requires Twitter API access which may be limited.`,
       }
     }
   }
@@ -604,15 +664,16 @@ export class ContentProcessorService
       // Phase 1: Fetch HTML content
       this.logger.debug(`Fetching HTML from ${url}`)
 
-
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Encoding': 'gzip, deflate, br',
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
+          Pragma: 'no-cache',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'none',
@@ -636,13 +697,24 @@ export class ContentProcessorService
       // Phase 3: Extract Open Graph metadata (fast)
       this.logger.debug(`Extracting Open Graph metadata from ${url}`)
       const ogData = this.extractOpenGraph(document, url)
-      this.logger.log(`[DEBUG] Open Graph data extracted: ${JSON.stringify({ title: ogData.title, image: ogData.image, siteName: ogData.siteName })}`)
+      this.logger.log(
+        `[DEBUG] Open Graph data extracted: ${JSON.stringify({
+          title: ogData.title,
+          image: ogData.image,
+          siteName: ogData.siteName,
+        })}`,
+      )
       await job.updateProgress(45)
 
       // Phase 3.5: Extract JSON-LD structured data
       this.logger.debug(`Extracting JSON-LD metadata from ${url}`)
       const jsonLdData = this.extractJsonLd(document)
-      this.logger.log(`[DEBUG] JSON-LD data extracted: ${JSON.stringify({ title: jsonLdData.title, author: jsonLdData.author })}`)
+      this.logger.log(
+        `[DEBUG] JSON-LD data extracted: ${JSON.stringify({
+          title: jsonLdData.title,
+          author: jsonLdData.author,
+        })}`,
+      )
       await job.updateProgress(50)
 
       // Phase 4: Extract content with Readability
@@ -684,7 +756,9 @@ export class ContentProcessorService
       }
 
       // Phase 5: Sanitize HTML content to prevent XSS
-      const sanitizedContent = this.htmlSanitizer.sanitize(article.content || '')
+      const sanitizedContent = this.htmlSanitizer.sanitize(
+        article.content || '',
+      )
 
       // Phase 6: Generate content hash for duplicate detection
       const contentHash = this.generateContentHash(sanitizedContent)
@@ -696,20 +770,22 @@ export class ContentProcessorService
       // This helps verify our HTML-to-text word counting is accurate
       const readabilityTextLength = article.textContent?.length || 0
       const readabilityWordEstimate = article.textContent
-        ? article.textContent.trim().split(/\s+/).filter(w => w.length > 0).length
+        ? article.textContent
+            .trim()
+            .split(/\s+/)
+            .filter((w) => w.length > 0).length
         : 0
 
       // Phase 8: Combine Open Graph + JSON-LD + Readability results
       // Priority: JSON-LD > Readability > Open Graph (most structured to least)
       this.logger.log(
         `Successfully extracted content from ${url}: ${actualWordCount} words ` +
-        `(Readability textContent estimate: ${readabilityWordEstimate} words, text length: ${readabilityTextLength})`
+          `(Readability textContent estimate: ${readabilityWordEstimate} words, text length: ${readabilityTextLength})`,
       )
 
       const result = {
         success: true,
-        title:
-          jsonLdData.title || article.title || ogData.title || 'Untitled',
+        title: jsonLdData.title || article.title || ogData.title || 'Untitled',
         content: sanitizedContent,
         contentType: 'text/html',
         author: jsonLdData.author || article.byline || ogData.author,
@@ -727,7 +803,14 @@ export class ContentProcessorService
         contentHash,
       }
 
-      this.logger.log(`[DEBUG] Content fetch result: ${JSON.stringify({ title: result.title, thumbnail: result.thumbnail, wordCount: result.wordCount })}`)
+      this.logger.log(
+        `[DEBUG] Content fetch result: ${JSON.stringify({
+          title: result.title,
+          thumbnail: result.thumbnail,
+          wordCount: result.wordCount,
+        })}`,
+      )
+
       return result
     } catch (error) {
       const errorMessage =
@@ -748,14 +831,19 @@ export class ContentProcessorService
    * @returns SHA-256 hash as hex string
    */
   private generateContentHash(content: string): string {
-    if (!content) return ''
+    if (!content) {
+      return ''
+    }
 
     try {
       return createHash('sha256').update(content).digest('hex')
     } catch (error) {
       this.logger.warn(
-        `Failed to generate content hash: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to generate content hash: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       )
+
       return ''
     }
   }
@@ -771,6 +859,7 @@ export class ContentProcessorService
   public calculateWordCount(htmlContent: string): number {
     if (!htmlContent) {
       this.logger.debug('[calculateWordCount] No HTML content provided')
+
       return 0
     }
 
@@ -783,12 +872,15 @@ export class ContentProcessorService
       const { document } = parseHTML(wrappedHtml)
       const textOnly = document.body?.textContent || ''
 
-      this.logger.debug(`[calculateWordCount] HTML length: ${htmlContent.length}, Text length: ${textOnly.length}`)
+      this.logger.debug(
+        `[calculateWordCount] HTML length: ${htmlContent.length}, Text length: ${textOnly.length}`,
+      )
 
       // Remove extra whitespace and normalize
       const normalized = textOnly.replace(/\s+/g, ' ').trim()
       if (!normalized) {
         this.logger.debug('[calculateWordCount] Normalized text is empty')
+
         return 0
       }
 
@@ -796,9 +888,11 @@ export class ContentProcessorService
       const words = normalized.split(' ').filter((word) => word.length > 0)
 
       this.logger.debug(`[calculateWordCount] Word count: ${words.length}`)
+
       return words.length
     } catch (error) {
       this.logger.warn(`Failed to calculate word count: ${error}`)
+
       return 0
     }
   }
@@ -822,13 +916,16 @@ export class ContentProcessorService
       const element = document.querySelector(
         `meta[property="${property}"], meta[name="${property}"]`,
       )
+
       return element?.getAttribute('content') || undefined
     }
 
     const getLink = (rel: string): string | undefined => {
       const element = document.querySelector(`link[rel="${rel}"]`)
       const href = element?.getAttribute('href')
-      if (!href) return undefined
+      if (!href) {
+        return undefined
+      }
 
       // Convert relative URLs to absolute
       try {
@@ -898,13 +995,17 @@ export class ContentProcessorService
         } catch (e) {
           // Skip invalid JSON
           this.logger.debug(
-            `Failed to parse JSON-LD script: ${e instanceof Error ? e.message : String(e)}`,
+            `Failed to parse JSON-LD script: ${
+              e instanceof Error ? e.message : String(e)
+            }`,
           )
         }
       }
     } catch (error) {
       this.logger.warn(
-        `Error extracting JSON-LD: ${error instanceof Error ? error.message : String(error)}`,
+        `Error extracting JSON-LD: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       )
     }
 
@@ -933,7 +1034,13 @@ export class ContentProcessorService
         wordCount: result.wordCount,
       }
 
-      this.logger.log(`[DEBUG] Saving to DB: ${JSON.stringify({ title: updateData.title, thumbnail: updateData.thumbnail, wordCount: updateData.wordCount })}`)
+      this.logger.log(
+        `[DEBUG] Saving to DB: ${JSON.stringify({
+          title: updateData.title,
+          thumbnail: updateData.thumbnail,
+          wordCount: updateData.wordCount,
+        })}`,
+      )
       await this.libraryItemRepository.update(libraryItemId, updateData)
 
       this.logger.log(`Content saved for library item ${libraryItemId}`)

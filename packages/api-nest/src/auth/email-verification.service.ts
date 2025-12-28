@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { randomBytes } from 'crypto'
 import { ConfigService } from '@nestjs/config'
+import { randomBytes } from 'crypto'
+
 import { EnvVariables } from '../config/env-variables'
 import {
   VerificationTokenPayload,
@@ -40,6 +41,7 @@ export class EmailVerificationService {
       { userId: payload.userId, email: payload.email },
       this.ttlSeconds,
     )
+
     return token
   }
 

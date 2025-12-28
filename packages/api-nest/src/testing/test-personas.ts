@@ -76,7 +76,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     password: 'password123',
     role: 'suspended',
     description: 'Suspended user with limited access',
-    expectedAccess: ['profile'], 
+    expectedAccess: ['profile'],
     restrictions: [
       'library',
       'basic-features',

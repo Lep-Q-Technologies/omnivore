@@ -1,16 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
+  HealthCheckError,
   HealthIndicator,
   HealthIndicatorResult,
-  HealthCheckError,
 } from '@nestjs/terminus'
 import Redis from 'ioredis'
+
 import { EnvVariables } from '../config/env-variables'
 
 @Injectable()
 export class RedisHealthIndicator extends HealthIndicator {
   private readonly logger = new Logger(RedisHealthIndicator.name)
+
   private redis?: Redis
 
   constructor(private readonly configService: ConfigService) {
@@ -71,6 +73,7 @@ export class RedisHealthIndicator extends HealthIndicator {
           message: 'Redis URL not configured',
           responseTime: 0,
         })
+
         return result
       }
 
@@ -90,10 +93,10 @@ export class RedisHealthIndicator extends HealthIndicator {
           message: 'Redis is responsive',
           responseTime,
         })
+
         return result
-      } else {
-        throw new Error(`Unexpected ping response: ${pingResult}`)
       }
+      throw new Error(`Unexpected ping response: ${pingResult}`)
     } catch (error) {
       const responseTime = Date.now() - startTime
       const errorMessage =

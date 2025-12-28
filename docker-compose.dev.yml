@@ -73,8 +73,8 @@ services:
             USER_ID=$$(uuidgen)
             PASSWORD='$$2a$$10$$41G6b1BDUdxNjH1QFPJYDOM29EE0C9nTdjD1FoseuQ8vZU1NWtrh6'
             psql -h postgres -U postgres -d omnivore -c \"
-              INSERT INTO omnivore.user (id, source, email, source_user_id, name, password) 
-              VALUES ('$$USER_ID', 'EMAIL', 'demo@omnivore.app', 'demo@omnivore.app', 'Demo User', '$$PASSWORD')
+              INSERT INTO omnivore.user (id, source, email, source_user_id, name, password, email_alias) 
+              VALUES ('$$USER_ID', 'EMAIL', 'demo@omnivore.app', 'demo@omnivore.app', 'Demo User', '$$PASSWORD', 'demo_user')
               ON CONFLICT (email) DO NOTHING;
               
               INSERT INTO omnivore.user_profile (user_id, username) 
@@ -110,10 +110,10 @@ services:
       - DATABASE_NAME=omnivore
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev-jwt-secret-at-least-32-characters-long-for-development
-      - FRONTEND_URL=http://localhost:3000
-      # Optional OAuth (using dummy values for development)
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-dummy-client-id-for-development}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-dummy-secret}
+      - FRONTEND_URL=http://localhost:3000,http://localhost:3010
+      # OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-63233828890-nlsc5rl1bpoh40mkl1aipnl6vv8o5hgg.apps.googleusercontent.com}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-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}
       - GOOGLE_IOS_CLIENT_ID=${GOOGLE_IOS_CLIENT_ID:-dummy-ios-client-id}
       - GOOGLE_ANDROID_CLIENT_ID=${GOOGLE_ANDROID_CLIENT_ID:-dummy-android-client-id}
     depends_on:
@@ -169,6 +169,41 @@ services:
       - ./packages/web-vite:/app/packages/web-vite
       - /app/packages/web-vite/node_modules
     command: npm run dev -- --host 0.0.0.0 --port 3000
+    restart: unless-stopped
+
+  omnivore-polish:
+    build:
+      context: .
+      dockerfile: packages/omnivore-polish/Dockerfile.dev
+    container_name: "omnivore-polish-dev"
+    ports:
+      - "3010:3010"
+    environment:
+      # Vite Environment
+      - NODE_ENV=development
+      - VITE_APP_ENV=local
+
+      # API Configuration (browser access via localhost)
+      - VITE_API_URL=http://localhost:4001/api/v2
+      - VITE_SERVER_BASE_URL=http://localhost:4001
+      - VITE_GRAPHQL_URL=http://localhost:4001/api/graphql
+
+      # Base URLs
+      - VITE_BASE_URL=http://localhost:3010
+      - VITE_HIGHLIGHTS_BASE_URL=http://localhost:3010
+
+      # OAuth Configuration
+      - VITE_GAUTH_CLIENT_ID=${GAUTH_CLIENT_ID:-63233828890-nlsc5rl1bpoh40mkl1aipnl6vv8o5hgg.apps.googleusercontent.com}
+      - VITE_GAUTH_IOS_CLIENT_ID=${GAUTH_IOS_CLIENT_ID:-dummy-ios-client-id}
+      - VITE_GAUTH_ANDROID_CLIENT_ID=${GAUTH_ANDROID_CLIENT_ID:-dummy-android-client-id}
+      - VITE_APPLE_CLIENT_ID=${APPLE_CLIENT_ID:-dummy-apple-client-id}
+    depends_on:
+      api-nest:
+        condition: service_healthy
+    volumes:
+      - ./packages/omnivore-polish:/app/packages/omnivore-polish
+      - /app/packages/omnivore-polish/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3010
     restart: unless-stopped
 
   redis:

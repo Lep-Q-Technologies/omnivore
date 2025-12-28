@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule } from '@nestjs/config'
-import { UserService } from './user.service'
-import { UserResolver } from './user.resolver'
+import { TypeOrmModule } from '@nestjs/typeorm'
+
+import { User, UserPersonalization, UserProfile } from './entities'
 import { RoleService } from './role.service'
-import { User, UserProfile, UserPersonalization } from './entities'
+import { UserResolver } from './user.resolver'
+import { UserService } from './user.service'
 
 @Module({
   imports: [

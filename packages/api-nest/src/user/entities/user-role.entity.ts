@@ -1,14 +1,15 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm'
-import { User } from './user.entity'
+
 import { Permission, UserRole } from '../enums'
+import { User } from './user.entity'
 
 /**
  * UserRole Entity

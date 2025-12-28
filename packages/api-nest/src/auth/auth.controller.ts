@@ -1,40 +1,38 @@
 import {
-  Controller,
-  Post,
+  BadRequestException,
   Body,
+  Controller,
   Get,
-  Request,
-  UnauthorizedException,
+  Headers,
   HttpCode,
   HttpStatus,
-  BadRequestException,
+  Post,
+  Request,
   UseGuards,
-  Res,
-  Headers,
 } from '@nestjs/common'
-import { Response } from 'express'
 import {
-  ApiTags,
-  ApiOperation,
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
   ApiOkResponse,
+  ApiOperation,
+  ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
-import { AuthService } from './services/auth.service'
-import { LoginDto } from './dto/login.dto'
-import { RegisterDto } from './dto/register.dto'
-import { ConfirmEmailDto } from './dto/confirm-email.dto'
-import { ResendVerificationDto } from './dto/resend-verification.dto'
-import { JwtAuthGuard } from './guards/jwt-auth.guard'
+
 import {
-  LoginResponse,
-  RegisterResponse,
-  AuthVerificationResponse,
   AuthErrorCode,
   AuthStatus,
+  AuthVerificationResponse,
+  LoginResponse,
+  RegisterResponse,
 } from './dto/auth-responses.dto'
+import { ConfirmEmailDto } from './dto/confirm-email.dto'
+import { LoginDto } from './dto/login.dto'
+import { RegisterDto } from './dto/register.dto'
+import { ResendVerificationDto } from './dto/resend-verification.dto'
+import { JwtAuthGuard } from './guards/jwt-auth.guard'
+import { AuthService } from './services/auth.service'
 
 @ApiTags('auth')
 @Controller('auth')
@@ -52,10 +50,7 @@ export class AuthController {
     type: 'AuthErrorResponse',
   })
   @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<LoginResponse> {
+  async login(@Body() loginDto: LoginDto): Promise<LoginResponse> {
     try {
       const user = await this.authService.validateUser(
         loginDto.email,
@@ -78,26 +73,17 @@ export class AuthController {
             errorCode: AuthErrorCode.PENDING_VERIFICATION,
             message: 'Please verify your email address',
           }
-        } else {
-          return {
-            success: false,
-            errorCode: AuthErrorCode.ACCOUNT_SUSPENDED,
-            message: 'Your account has been suspended',
-          }
+        }
+
+        return {
+          success: false,
+          errorCode: AuthErrorCode.ACCOUNT_SUSPENDED,
+          message: 'Your account has been suspended',
         }
       }
 
-      // Generate login result
+      // Generate and return JWT token
       const loginResult = await this.authService.login(user)
-
-      // Set auth cookie for web browser compatibility
-      res.cookie('auth', loginResult.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-        path: '/',
-        sameSite: 'lax',
-      })
 
       return loginResult
     } catch (error) {
@@ -181,6 +167,7 @@ export class AuthController {
   async confirmEmail(@Body() confirmEmailDto: ConfirmEmailDto) {
     try {
       const result = await this.authService.confirmEmail(confirmEmailDto.token)
+
       return result
     } catch (error) {
       if (
@@ -199,6 +186,7 @@ export class AuthController {
   async resendVerification(@Body() resendDto: ResendVerificationDto) {
     try {
       const result = await this.authService.resendVerification(resendDto.email)
+
       return result
     } catch (error) {
       if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
@@ -239,9 +227,9 @@ export class AuthController {
       if (!user.canAccess()) {
         if (user.status === 'PENDING') {
           return { authStatus: AuthStatus.PENDING_USER }
-        } else {
-          return { authStatus: AuthStatus.NOT_AUTHENTICATED }
         }
+
+        return { authStatus: AuthStatus.NOT_AUTHENTICATED }
       }
 
       return {

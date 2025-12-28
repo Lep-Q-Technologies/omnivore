@@ -24,7 +24,8 @@ export class BaseAuthResponse {
   errorCode?: string
 
   @ApiProperty({
-    description: 'URL for frontend navigation after operation (DEPRECATED: Not recommended)',
+    description:
+      'URL for frontend navigation after operation (DEPRECATED: Not recommended)',
     example: '/home',
     required: false,
   })
@@ -86,7 +87,8 @@ export class LoginSuccessResponse extends BaseAuthResponse {
   expiresIn: string
 
   @ApiProperty({
-    description: 'Redirect URL for successful login (DEPRECATED: Frontend should determine navigation)',
+    description:
+      'Redirect URL for successful login (DEPRECATED: Frontend should determine navigation)',
     example: '/home',
     required: false,
   })
@@ -142,7 +144,8 @@ export class RegisterSuccessWithLoginResponse extends BaseAuthResponse {
   message: string
 
   @ApiProperty({
-    description: 'Redirect URL after registration (DEPRECATED: Frontend determines navigation)',
+    description:
+      'Redirect URL after registration (DEPRECATED: Frontend determines navigation)',
     example: '/home',
     required: false,
   })

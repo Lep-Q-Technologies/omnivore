@@ -1,28 +1,29 @@
 import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
-import { StructuredLogger } from '../../logging/structured-logger.service'
-import { UserService } from '../../user/user.service'
-import { User, StatusType } from '../../user/entities/user.entity'
-import { RegisterDto } from '../dto/register.dto'
-import { EnvVariables } from '../../config/env-variables'
-import { EmailVerificationService } from '../email-verification.service'
-import { DefaultUserResourcesService } from '../default-user-resources.service'
-import { NotificationClient } from '../interfaces/notification-client.interface'
+import { JwtService } from '@nestjs/jwt'
+
 import { AnalyticsService } from '../../analytics/analytics.service'
-import { PubSubService } from '../../pubsub/pubsub.service'
+import { EnvVariables } from '../../config/env-variables'
 import { IntercomService } from '../../integrations/intercom.service'
+import { StructuredLogger } from '../../logging/structured-logger.service'
+import { PubSubService } from '../../pubsub/pubsub.service'
+import { StatusType, User } from '../../user/entities/user.entity'
+import { UserService } from '../../user/user.service'
+import { DefaultUserResourcesService } from '../default-user-resources.service'
 import {
+  AuthUserData,
   LoginSuccessResponse,
   RegisterSuccessWithLoginResponse,
   RegisterSuccessWithVerificationResponse,
-  AuthUserData,
 } from '../dto/auth-responses.dto'
+import { RegisterDto } from '../dto/register.dto'
+import { EmailVerificationService } from '../email-verification.service'
+import { NotificationClient } from '../interfaces/notification-client.interface'
 
 export interface JwtPayload {
   sub: string
@@ -84,6 +85,7 @@ export class AuthService {
       this.logger.warn('Token validation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
       })
+
       return null
     }
   }

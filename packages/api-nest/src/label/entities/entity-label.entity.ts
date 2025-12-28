@@ -1,12 +1,13 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
+  Entity,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm'
-import { Label } from './label.entity'
+
 import { LibraryItemEntity } from '../../library/entities/library-item.entity'
+import { Label } from './label.entity'
 
 @Entity('entity_labels', { schema: 'omnivore' })
 export class EntityLabel {
