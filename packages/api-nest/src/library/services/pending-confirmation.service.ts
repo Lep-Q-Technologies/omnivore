@@ -15,6 +15,11 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { LessThan, Repository } from 'typeorm'
 
 import {
+  FORTY_EIGHT_HOURS_MS,
+  SEVEN_DAYS_MS,
+  THIRTY_DAYS_MS,
+} from '../../common/constants/time.constants'
+import {
   NewsletterPlatform,
   PendingConfirmationEntity,
 } from '../entities/pending-confirmation.entity'
@@ -28,7 +33,7 @@ export interface CreatePendingConfirmationInput {
   confirmationEmailText?: string
   confirmationUrl?: string
   forwardedTo: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface PendingConfirmationAnalytics {
@@ -64,7 +69,7 @@ export class PendingConfirmationService {
   async create(
     input: CreatePendingConfirmationInput,
   ): Promise<PendingConfirmationEntity> {
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    const expiresAt = new Date(Date.now() + SEVEN_DAYS_MS)
 
     const confirmation = this.confirmationRepository.create({
       userId: input.userId,
@@ -254,7 +259,7 @@ export class PendingConfirmationService {
    */
   @Cron(CronExpression.EVERY_WEEK)
   async cleanupOldConfirmations(): Promise<number> {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(Date.now() - THIRTY_DAYS_MS)
 
     const result = await this.confirmationRepository.delete({
       createdAt: LessThan(thirtyDaysAgo),
@@ -302,13 +307,16 @@ export class PendingConfirmationService {
       confirmedOnes.length > 0
         ? confirmedOnes.reduce(
             (sum, c) =>
-              sum + (c.confirmedAt!.getTime() - c.createdAt.getTime()),
+              sum + ((c.confirmedAt?.getTime() ?? 0) - c.createdAt.getTime()),
             0,
           ) / confirmedOnes.length
         : 0
 
     // Group by platform
-    const byPlatform: Record<string, any> = {}
+    const byPlatform: Record<
+      string,
+      { total: number; confirmed: number; conversionRate: number }
+    > = {}
     const platforms = [
       ...new Set(confirmations.map((c) => c.newsletterPlatform || 'unknown')),
     ]
@@ -347,7 +355,7 @@ export class PendingConfirmationService {
   async getConfirmationsNeedingReminder(): Promise<
     PendingConfirmationEntity[]
   > {
-    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const twoDaysAgo = new Date(Date.now() - FORTY_EIGHT_HOURS_MS)
 
     return this.confirmationRepository.find({
       where: {

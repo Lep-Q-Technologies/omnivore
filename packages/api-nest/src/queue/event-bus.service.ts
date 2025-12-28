@@ -12,7 +12,6 @@ import { Queue } from 'bullmq'
 import { EventEmitter } from 'events'
 
 import {
-  AppEvent,
   ContentFetchCompletedEvent,
   ContentFetchFailedEvent,
   ContentFetchStartedEvent,
@@ -180,7 +179,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
-      const errorStack = error instanceof Error ? error.stack : undefined
+      const errorStack = error instanceof Error ? error.stack : null
       this.logger.error(
         `Failed to enqueue content fetch job: ${errorMessage}`,
         errorStack,
@@ -214,7 +213,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
-      const errorStack = error instanceof Error ? error.stack : undefined
+      const errorStack = error instanceof Error ? error.stack : null
       this.logger.error(
         `Failed to enqueue post-processing job: ${errorMessage}`,
         errorStack,
@@ -229,11 +228,11 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     )
 
     // Could send notification to user if final failure
-    if (!event.willRetry) {
+    if (!event.willRetry && event.userId) {
       // Notify user of failure
       this.emitNotificationRequested({
         eventType: EVENT_NAMES.NOTIFICATION_REQUESTED,
-        userId: event.userId!,
+        userId: event.userId,
         notificationType: 'in-app',
         title: 'Content Fetch Failed',
         message: `Failed to fetch content for saved item`,
@@ -273,7 +272,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
-      const errorStack = error instanceof Error ? error.stack : undefined
+      const errorStack = error instanceof Error ? error.stack : null
       this.logger.error(
         `Failed to enqueue notification: ${errorMessage}`,
         errorStack,
@@ -303,7 +302,7 @@ export class EventBusService extends EventEmitter implements OnModuleInit {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)
-      const errorStack = error instanceof Error ? error.stack : undefined
+      const errorStack = error instanceof Error ? error.stack : null
       this.logger.error(
         `Failed to enqueue search index update: ${errorMessage}`,
         errorStack,

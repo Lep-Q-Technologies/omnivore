@@ -17,7 +17,7 @@ export interface RssFeedItem {
   description?: string
   content?: string // Full content if available
   author?: string
-  publishedAt?: Date
+  publishedAt?: Date | null
   guid?: string // Unique identifier for the item
 }
 
@@ -30,7 +30,7 @@ export interface RssFeedResult {
   link: string
   feedUrl: string
   items: RssFeedItem[]
-  lastBuildDate?: Date
+  lastBuildDate?: Date | null
   language?: string
   image?: {
     url: string
@@ -79,16 +79,14 @@ export class RssFeedService {
         link: feed.link || feedUrl,
         feedUrl,
         items: [],
-        lastBuildDate: feed.lastBuildDate
-          ? new Date(feed.lastBuildDate)
-          : undefined,
-        language: (feed as any).language,
+        lastBuildDate: feed.lastBuildDate ? new Date(feed.lastBuildDate) : null,
+        language: (feed as unknown as { language?: string }).language,
       }
 
       // Extract feed image if available
-      if (feed.image) {
+      if (feed.image?.url) {
         result.image = {
-          url: feed.image.url!,
+          url: feed.image.url,
           title: feed.image.title,
           link: feed.image.link,
         }
@@ -107,7 +105,9 @@ export class RssFeedService {
     } catch (error) {
       this.logger.error(`Failed to parse RSS feed: ${feedUrl}`, error)
       throw new Error(
-        `Failed to parse RSS feed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to parse RSS feed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       )
     }
   }
@@ -118,7 +118,7 @@ export class RssFeedService {
    * @param item - Raw feed item from parser
    * @returns Parsed feed item or null if invalid
    */
-  private parseFeedItem(item: any): RssFeedItem | null {
+  private parseFeedItem(item: Parser.Item): RssFeedItem | null {
     // Must have at minimum a link
     if (!item.link) {
       this.logger.warn('Skipping feed item without link')
@@ -126,14 +126,20 @@ export class RssFeedService {
       return null
     }
 
+    const extendedItem = item as Parser.Item & {
+      contentEncoded?: string
+      creator?: string
+      id?: string
+    }
+
     const feedItem: RssFeedItem = {
       title: item.title || 'Untitled',
       link: item.link,
-      description: item.contentSnippet || item.description,
-      content: item.contentEncoded || item.content,
-      author: item.creator || item.author,
-      publishedAt: item.pubDate ? new Date(item.pubDate) : undefined,
-      guid: item.guid || item.id || item.link,
+      description: item.contentSnippet || item.summary,
+      content: extendedItem.contentEncoded || item.content,
+      author: extendedItem.creator || item.creator,
+      publishedAt: item.pubDate ? new Date(item.pubDate) : null,
+      guid: item.guid || extendedItem.id || item.link,
     }
 
     return feedItem
