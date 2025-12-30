@@ -52,7 +52,7 @@ Omnivore takes advantage of some great open source software:
 - [Swift GraphQL](https://www.swift-graphql.com/) - We generate our GraphQL queries on iOS using Swift GraphQL.
 - [Apollo GraphQL](https://www.apollographql.com/) - We generate our GraphQL queries on Android using Apollo GraphQL.
 - [Radix](https://www.radix-ui.com/) - We use Radix UI's components on our frontend.
-- [PDF.js](https://github.com/mozilla/pdf.js) - PDF.js is used to have open source pdf functionality. 
+- [PDF.js](https://github.com/mozilla/pdf.js) - PDF.js is used to have open source pdf functionality.
 - And many more awesome libraries, just checkout our package files to see what we are using.
 
 ## Importing Libraries
@@ -67,7 +67,7 @@ The easiest way to get started with local development is to use `docker compose 
 
 Omnivore is written in TypeScript and JavaScript.
 
-- [Node.js](https://nodejs.org/) (v18.16) and [Yarn](https://classic.yarnpkg.com/lang/en/) -- Versions are managed by [Volta](https://docs.volta.sh/guide/getting-started).
+- [Node.js](https://nodejs.org/) (v25.2.1) and [Yarn](https://classic.yarnpkg.com/lang/en/) -- Versions are managed by [Volta](https://docs.volta.sh/guide/getting-started).
 - [Chromium](https://www.chromium.org/chromium-projects/) -- See below for installation info.
 
 ### Running the web and API services

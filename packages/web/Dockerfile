@@ -1,7 +1,7 @@
 # Note this docker file is meant for local testing
 # and not for production.
 
-FROM node:25.2.0-alpine as builder
+FROM node:25.2.1-alpine as builder
 ENV NODE_OPTIONS=--max-old-space-size=8192
 ARG APP_ENV
 ARG BASE_URL
@@ -32,7 +32,7 @@ ADD /packages/web ./packages/web
 RUN yarn workspace @omnivore/web build
 
 
-FROM node:25.2.0-alpine as runner
+FROM node:25.2.1-alpine as runner
 LABEL org.opencontainers.image.source="https://github.com/omnivore-app/omnivore"
 
 ENV NODE_ENV production
