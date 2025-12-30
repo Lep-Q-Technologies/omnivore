@@ -2,17 +2,21 @@ import { InjectQueue } from '@nestjs/bullmq'
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Logger,
   Post,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Queue } from 'bullmq'
 
+import { EnvVariables } from '../../config/env-variables'
 import { PostmarkInboundEmailDto } from '../dto/postmark-inbound.dto'
 import { SaveNewsletterJobData } from '../processors/email-processor.service'
 import { JOB_TYPES, QUEUE_NAMES } from '../queue.constants'
-
 /**
  * Webhook Controller for handling inbound emails from Postmark
  *
@@ -29,6 +33,7 @@ export class WebhookController {
   constructor(
     @InjectQueue(QUEUE_NAMES.EMAIL_PROCESSING)
     private readonly emailQueue: Queue,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -41,8 +46,15 @@ export class WebhookController {
    */
   @Post('postmark/inbound')
   @HttpCode(HttpStatus.OK)
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: false,
+    }),
+  )
   async handlePostmarkInbound(
     @Body() payload: PostmarkInboundEmailDto,
+    @Headers() headers: Record<string, string | string[] | undefined>,
   ): Promise<{ success: boolean; message?: string }> {
     try {
       this.logger.log(
@@ -69,29 +81,25 @@ export class WebhookController {
         replyTo: payload.FromFull?.Email,
       }
 
-      // Queue the email for processing
-      const job = await this.emailQueue.add(
-        JOB_TYPES.SAVE_NEWSLETTER,
-        jobData,
-        {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 5000,
-          },
-          removeOnComplete: {
-            age: 24 * 3600, // Keep for 24 hours
-            count: 1000,
-          },
-          removeOnFail: {
-            age: 7 * 24 * 3600, // Keep failures for 7 days
-          },
-        },
-      )
+      const jobType = this.resolveJobType(headers)
 
-      this.logger.log(
-        `Queued email processing job ${job.id} for ${payload.From}`,
-      )
+      // Queue the email for processing
+      const job = await this.emailQueue.add(jobType, jobData, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: {
+          age: 24 * 3600, // Keep for 24 hours
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 7 * 24 * 3600, // Keep failures for 7 days
+        },
+      })
+
+      this.logger.log(`Queued ${jobType} job ${job.id} for ${payload.From}`)
 
       return {
         success: true,
@@ -120,13 +128,14 @@ export class WebhookController {
    * Extract List-Unsubscribe mailto: link from headers
    */
   private extractUnsubscribeMailTo(
-    headers?: Array<{ Name: string; Value: string }>,
+    headers?: Array<{ Name: string; Value: string } | [string, string]>,
   ): string | null {
-    if (!headers) {
+    const normalizedHeaders = this.normalizeHeaders(headers)
+    if (!normalizedHeaders) {
       return null
     }
 
-    const unsubHeader = headers.find(
+    const unsubHeader = normalizedHeaders.find(
       (h) => h.Name.toLowerCase() === 'list-unsubscribe',
     )
 
@@ -145,13 +154,14 @@ export class WebhookController {
    * Extract List-Unsubscribe HTTP URL from headers
    */
   private extractUnsubscribeHttpUrl(
-    headers?: Array<{ Name: string; Value: string }>,
+    headers?: Array<{ Name: string; Value: string } | [string, string]>,
   ): string | null {
-    if (!headers) {
+    const normalizedHeaders = this.normalizeHeaders(headers)
+    if (!normalizedHeaders) {
       return null
     }
 
-    const unsubHeader = headers.find(
+    const unsubHeader = normalizedHeaders.find(
       (h) => h.Name.toLowerCase() === 'list-unsubscribe',
     )
 
@@ -169,15 +179,16 @@ export class WebhookController {
    * Transform Postmark headers array to Record format
    */
   private transformHeaders(
-    headers?: Array<{ Name: string; Value: string }>,
+    headers?: Array<{ Name: string; Value: string } | [string, string]>,
   ): Record<string, string | string[]> | null {
-    if (!headers || headers.length === 0) {
+    const normalizedHeaders = this.normalizeHeaders(headers)
+    if (!normalizedHeaders || normalizedHeaders.length === 0) {
       return null
     }
 
     const result: Record<string, string | string[]> = {}
 
-    for (const header of headers) {
+    for (const header of normalizedHeaders) {
       const key = header.Name
       const value = header.Value
 
@@ -194,5 +205,92 @@ export class WebhookController {
     }
 
     return result
+  }
+
+  /**
+   * Normalize inbound headers to a Name/Value shape and drop malformed entries.
+   * Postmark can send headers as arrays (e.g., [name, value]) depending on format.
+   */
+  private normalizeHeaders(
+    headers?: Array<{ Name: string; Value: string } | [string, string]>,
+  ): Array<{ Name: string; Value: string }> | null {
+    if (!headers || headers.length === 0) {
+      return null
+    }
+
+    return headers
+      .map((header) => {
+        if (Array.isArray(header)) {
+          const [Name, Value] = header
+          if (typeof Name === 'string' && typeof Value === 'string') {
+            return { Name, Value }
+          }
+
+          return null
+        }
+
+        if (
+          header &&
+          typeof header === 'object' &&
+          typeof header.Name === 'string' &&
+          typeof header.Value === 'string'
+        ) {
+          return { Name: header.Name, Value: header.Value }
+        }
+
+        return null
+      })
+      .filter((header): header is { Name: string; Value: string } => !!header)
+  }
+
+  /**
+   * Resolve the job type from headers when a test token is provided.
+   */
+  private resolveJobType(
+    headers: Record<string, string | string[] | undefined>,
+  ): string {
+    const requestedJob = this.readHeader(headers, 'x-omnivore-webhook-job')
+    if (!requestedJob) {
+      return JOB_TYPES.SAVE_NEWSLETTER
+    }
+
+    const testToken = this.configService.get<string>(
+      EnvVariables.WEBHOOK_TEST_TOKEN,
+    )
+    const requestToken = this.readHeader(headers, 'x-omnivore-webhook-token')
+
+    if (!testToken || requestToken !== testToken) {
+      this.logger.warn(
+        `Webhook job override rejected for ${requestedJob}: missing or invalid token`,
+      )
+
+      return JOB_TYPES.SAVE_NEWSLETTER
+    }
+
+    const allowedJobs = new Set<string>([
+      JOB_TYPES.SAVE_NEWSLETTER,
+      JOB_TYPES.CONFIRMATION_EMAIL,
+    ])
+
+    if (!allowedJobs.has(requestedJob)) {
+      this.logger.warn(`Webhook job override rejected: ${requestedJob}`)
+
+      return JOB_TYPES.SAVE_NEWSLETTER
+    }
+
+    return requestedJob
+  }
+
+  private readHeader(
+    headers: Record<string, string | string[] | undefined>,
+    key: string,
+  ): string | null {
+    const value = headers[key]
+
+    if (Array.isArray(value)) {
+      return value[0] ?? null
+    }
+
+    return value ?? null
   }
 }

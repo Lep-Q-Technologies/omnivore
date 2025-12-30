@@ -36,7 +36,7 @@ export enum NewsletterPlatform {
   UNKNOWN = 'unknown',
 }
 
-@Entity('pending_confirmation')
+@Entity({ name: 'pending_confirmation', schema: 'omnivore' })
 export class PendingConfirmationEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string

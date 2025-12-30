@@ -1,0 +1,17 @@
+schema: ../api-nest/schema.graphql
+documents: 'src/**/*.graphql'
+generates:
+  src/types/generated-graphql.ts:
+    plugins:
+      - typescript
+      - typescript-operations
+    config:
+      skipTypename: false
+      withHooks: false
+      withHOC: false
+      withComponent: false
+      scalars:
+        DateTime: string
+        Date: string
+        UUID: string
+        JSON: any
