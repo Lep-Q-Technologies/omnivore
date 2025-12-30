@@ -1,0 +1,33 @@
+# Development Dockerfile for omnivore-polish
+# Uses Vite dev server with HMR (Hot Module Replacement)
+
+FROM node:25-alpine
+
+# Install necessary build tools
+RUN apk add --no-cache g++ make python3 py3-setuptools
+
+WORKDIR /app
+
+# Copy root-level package files for monorepo
+COPY package.json .
+COPY yarn.lock .
+COPY tsconfig.json .
+COPY tsconfig.base.json .
+
+# Copy omnivore-polish package.json
+COPY packages/omnivore-polish/package.json ./packages/omnivore-polish/package.json
+
+# Install dependencies at monorepo level
+RUN yarn install --pure-lockfile
+
+# Copy omnivore-polish source code
+COPY packages/omnivore-polish ./packages/omnivore-polish
+
+# Set working directory to omnivore-polish
+WORKDIR /app/packages/omnivore-polish
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Start Vite dev server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

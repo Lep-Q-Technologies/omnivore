@@ -149,8 +149,8 @@ export class UserService {
     // Create and save profile
     const newProfile = this.profileRepository.create({
       username: normalizedUsername,
-      bio: bio ?? undefined,
-      pictureUrl: pictureUrl ?? undefined,
+      bio: bio ?? null,
+      pictureUrl: pictureUrl ?? null,
       private: false,
       user: savedUser,
     })
@@ -383,6 +383,29 @@ export class UserService {
   }
 
   async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10)
+    return bcrypt.hash(password, 12) // Increased from 10 to 12 for better security
+  }
+
+  /**
+   * Update a user's password
+   * @param userId - User ID
+   * @param newPassword - New password (plaintext, will be hashed)
+   * @returns Updated user
+   */
+  async updatePassword(userId: string, newPassword: string): Promise<User> {
+    const hashedPassword = await this.hashPassword(newPassword)
+
+    await this.userRepository.update(
+      { id: userId },
+      { password: hashedPassword },
+    )
+
+    const user = await this.findById(userId)
+
+    if (!user) {
+      throw new Error('User not found after password update')
+    }
+
+    return user
   }
 }

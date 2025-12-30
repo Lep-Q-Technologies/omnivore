@@ -1,0 +1,323 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Omnivore Design System - "Structured for Power, Simple by Default" */
+/* All colors in HSL format for consistency */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Brand & Accent Colors */
+    --brand-yellow: 45 100% 60%;
+    --action-blue: 213 100% 65%;
+    
+    /* State Colors */
+    --state-success: 122 39% 49%;
+    --state-warning: 33 100% 50%;
+    --state-danger: 0 100% 27%;
+    
+    /* Priority Colors */
+    --priority-high: 33 100% 50%;
+    --priority-medium: 213 100% 65%;
+    --priority-low: 0 0% 40%;
+    
+    /* Text Colors */
+    --color-text-primary: 0 0% 100%;
+    --color-text-secondary: 0 0% 85%;
+    --color-text-tertiary: 0 0% 54%;
+    --color-text-muted: 0 0% 40%;
+    
+    /* Background Colors - Dark Theme */
+    --background: 0 0% 10%;
+    --foreground: 0 0% 100%;
+    
+    --card: 0 0% 16%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 0 0% 20%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 45 100% 60%;
+    --primary-foreground: 0 0% 10%;
+    
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 85%;
+    
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 54%;
+    
+    --accent: 213 100% 65%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 100% 27%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 213 100% 65%;
+    
+    /* Elevated surfaces */
+    --elevated: 0 0% 20%;
+    --tertiary: 0 0% 15%;
+    
+    /* Tag Colors */
+    --tag-red: 0 85% 60%;
+    --tag-orange: 25 95% 55%;
+    --tag-yellow: 45 100% 60%;
+    --tag-green: 142 71% 45%;
+    --tag-blue: 213 90% 60%;
+    --tag-purple: 262 83% 58%;
+    --tag-pink: 330 81% 60%;
+    
+    /* Read Rate Colors */
+    --read-rate-excellent: 142 71% 45%;
+    --read-rate-good: 213 90% 60%;
+    --read-rate-low: 33 100% 50%;
+    --read-rate-poor: 0 85% 55%;
+    
+    /* Chart colors for sidebar indicators */
+    --chart-1: 213 90% 60%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 25 95% 55%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 0 85% 60%;
+    --tag-gray: 0 0% 50%;
+    
+    /* Spacing (4px grid) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    
+    /* Border Radius */
+    --radius: 8px;
+    --radius-sm: 4px;
+    --radius-md: 5px;
+    --radius-lg: 8px;
+    --radius-full: 9999px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 8px 24px -4px rgb(0 0 0 / 0.5);
+    --shadow-glow: 0 0 20px rgb(255 210 52 / 0.2);
+    
+    /* Transitions */
+    --transition-fast: 150ms ease-out;
+    --transition-normal: 200ms ease-in-out;
+    --transition-slow: 300ms ease-in-out;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 45 100% 60%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 213 100% 65%;
+  }
+
+  .dark {
+    /* Dark is default, but keeping for consistency */
+    --background: 0 0% 10%;
+    --foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  
+  /* Typography Scale */
+  .text-heading {
+    @apply text-base font-bold leading-tight;
+  }
+  
+  .text-body {
+    @apply text-sm font-normal leading-normal;
+  }
+  
+  .text-caption {
+    @apply text-xs font-normal leading-normal;
+  }
+  
+  .text-micro {
+    font-size: 11px;
+    @apply font-medium leading-normal;
+  }
+}
+
+@layer components {
+  /* Card hover lift effect */
+  .card-lift {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .card-lift:focus-within {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    outline: 2px solid hsl(var(--action-blue));
+    outline-offset: 2px;
+  }
+  
+  /* Progress bar gradient */
+  .progress-gradient {
+    background: linear-gradient(90deg, 
+      hsl(var(--action-blue)) 0%, 
+      hsl(var(--state-success)) 100%
+    );
+  }
+  
+  /* Tag chip styles */
+  .tag-chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-medium;
+    @apply transition-colors duration-150;
+  }
+  
+  .tag-chip-red {
+    background: hsl(var(--tag-red) / 0.2);
+    border: 1px solid hsl(var(--tag-red) / 0.5);
+    color: hsl(var(--tag-red));
+  }
+  
+  .tag-chip-orange {
+    background: hsl(var(--tag-orange) / 0.2);
+    border: 1px solid hsl(var(--tag-orange) / 0.5);
+    color: hsl(var(--tag-orange));
+  }
+  
+  .tag-chip-yellow {
+    background: hsl(var(--tag-yellow) / 0.2);
+    border: 1px solid hsl(var(--tag-yellow) / 0.5);
+    color: hsl(var(--tag-yellow));
+  }
+  
+  .tag-chip-green {
+    background: hsl(var(--tag-green) / 0.2);
+    border: 1px solid hsl(var(--tag-green) / 0.5);
+    color: hsl(var(--tag-green));
+  }
+  
+  .tag-chip-blue {
+    background: hsl(var(--tag-blue) / 0.2);
+    border: 1px solid hsl(var(--tag-blue) / 0.5);
+    color: hsl(var(--tag-blue));
+  }
+  
+  .tag-chip-purple {
+    background: hsl(var(--tag-purple) / 0.2);
+    border: 1px solid hsl(var(--tag-purple) / 0.5);
+    color: hsl(var(--tag-purple));
+  }
+  
+  .tag-chip-pink {
+    background: hsl(var(--tag-pink) / 0.2);
+    border: 1px solid hsl(var(--tag-pink) / 0.5);
+    color: hsl(var(--tag-pink));
+  }
+  
+  .tag-chip-gray {
+    background: hsl(var(--tag-gray) / 0.2);
+    border: 1px solid hsl(var(--tag-gray) / 0.5);
+    color: hsl(var(--tag-gray));
+  }
+  
+  /* Skeleton shimmer */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--elevated)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: var(--radius-full);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Safe area insets for mobile */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -17,7 +17,7 @@ COPY /packages/discord/tsconfig.json ./packages/discord/tsconfig.json
 RUN yarn install --pure-lockfile
 RUN yarn workspace @omnivore/discord build
 
-FROM node:22.12 as runner
+FROM node:25.2.0 as runner
 
 WORKDIR /app
 

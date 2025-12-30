@@ -398,6 +398,12 @@ export class EmailProcessorService
   private async resolveUserAndSubscription(
     recipientEmail: string,
   ): Promise<{ user: User; subscription: SubscriptionEntity } | null> {
+    if (!recipientEmail) {
+      this.logger.warn('Missing recipient email address')
+
+      return null
+    }
+
     const email = recipientEmail.toLowerCase()
 
     // Extract subscription alias from email
@@ -679,8 +685,6 @@ export class EmailProcessorService
 
       return {
         success: true,
-        confirmationId: confirmation.id,
-        forwardedTo: user.email,
       }
     } catch (error) {
       this.logger.error(`Failed to process confirmation email: ${error}`)

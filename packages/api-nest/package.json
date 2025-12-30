@@ -27,7 +27,8 @@
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "schema:drop": "npm run typeorm -- schema:drop"
+    "schema:drop": "npm run typeorm -- schema:drop",
+    "test:postmark-webhook": "TS_NODE_TRANSPILE_ONLY=true ts-node -r tsconfig-paths/register scripts/test-postmark-webhook.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.11.1",
@@ -51,6 +52,7 @@
     "cheerio": "^1.1.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "commander": "^11.1.0",
     "cross-fetch": "^4.1.0",
     "dataloader": "^2.2.3",
     "dompurify": "^3.2.2",

@@ -1,4 +1,4 @@
-FROM node:14.18-alpine
+FROM node:25.2.0-alpine
 
 # Run everything after as non-privileged user.
 WORKDIR /app

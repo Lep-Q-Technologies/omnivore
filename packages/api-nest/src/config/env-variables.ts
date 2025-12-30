@@ -38,4 +38,7 @@ export enum EnvVariables {
   APPLE_TEAM_ID = 'APPLE_TEAM_ID',
   APPLE_KEY_ID = 'APPLE_KEY_ID',
   APPLE_PRIVATE_KEY = 'APPLE_PRIVATE_KEY',
+
+  // Webhook test overrides
+  WEBHOOK_TEST_TOKEN = 'WEBHOOK_TEST_TOKEN',
 }

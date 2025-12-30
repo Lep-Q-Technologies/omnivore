@@ -1,0 +1,237 @@
+import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { apiClient, AUTH_TOKEN_STORAGE_KEY } from '../lib/api-client'
+import type { AuthUser, LoginResponse, RegisterResponse } from '../types/api'
+
+const isBrowser = typeof window !== 'undefined'
+
+const fallbackStorage = {
+  length: 0,
+  clear: () => undefined,
+  getItem: () => null,
+  key: () => null,
+  removeItem: () => undefined,
+  setItem: () => undefined,
+} as Storage
+
+const storeToken = (token: string | null) => {
+  if (!isBrowser) return
+  try {
+    if (token) {
+      window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+    } else {
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    }
+  } catch (error) {
+    console.warn('Unable to persist auth token', error)
+  }
+}
+
+interface AuthState {
+  user: AuthUser | null
+  token: string | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  error: string | null
+  statusMessage: string | null
+  pendingEmailVerification: boolean
+
+  login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string, name: string) => Promise<void>
+  logout: () => void
+  setUser: (user: AuthUser | null) => void
+  setToken: (token: string | null) => void
+  clearError: () => void
+  clearStatus: () => void
+  verifyAuth: () => Promise<void>
+}
+
+const initialAuthState: Omit<
+  AuthState,
+  'login' | 'register' | 'logout' | 'setUser' | 'setToken' | 'clearError' | 'clearStatus' | 'verifyAuth'
+> = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+  statusMessage: null,
+  pendingEmailVerification: false,
+}
+
+const handleAuthSuccess = (response: LoginResponse | RegisterResponse) => {
+  if (!response.success) {
+    return {
+      ...initialAuthState,
+      error: 'errorCode' in response ? response.errorCode : 'Authentication failed',
+    }
+  }
+
+  if ('pendingEmailVerification' in response) {
+    return {
+      ...initialAuthState,
+      statusMessage: 'Please check your email to verify your account',
+      pendingEmailVerification: true,
+    }
+  }
+
+  if ('accessToken' in response && response.accessToken) {
+    storeToken(response.accessToken)
+
+    return {
+      user: response.user,
+      token: response.accessToken,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      statusMessage: null,
+      pendingEmailVerification: false,
+    }
+  }
+
+  return {
+    ...initialAuthState,
+    error: 'Authentication response missing access token',
+  }
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      ...initialAuthState,
+
+      login: async (email: string, password: string) => {
+        set({ isLoading: true, error: null, statusMessage: null })
+        try {
+          const response = await apiClient.login(email, password)
+          const nextState = handleAuthSuccess(response)
+          set({ ...nextState, isLoading: false })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Login failed'
+          set({ ...initialAuthState, error: message })
+          storeToken(null)
+        }
+      },
+
+      register: async (email: string, password: string, name: string) => {
+        set({ isLoading: true, error: null, statusMessage: null })
+        try {
+          const response = await apiClient.register(email, password, name)
+          const nextState = handleAuthSuccess(response)
+          set({ ...nextState, isLoading: false })
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Registration failed'
+          set({ ...initialAuthState, error: message })
+          storeToken(null)
+        }
+      },
+
+      logout: () => {
+        // Client-side logout: Clear token and reset state
+        // Note: Using stateless JWT - no backend session to invalidate
+        storeToken(null)
+        set({ ...initialAuthState })
+      },
+
+      setUser: (user) => {
+        set({ user, isAuthenticated: !!user })
+      },
+
+      setToken: (token) => {
+        storeToken(token)
+        set({ token, isAuthenticated: !!token })
+      },
+
+      clearError: () => set({ error: null }),
+
+      clearStatus: () =>
+        set({ statusMessage: null, pendingEmailVerification: false }),
+
+      verifyAuth: async () => {
+        const startTime = Date.now()
+
+        try {
+          const existingToken =
+            get().token ??
+            (isBrowser ? window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null)
+
+          // Fast path: no token, don't even try
+          if (!existingToken) {
+            set({ ...initialAuthState, isLoading: false })
+            storeToken(null)
+
+            return
+          }
+
+          // Optimistic: assume valid if we have persisted user
+          const persistedUser = get().user
+          if (persistedUser && existingToken) {
+            set({
+              user: persistedUser,
+              token: existingToken,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            })
+          } else {
+            set({ isLoading: true, error: null, token: existingToken })
+          }
+
+          // Verify in background with timeout
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Auth verification timeout')), 5000)
+          )
+
+          const response = await Promise.race([
+            apiClient.verifyAuth(),
+            timeoutPromise
+          ]) as Awaited<ReturnType<typeof apiClient.verifyAuth>>
+
+          if (response.authStatus === 'AUTHENTICATED' && response.user) {
+            set({
+              user: response.user as AuthUser,
+              token: existingToken,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+              statusMessage: null,
+              pendingEmailVerification: false,
+            })
+          } else if (response.authStatus === 'PENDING_USER') {
+            set({
+              ...initialAuthState,
+              statusMessage: 'Please verify your email to activate your account.',
+              pendingEmailVerification: true,
+              isLoading: false,
+            })
+            storeToken(existingToken)
+          } else {
+            set({ ...initialAuthState, isLoading: false })
+            storeToken(null)
+          }
+        } catch (error) {
+          // Verification failed - use cached state if available (offline-first)
+          const cachedUser = get().user
+          if (cachedUser && get().token) {
+            set({ isLoading: false, error: null })
+          } else {
+            set({ ...initialAuthState, isLoading: false })
+            storeToken(null)
+          }
+        }
+      },
+    }),
+    {
+      name: 'omnivore-auth',
+      storage: createJSONStorage(() =>
+        isBrowser ? window.localStorage : fallbackStorage
+      ),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+)
