@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
 
@@ -9,7 +9,7 @@ import { EnvVariables } from '../config/env-variables'
  * States are stored with a TTL of 10 minutes
  */
 @Injectable()
-export class OAuthStateStore {
+export class OAuthStateStore implements OnModuleDestroy {
   private readonly logger = new Logger(OAuthStateStore.name)
 
   private readonly redis: Redis | null = null
@@ -20,6 +20,8 @@ export class OAuthStateStore {
   >()
 
   private readonly STATE_TTL = 600 // 10 minutes in seconds
+
+  private cleanupInterval: NodeJS.Timeout | null = null
 
   constructor(private readonly configService: ConfigService) {
     const redisUrl = this.configService.get<string>(EnvVariables.REDIS_URL)
@@ -38,11 +40,14 @@ export class OAuthStateStore {
 
       this.redis.connect().catch((err) => {
         this.logger.error('Failed to connect to Redis for OAuth state', err)
+        this.logger.warn('Falling back to in-memory storage')
+        this.startCleanupInterval()
       })
     } else {
       this.logger.warn(
         'Redis not configured, using in-memory OAuth state storage (not safe for multi-instance deployments)',
       )
+      this.startCleanupInterval()
     }
   }
 
@@ -51,16 +56,29 @@ export class OAuthStateStore {
    */
   async store(state: string, data: string): Promise<void> {
     if (this.redis) {
-      const key = `oauth:state:${state}`
-      await this.redis.setex(key, this.STATE_TTL, data)
-      this.logger.debug(`Stored OAuth state: ${state}`)
+      try {
+        const key = `oauth:state:${state}`
+        await this.redis.setex(key, this.STATE_TTL, data)
+        this.logger.debug(`Stored OAuth state: ${state}`)
+      } catch (error) {
+        this.logger.error('Failed to store in Redis, using in-memory', error)
+        this.storeInMemory(state, data)
+      }
     } else {
-      // Fallback to in-memory (development only)
-      this.inMemoryStore.set(state, {
-        data,
-        expiresAt: Date.now() + this.STATE_TTL * 1000,
-      })
+      this.storeInMemory(state, data)
     }
+  }
+
+  /**
+   * Store in memory (fallback)
+   */
+  private storeInMemory(state: string, data: string): void {
+    const ttlMs = this.STATE_TTL * 1000
+
+    this.inMemoryStore.set(state, {
+      data,
+      expiresAt: Date.now() + ttlMs,
+    })
   }
 
   /**
@@ -68,18 +86,33 @@ export class OAuthStateStore {
    */
   async retrieve(state: string): Promise<string | null> {
     if (this.redis) {
-      const key = `oauth:state:${state}`
-      const data = await this.redis.get(key)
+      try {
+        const key = `oauth:state:${state}`
+        // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
+        const data = await this.redis.getdel(key)
 
-      if (data) {
-        // Delete immediately after retrieval (one-time use)
-        await this.redis.del(key)
-        this.logger.debug(`Retrieved and deleted OAuth state: ${state}`)
+        if (data) {
+          this.logger.debug(`Retrieved and deleted OAuth state: ${state}`)
+        }
+
+        return data
+      } catch (error) {
+        this.logger.error(
+          'Failed to retrieve from Redis, using in-memory',
+          error,
+        )
+
+        return this.retrieveFromMemory(state)
       }
-
-      return data
     }
-    // Fallback to in-memory
+
+    return this.retrieveFromMemory(state)
+  }
+
+  /**
+   * Retrieve from in-memory store
+   */
+  private retrieveFromMemory(state: string): string | null {
     const entry = this.inMemoryStore.get(state)
 
     if (!entry) {
@@ -100,28 +133,51 @@ export class OAuthStateStore {
   }
 
   /**
-   * Cleanup expired in-memory states (called periodically if using in-memory)
+   * Cleanup expired in-memory states
    */
-  cleanupExpired(): void {
-    if (this.redis) {
-      return
-    }
-
+  private cleanupExpired(): void {
     const now = Date.now()
+    let cleaned = 0
 
     for (const [state, entry] of this.inMemoryStore.entries()) {
       if (entry.expiresAt < now) {
         this.inMemoryStore.delete(state)
+        cleaned++
       }
+    }
+
+    if (cleaned > 0) {
+      this.logger.debug(`Cleaned up ${cleaned} expired OAuth states`)
     }
   }
 
   /**
-   * Disconnect Redis connection on module destroy
+   * Start periodic cleanup for in-memory storage
+   */
+  private startCleanupInterval(): void {
+    if (!this.cleanupInterval) {
+      this.cleanupInterval = setInterval(
+        () => this.cleanupExpired(),
+        300000, // Every 5 minutes
+      )
+      this.logger.debug(
+        'Started cleanup interval for in-memory OAuth state storage',
+      )
+    }
+  }
+
+  /**
+   * Disconnect Redis and cleanup on module destroy
    */
   async onModuleDestroy(): Promise<void> {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval)
+      this.logger.debug('Stopped cleanup interval')
+    }
+
     if (this.redis) {
       await this.redis.quit()
+      this.logger.debug('Disconnected from Redis')
     }
   }
 }

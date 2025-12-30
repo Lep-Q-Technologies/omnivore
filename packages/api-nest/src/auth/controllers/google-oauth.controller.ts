@@ -13,9 +13,14 @@ import { Response } from 'express'
 
 import { GoogleOAuthService } from '../services/google-oauth.service'
 import { OAuthAuthService } from '../services/oauth-auth.service'
+import { TokenExchangeStore } from '../token-exchange.store'
 
 interface GoogleWebAuthDto {
   idToken: string
+}
+
+interface ExchangeTokenDto {
+  code: string
 }
 
 @ApiTags('google-oauth')
@@ -26,6 +31,7 @@ export class GoogleOAuthController {
   constructor(
     private readonly oauthAuthService: OAuthAuthService,
     private readonly googleOAuthService: GoogleOAuthService,
+    private readonly tokenExchangeStore: TokenExchangeStore,
   ) {}
 
   @Get('google-redirect/login')
@@ -87,8 +93,14 @@ export class GoogleOAuthController {
         await this.oauthAuthService.handleVerifiedOAuthUser(userInfo)
 
       if (result.success && result.accessToken) {
-        // Redirect with token in URL (frontend will store in localStorage)
-        const redirectUrl = `/library?auth_token=${encodeURIComponent(result.accessToken)}`
+        // Generate one-time exchange code and store the token
+        const exchangeCode = this.tokenExchangeStore.generateExchangeCode()
+        await this.tokenExchangeStore.store(exchangeCode, result.accessToken)
+
+        // Redirect with exchange code (not the token) - frontend will exchange it
+        const redirectUrl = `/library?exchange_code=${encodeURIComponent(
+          exchangeCode,
+        )}`
 
         return res.redirect(redirectUrl)
       }
@@ -133,6 +145,53 @@ export class GoogleOAuthController {
       return res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
         error: 'Authentication failed',
+      })
+    }
+  }
+
+  @Post('exchange-token')
+  @ApiOperation({
+    summary:
+      'Exchange one-time code for access token (secure OAuth redirect flow)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+      },
+      required: ['code'],
+    },
+  })
+  async exchangeToken(@Body() body: ExchangeTokenDto, @Res() res: Response) {
+    try {
+      if (!body.code) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          error: 'Exchange code is required',
+        })
+      }
+
+      // Retrieve and delete the token (one-time use)
+      const accessToken = await this.tokenExchangeStore.retrieve(body.code)
+
+      if (!accessToken) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          success: false,
+          error: 'Invalid or expired exchange code',
+        })
+      }
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        accessToken,
+      })
+    } catch (error) {
+      this.logger.error('Error exchanging token', error)
+
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        error: 'Failed to exchange token',
       })
     }
   }

@@ -333,6 +333,13 @@ export class UserService {
     userId: string,
     passwordHash: string,
   ): Promise<void> {
-    await this.userRepository.update({ id: userId }, { password: passwordHash })
+    const result = await this.userRepository.update(
+      { id: userId },
+      { password: passwordHash },
+    )
+
+    if (!result.affected || result.affected === 0) {
+      throw new NotFoundException(`User with ID ${userId} not found`)
+    }
   }
 }

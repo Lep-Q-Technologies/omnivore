@@ -42,7 +42,7 @@
 
 1. **API Key Invalid/Expired**
 
-   - Current key: `y969249fa-7fb0-40dc-8e6d-fa37e9bf0a75`
+   - Current key: `[REDACTED - See .env file]`
    - Verify this is the correct Postmark Server API Token
    - Check if it's expired or revoked
 
@@ -114,7 +114,7 @@ Once emails are sending successfully:
 ## 📊 Current Configuration
 
 ```env
-POSTMARK_API_KEY=y969249fa-7fb0-40dc-8e6d-fa37e9bf0a75
+POSTMARK_API_KEY=[REDACTED - See .env file]
 POSTMARK_FROM_EMAIL=hello@lepq.io
 FRONTEND_URL=http://localhost:3010
 ```
