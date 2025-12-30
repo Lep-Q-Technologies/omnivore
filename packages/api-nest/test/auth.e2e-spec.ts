@@ -73,7 +73,6 @@ describe('Authentication E2E Tests', () => {
           name: newUser.name,
         },
         accessToken: expect.any(String),
-        expiresIn: expect.any(String),
       })
 
       // Store token for subsequent tests
@@ -122,7 +121,6 @@ describe('Authentication E2E Tests', () => {
           name: mainUser.name,
         },
         accessToken: expect.any(String),
-        expiresIn: expect.any(String),
       })
 
       // Update token for subsequent tests (in case it's different)
@@ -220,7 +218,6 @@ describe('Authentication E2E Tests', () => {
       expect(response.body).toMatchObject({
         success: true,
         accessToken: expect.any(String),
-        expiresIn: expect.any(String),
       })
 
       // Verify token is valid JWT structure

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing'
 
 import { UserProfile } from '../../user/entities/profile.entity'
@@ -12,6 +13,7 @@ import { AuthService } from './auth.service'
 import { GoogleOAuthService } from './google-oauth.service'
 import { OAuthAuthService } from './oauth-auth.service'
 
+// eslint-disable-next-line @typescript-eslint/consistent-return
 const createMockUser = (overrides: Partial<User> = {}): User =>
   ({
     id: 'user-123',
@@ -42,10 +44,10 @@ const createMockLoginResponse = (user: User, token: string) => ({
 })
 
 describe('OAuthAuthService', () => {
-  let service: OAuthAuthService
-  let userService: UserService
-  let authService: AuthService
-  let googleOAuthService: GoogleOAuthService
+  let service: OAuthAuthService = null
+  let userService: UserService = null
+  let authService: AuthService = null
+  let googleOAuthService: GoogleOAuthService = null
 
   const mockUserService = {
     findByEmailAndSource: jest.fn(),
