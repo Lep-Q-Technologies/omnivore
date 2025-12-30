@@ -28,12 +28,14 @@ export class RegisterDto {
   name: string
 
   @ApiProperty({
-    description: 'User password',
-    example: 'securepassword123',
-    minLength: 6,
+    description: 'User password (6-128 characters)',
+    example: 'secureP@ssw0rd123',
+    minLength: 8,
+    maxLength: 128,
   })
   @IsString()
-  @MinLength(6)
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(128, { message: 'Password must not exceed 128 characters' })
   password: string
 
   @ApiPropertyOptional({

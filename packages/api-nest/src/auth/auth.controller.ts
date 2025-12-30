@@ -6,6 +6,7 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Logger,
   Post,
   Request,
   UseGuards,
@@ -30,13 +31,17 @@ import {
 import { ConfirmEmailDto } from './dto/confirm-email.dto'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto'
 import { ResendVerificationDto } from './dto/resend-verification.dto'
+import { ResetPasswordDto } from './dto/reset-password.dto'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { AuthService } from './services/auth.service'
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name)
+
   constructor(private authService: AuthService) {}
 
   @ApiOperation({ summary: 'Login with email and password' })
@@ -87,6 +92,8 @@ export class AuthController {
 
       return loginResult
     } catch (error) {
+      this.logger.error('Login error', error)
+
       return {
         success: false,
         errorCode: AuthErrorCode.AUTH_FAILED,
@@ -189,11 +196,19 @@ export class AuthController {
 
       return result
     } catch (error) {
+      // Return generic success message to prevent user enumeration
+      // Don't reveal whether the email exists or not
       if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
-        throw new BadRequestException('User not found')
+        return {
+          success: true,
+          message: 'If the email exists, a verification link has been sent',
+        }
       }
       if (error instanceof Error && error.message === 'USER_ALREADY_VERIFIED') {
-        throw new BadRequestException('User already verified')
+        return {
+          success: true,
+          message: 'If the email exists, a verification link has been sent',
+        }
       }
       throw error
     }
@@ -210,8 +225,8 @@ export class AuthController {
     @Headers('authorization') authHeader?: string,
   ): Promise<AuthVerificationResponse> {
     try {
-      // Check for auth token in header or cookie
-      const token = authHeader || req.cookies?.auth
+      // Check for auth token in Authorization header only
+      const token = authHeader?.replace('Bearer ', '')
 
       if (!token) {
         return { authStatus: AuthStatus.NOT_AUTHENTICATED }
@@ -237,7 +252,32 @@ export class AuthController {
         user: { id: user.id, email: user.email, name: user.name },
       }
     } catch (error) {
+      this.logger.error('Error verifying auth status', error)
+
       return { authStatus: AuthStatus.NOT_AUTHENTICATED }
     }
+  }
+
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiBody({ type: RequestPasswordResetDto })
+  @HttpCode(HttpStatus.OK)
+  @Post('request-password-reset')
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    // Note: EmailService will be injected via NotificationModule
+    // For now, we'll need to update auth.module.ts to import NotificationModule
+    throw new Error(
+      'Password reset not yet fully integrated - NotificationModule needs to be added to AuthModule',
+    )
+  }
+
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @HttpCode(HttpStatus.OK)
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    // Note: EmailService will be injected via NotificationModule
+    throw new Error(
+      'Password reset not yet fully integrated - NotificationModule needs to be added to AuthModule',
+    )
   }
 }

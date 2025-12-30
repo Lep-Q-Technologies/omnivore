@@ -12,7 +12,11 @@ import { EnvVariables } from '../../config/env-variables'
 import { IntercomService } from '../../integrations/intercom.service'
 import { StructuredLogger } from '../../logging/structured-logger.service'
 import { PubSubService } from '../../pubsub/pubsub.service'
-import { StatusType, User } from '../../user/entities/user.entity'
+import {
+  RegistrationType,
+  StatusType,
+  User,
+} from '../../user/entities/user.entity'
 import { UserService } from '../../user/user.service'
 import { DefaultUserResourcesService } from '../default-user-resources.service'
 import {
@@ -342,6 +346,132 @@ export class AuthService {
     return {
       success: true,
       message: 'Verification email sent',
+    }
+  }
+
+  /**
+   * Request a password reset for a user
+   * Generates a secure token and sends reset email
+   * @param email - User's email address
+   * @returns Success response (always returns success to prevent user enumeration)
+   */
+  async requestPasswordReset(
+    email: string,
+    passwordResetTokenStore: any, // Will inject properly
+    emailService: any, // Will inject properly
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.userService.findByEmail(
+        email.trim().toLowerCase(),
+      )
+
+      if (!user) {
+        // Don't reveal that user doesn't exist (prevent enumeration)
+        this.logger.debug(
+          `Password reset requested for non-existent email: ${email}`,
+        )
+
+        return {
+          success: true,
+          message: 'If the email exists, a password reset link has been sent',
+        }
+      }
+
+      // Only allow password reset for email/password users
+      if (user.source !== RegistrationType.EMAIL) {
+        this.logger.warn(
+          `Password reset attempted for OAuth user: ${user.email}`,
+        )
+
+        // Don't reveal the auth method (prevent enumeration)
+        return {
+          success: true,
+          message: 'If the email exists, a password reset link has been sent',
+        }
+      }
+
+      // Generate reset token
+      const token = await passwordResetTokenStore.create({
+        userId: user.id,
+        email: user.email,
+        createdAt: Date.now(),
+      })
+
+      // Send reset email
+      await emailService.sendPasswordResetEmail(user.email, token)
+
+      this.logger.log('Password reset email sent', {
+        userId: user.id,
+        email: user.email,
+      })
+
+      return {
+        success: true,
+        message: 'If the email exists, a password reset link has been sent',
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error requesting password reset, email: ${email}, error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+
+      // Return success to prevent enumeration
+      return {
+        success: true,
+        message: 'If the email exists, a password reset link has been sent',
+      }
+    }
+  }
+
+  /**
+   * Reset a user's password using a reset token
+   * @param token - Password reset token
+   * @param newPassword - New password (plaintext, will be hashed)
+   * @returns Success response
+   * @throws BadRequestException if token is invalid or expired
+   */
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    passwordResetTokenStore: any, // Will inject properly
+    emailService: any, // Will inject properly
+  ): Promise<{ success: boolean; message: string }> {
+    // Retrieve and validate token (one-time use)
+    const payload = await passwordResetTokenStore.retrieve(token)
+
+    if (!payload) {
+      throw new BadRequestException('Invalid or expired password reset token')
+    }
+
+    // Get user
+    const user = await this.userService.findById(payload.userId)
+
+    if (!user) {
+      throw new BadRequestException('User not found')
+    }
+
+    // Verify email matches (extra security)
+    if (user.email !== payload.email) {
+      throw new BadRequestException('Token mismatch')
+    }
+
+    // Hash and update password
+    await this.userService.updatePassword(user.id, newPassword)
+
+    // Send confirmation email
+    await emailService.sendPasswordChangedNotification(user.email)
+
+    this.logger.log('Password reset successful', {
+      userId: user.id,
+      email: user.email,
+    })
+
+    // Analytics: Track password reset
+    this.analytics.trackPasswordReset(user.id, { email: user.email })
+
+    return {
+      success: true,
+      message:
+        'Password reset successful. You can now login with your new password.',
     }
   }
 }

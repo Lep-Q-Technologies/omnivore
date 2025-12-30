@@ -87,15 +87,13 @@ export class GoogleOAuthController {
         await this.oauthAuthService.handleVerifiedOAuthUser(userInfo)
 
       if (result.success && result.accessToken) {
-        // Set auth cookie and redirect
-        res.cookie('auth', result.accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-        })
+        // Redirect with token in URL (frontend will store in localStorage)
+        const redirectUrl = `/library?auth_token=${encodeURIComponent(result.accessToken)}`
+
+        return res.redirect(redirectUrl)
       }
 
-      return res.redirect('/library')
+      return res.redirect('/login?errorCodes=AuthFailed')
     } catch (error) {
       this.logger.error('Error in Google OAuth callback', error)
 
@@ -127,14 +125,7 @@ export class GoogleOAuthController {
         })
       }
 
-      // Set auth cookie for session management
-      res.cookie('auth', result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-      })
-
-      // Return unified response (same as email login)
+      // Return token in response body (frontend stores in localStorage)
       return res.status(HttpStatus.OK).json(result)
     } catch (error) {
       this.logger.error('Error in Google web sign-in', error)
