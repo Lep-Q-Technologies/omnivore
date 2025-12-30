@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'crypto'
 import Redis from 'ioredis'
@@ -16,7 +16,7 @@ export interface PasswordResetTokenPayload {
  * Tokens are stored with a TTL of 1 hour for security
  */
 @Injectable()
-export class PasswordResetTokenStore {
+export class PasswordResetTokenStore implements OnModuleDestroy {
   private readonly logger = new Logger(PasswordResetTokenStore.name)
 
   private readonly redis: Redis | null = null
@@ -27,6 +27,8 @@ export class PasswordResetTokenStore {
   >()
 
   private readonly TOKEN_TTL = 3600 // 1 hour in seconds
+
+  private cleanupInterval: NodeJS.Timeout | null = null
 
   constructor(private readonly configService: ConfigService) {
     const redisUrl = this.configService.get<string>(EnvVariables.REDIS_URL)
@@ -48,11 +50,14 @@ export class PasswordResetTokenStore {
           'Failed to connect to Redis for password reset tokens',
           err,
         )
+        this.logger.warn('Falling back to in-memory storage')
+        this.startCleanupInterval()
       })
     } else {
       this.logger.warn(
         'Redis not configured, using in-memory password reset token storage',
       )
+      this.startCleanupInterval()
     }
   }
 
@@ -85,20 +90,35 @@ export class PasswordResetTokenStore {
    */
   async retrieve(token: string): Promise<PasswordResetTokenPayload | null> {
     if (this.redis) {
-      const key = `password-reset:${token}`
-      const data = await this.redis.get(key)
+      try {
+        const key = `password-reset:${token}`
+        // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
+        const data = await this.redis.getdel(key)
 
-      if (!data) {
-        return null
+        if (!data) {
+          return null
+        }
+
+        this.logger.debug(`Retrieved and deleted password reset token`)
+
+        return JSON.parse(data) as PasswordResetTokenPayload
+      } catch (error) {
+        this.logger.error(
+          'Failed to retrieve from Redis, using in-memory',
+          error,
+        )
+
+        return this.retrieveFromMemory(token)
       }
-
-      // Delete immediately after retrieval (one-time use)
-      await this.redis.del(key)
-      this.logger.debug(`Retrieved and deleted password reset token`)
-
-      return JSON.parse(data) as PasswordResetTokenPayload
     }
-    // Fallback to in-memory
+
+    return this.retrieveFromMemory(token)
+  }
+
+  /**
+   * Retrieve from in-memory store
+   */
+  private retrieveFromMemory(token: string): PasswordResetTokenPayload | null {
     const entry = this.inMemoryStore.get(token)
 
     if (!entry) {
@@ -133,26 +153,47 @@ export class PasswordResetTokenStore {
   /**
    * Cleanup expired in-memory tokens
    */
-  cleanupExpired(): void {
-    if (this.redis) {
-      return
-    }
-
+  private cleanupExpired(): void {
     const now = Date.now()
+    let cleaned = 0
 
     for (const [token, entry] of this.inMemoryStore.entries()) {
       if (entry.expiresAt < now) {
         this.inMemoryStore.delete(token)
+        cleaned++
       }
+    }
+
+    if (cleaned > 0) {
+      this.logger.debug(`Cleaned up ${cleaned} expired password reset tokens`)
     }
   }
 
   /**
-   * Disconnect Redis on module destroy
+   * Start periodic cleanup for in-memory storage
+   */
+  private startCleanupInterval(): void {
+    if (!this.cleanupInterval) {
+      this.cleanupInterval = setInterval(
+        () => this.cleanupExpired(),
+        300000, // Every 5 minutes
+      )
+      this.logger.debug('Started cleanup interval for in-memory token storage')
+    }
+  }
+
+  /**
+   * Disconnect Redis and cleanup on module destroy
    */
   async onModuleDestroy(): Promise<void> {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval)
+      this.logger.debug('Stopped cleanup interval')
+    }
+
     if (this.redis) {
       await this.redis.quit()
+      this.logger.debug('Disconnected from Redis')
     }
   }
 }

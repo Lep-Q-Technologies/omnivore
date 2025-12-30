@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '25.2.0'
+          node-version: '25.2.1'
           cache: 'npm'
           cache-dependency-path: '${{ matrix.package }}/package-lock.json'
 
@@ -86,7 +86,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'typescript']
+        language: ['javascript']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

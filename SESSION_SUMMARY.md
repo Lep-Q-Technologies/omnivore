@@ -262,7 +262,7 @@
 **File:** `packages/api-nest/.env`
 
 ```bash
-POSTMARK_API_KEY=y969249fa-7fb0-40dc-8e6d-fa37e9bf0a75
+POSTMARK_API_KEY=[REDACTED - See .env file]
 POSTMARK_FROM_EMAIL=hello@lepq.io
 FRONTEND_URL=http://localhost:3010
 ```

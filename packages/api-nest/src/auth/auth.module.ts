@@ -33,6 +33,7 @@ import { PendingUserService } from './services/pending-user.service'
 import { UserRegistrationService } from './services/user-registration.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { LocalStrategy } from './strategies/local.strategy'
+import { TokenExchangeStore } from './token-exchange.store'
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { LocalStrategy } from './strategies/local.strategy'
     PubSubService,
     IntercomService,
     PasswordResetTokenStore,
+    TokenExchangeStore,
     {
       provide: NotificationClient,
       useClass: QueueNotificationClient,
