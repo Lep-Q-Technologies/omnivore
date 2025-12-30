@@ -57,6 +57,7 @@ export class TokenExchangeStore implements OnModuleDestroy {
 
   /**
    * Generate a secure one-time exchange code
+   * @returns A cryptographically secure 64-character hex string
    */
   generateExchangeCode(): string {
     return randomBytes(32).toString('hex')
@@ -64,6 +65,9 @@ export class TokenExchangeStore implements OnModuleDestroy {
 
   /**
    * Store an access token with a one-time exchange code
+   * @param exchangeCode - The unique exchange code (64-char hex)
+   * @param accessToken - The JWT access token to store
+   * @returns Promise that resolves when storage is complete
    */
   async store(exchangeCode: string, accessToken: string): Promise<void> {
     if (this.redis) {
@@ -82,6 +86,8 @@ export class TokenExchangeStore implements OnModuleDestroy {
 
   /**
    * Retrieve and delete a token using exchange code (one-time use)
+   * @param exchangeCode - The unique exchange code to look up
+   * @returns The JWT access token if found and valid, null otherwise
    */
   async retrieve(exchangeCode: string): Promise<string | null> {
     if (this.redis) {

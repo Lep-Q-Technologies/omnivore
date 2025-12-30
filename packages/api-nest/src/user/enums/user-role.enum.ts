@@ -111,14 +111,30 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 }
 
 /**
- * Helper function to check if a role has a specific permission
+ * Check if a role has a specific permission
+ * @param role - The user role to check
+ * @param permission - The permission to check for
+ * @returns True if the role has the permission, false otherwise
+ * @example
+ * ```typescript
+ * if (hasPermission(UserRole.PREMIUM, Permission.AI_SUMMARIES)) {
+ *   // User can access AI summaries
+ * }
+ * ```
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role]?.includes(permission) || false
 }
 
 /**
- * Helper function to get all permissions for a role
+ * Get all permissions for a specific role
+ * @param role - The user role
+ * @returns Array of permissions assigned to the role
+ * @example
+ * ```typescript
+ * const permissions = getRolePermissions(UserRole.ADMIN)
+ * // Returns all admin permissions
+ * ```
  */
 export function getRolePermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] || []
