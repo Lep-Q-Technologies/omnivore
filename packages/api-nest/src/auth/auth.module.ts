@@ -28,7 +28,7 @@ import { RedisVerificationTokenStore } from './redis-verification-token.store'
 import { AuthService } from './services/auth.service'
 import { GoogleOAuthService } from './services/google-oauth.service'
 import { OAuthAuthService } from './services/oauth-auth.service'
-import { PasswordResetService } from './services/password-reset.service'
+import { PasswordService } from './services/password.service'
 import { PendingUserService } from './services/pending-user.service'
 import { UserRegistrationService } from './services/user-registration.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
@@ -61,7 +61,7 @@ import { LocalStrategy } from './strategies/local.strategy'
     GoogleOAuthService,
     PendingUserService,
     OAuthAuthService,
-    PasswordResetService,
+    PasswordService,
     UserRegistrationService,
     JwtStrategy,
     LocalStrategy,

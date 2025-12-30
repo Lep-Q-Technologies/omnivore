@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 
+import { UserProfile } from '../../user/entities/profile.entity'
 import {
   RegistrationType,
   StatusType,
@@ -48,7 +49,7 @@ describe('OAuthAuthService', () => {
 
   const mockUserService = {
     findByEmailAndSource: jest.fn(),
-    registerUser: jest.fn(),
+    createUserWithProfile: jest.fn(),
   }
 
   const mockAuthService = {
@@ -133,13 +134,16 @@ describe('OAuthAuthService', () => {
           pictureUrl: 'https://example.com/pic.jpg',
         })
         mockUserService.findByEmailAndSource.mockResolvedValue(null)
-        mockUserService.registerUser.mockResolvedValue({ user: mockUser })
+        mockUserService.createUserWithProfile.mockResolvedValue({
+          user: mockUser,
+          profile: { username: 'test' } as UserProfile,
+        })
         mockAuthService.login.mockResolvedValue(mockResponse)
 
         const result = await service.handleGoogleAuth('valid-id-token')
 
         expect(result).toEqual(mockResponse)
-        expect(userService.registerUser).toHaveBeenCalledWith({
+        expect(userService.createUserWithProfile).toHaveBeenCalledWith({
           email: 'new@example.com',
           name: 'New User',
           sourceUserId: 'google-new-123',
@@ -235,19 +239,21 @@ describe('OAuthAuthService', () => {
           name: 'New Mobile User',
         })
         mockUserService.findByEmailAndSource.mockResolvedValue(null)
-        mockUserService.registerUser.mockResolvedValue({ user: mockUser })
+        mockUserService.createUserWithProfile.mockResolvedValue({
+          user: mockUser,
+          profile: { username: 'test' } as UserProfile,
+        })
         mockAuthService.login.mockResolvedValue(mockResponse)
 
         const result = await service.handleGoogleAuth('id-token', true)
 
         expect(result).toEqual(mockResponse)
-        expect(userService.registerUser).toHaveBeenCalledWith({
+        expect(userService.createUserWithProfile).toHaveBeenCalledWith({
           email: 'new@example.com',
           name: 'New Mobile User',
           sourceUserId: 'google-new-123',
           registrationType: RegistrationType.GOOGLE,
           requireEmailConfirmation: false,
-          pictureUrl: undefined,
         })
       })
 
@@ -347,7 +353,10 @@ describe('OAuthAuthService', () => {
       const mockResponse = createMockLoginResponse(mockUser, 'jwt-token')
 
       mockUserService.findByEmailAndSource.mockResolvedValue(null)
-      mockUserService.registerUser.mockResolvedValue({ user: mockUser })
+      mockUserService.createUserWithProfile.mockResolvedValue({
+        user: mockUser,
+        profile: { username: 'test' } as any,
+      })
       mockAuthService.login.mockResolvedValue(mockResponse)
 
       const result = await service.handleVerifiedOAuthUser({
@@ -357,13 +366,12 @@ describe('OAuthAuthService', () => {
       })
 
       expect(result).toEqual(mockResponse)
-      expect(userService.registerUser).toHaveBeenCalledWith({
+      expect(userService.createUserWithProfile).toHaveBeenCalledWith({
         email: 'new@example.com',
         name: 'New User',
         sourceUserId: 'google-new-123',
         registrationType: RegistrationType.GOOGLE,
         requireEmailConfirmation: false,
-        pictureUrl: undefined,
       })
     })
   })

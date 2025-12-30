@@ -39,7 +39,7 @@ services:
 Create `packages/api/Dockerfile.dev`:
 
 ```dockerfile
-FROM node:22.12-alpine
+FROM node:25.2.1-alpine
 
 WORKDIR /app
 

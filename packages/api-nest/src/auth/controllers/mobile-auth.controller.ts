@@ -96,7 +96,7 @@ export class MobileAuthController {
   })
   async mobileEmailSignIn(@Body() body: MobileEmailSignInDto) {
     try {
-      const user = await this.userService.validateCredentials(
+      const user = await this.authService.validateUser(
         body.email,
         body.password,
       )

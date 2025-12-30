@@ -42,15 +42,15 @@ graph LR
 
 ## Container Responsibilities
 
-| Container | Responsibilities | Technology | Status |
-| --- | --- | --- | --- |
-| Express + Apollo API | GraphQL schema, REST ingestion endpoints, auth, orchestration of services | Node.js 22, Express, Apollo Server, TypeORM | Mature but monolithic; lacks module boundaries and DI |
-| Queue Processor | Listens to BullMQ queues (`queue-processor` package) for emails, digests, exports | Node.js workers, BullMQ | Scattered handlers, manual health checks, limited retry policies |
-| Content Worker | Fetches & parses content, generates thumbnails, applies rules | Puppeteer Extra, custom services | Heavy coupling to API services, difficult to scale horizontally |
-| Image Proxy | Resizes & caches images for clients | Express server | Independent container but minimal documentation |
-| ML/AI Services | Handles AI summaries/explanations | FastAPI/Node (varies) | Mixed maturity; some endpoints mocked |
-| PostgreSQL | Primary data store, TypeORM-managed schema | PostgreSQL 14+ | Schema managed via migrations, but seeds & migrations split across packages |
-| Redis | Queue backend, cache, rate limiting | Redis 6+ | Shared for queues + caching; single point of failure |
+| Container            | Responsibilities                                                                  | Technology                                      | Status                                                                      |
+| -------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
+| Express + Apollo API | GraphQL schema, REST ingestion endpoints, auth, orchestration of services         | Node.js 25.2.1, Express, Apollo Server, TypeORM | Mature but monolithic; lacks module boundaries and DI                       |
+| Queue Processor      | Listens to BullMQ queues (`queue-processor` package) for emails, digests, exports | Node.js workers, BullMQ                         | Scattered handlers, manual health checks, limited retry policies            |
+| Content Worker       | Fetches & parses content, generates thumbnails, applies rules                     | Puppeteer Extra, custom services                | Heavy coupling to API services, difficult to scale horizontally             |
+| Image Proxy          | Resizes & caches images for clients                                               | Express server                                  | Independent container but minimal documentation                             |
+| ML/AI Services       | Handles AI summaries/explanations                                                 | FastAPI/Node (varies)                           | Mixed maturity; some endpoints mocked                                       |
+| PostgreSQL           | Primary data store, TypeORM-managed schema                                        | PostgreSQL 14+                                  | Schema managed via migrations, but seeds & migrations split across packages |
+| Redis                | Queue backend, cache, rate limiting                                               | Redis 6+                                        | Shared for queues + caching; single point of failure                        |
 
 ## Built vs. Missing at Container Level
 
