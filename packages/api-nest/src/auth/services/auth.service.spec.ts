@@ -24,6 +24,7 @@ import { AuthService } from './auth.service'
 import { PasswordService } from './password.service'
 import { UserRegistrationService } from './user-registration.service'
 
+// eslint-disable-next-line @typescript-eslint/consistent-return
 const createMockUser = (overrides: Partial<User> = {}): User =>
   ({
     id: '1',

@@ -1,12 +1,13 @@
 import { faker } from '@faker-js/faker'
 import { Repository } from 'typeorm'
+
+import { FOLDERS } from '../../src/constants/folders.constants'
 import {
+  ContentType,
   LibraryItemEntity,
   LibraryItemState,
-  ContentType,
 } from '../../src/library/entities/library-item.entity'
 import { BaseFactory, getTestRepository } from './base.factory'
-import { FOLDERS } from '../../src/constants/folders.constants'
 
 /**
  * LibraryItemFactory - Generate test library items
@@ -33,7 +34,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
     return {
       id: faker.string.uuid(),
       title,
-      slug: faker.helpers.slugify(title).toLowerCase() + `-${timestamp}`,
+      slug: `${faker.helpers.slugify(title).toLowerCase()}-${timestamp}`,
       originalUrl: faker.internet.url(),
       savedAt: new Date(),
       state: LibraryItemState.SUCCEEDED,
@@ -201,11 +202,7 @@ class LibraryItemFactoryClass extends BaseFactory<LibraryItemEntity> {
       userId,
       author: faker.person.fullName(),
       description: faker.lorem.sentences(2),
-      thumbnail: faker.image.urlLoremFlickr({
-        width: 1200,
-        height: 630,
-        category: 'business',
-      }),
+      thumbnail: faker.image.url({ width: 1200, height: 630 }),
       wordCount: faker.number.int({ min: 1000, max: 3000 }),
       siteName,
       siteIcon: `https://${domain}/favicon.ico`,
