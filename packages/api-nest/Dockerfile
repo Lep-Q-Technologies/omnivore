@@ -1,5 +1,5 @@
 # Build stage
-FROM node:25.2.0-alpine AS builder
+FROM node:25.2.1-alpine AS builder
 
 # Install build dependencies for native modules
 RUN apk add --no-cache python3 make g++ py3-pip
@@ -26,7 +26,7 @@ WORKDIR /app/packages/api-nest
 RUN yarn build
 
 # Production stage
-FROM node:25.2.0-alpine AS production
+FROM node:25.2.1-alpine AS production
 
 WORKDIR /app
 
