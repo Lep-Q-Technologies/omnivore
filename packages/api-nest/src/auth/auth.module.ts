@@ -14,7 +14,6 @@ import { PubSubService } from '../pubsub/pubsub.service'
 import { UserModule } from '../user/user.module'
 import { AuthController } from './auth.controller'
 import { AuthResolver } from './auth.resolver'
-import { ConsoleNotificationClient } from './console-notification.client'
 import { GoogleOAuthController } from './controllers/google-oauth.controller'
 import { MobileAuthController } from './controllers/mobile-auth.controller'
 import { DefaultUserResourcesService } from './default-user-resources.service'
@@ -90,7 +89,7 @@ import { LocalStrategy } from './strategies/local.strategy'
                 ca: tlsCert,
                 rejectUnauthorized: false,
               }
-            : undefined,
+            : null,
         })
 
         return new RedisVerificationTokenStore(redis)
