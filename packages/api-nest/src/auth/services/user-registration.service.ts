@@ -10,6 +10,7 @@ import { PubSubService } from '../../pubsub/pubsub.service'
 import { RegisterUserResult, UserService } from '../../user/user.service'
 import { DefaultUserResourcesService } from '../default-user-resources.service'
 import { EmailVerificationService } from '../email-verification.service'
+import { PasswordService } from './password.service'
 
 export interface RegisterUserInput {
   email: string
@@ -42,6 +43,7 @@ export class UserRegistrationService {
 
   constructor(
     private readonly userService: UserService,
+    private readonly passwordService: PasswordService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly defaultResources: DefaultUserResourcesService,
     private readonly analytics: AnalyticsService,
@@ -67,21 +69,31 @@ export class UserRegistrationService {
       hasInviteCode: !!input.inviteCode,
     })
 
-    // 1. Create user and profile
+    // 1. Hash password
+    const passwordHash = await this.passwordService.hashPassword(input.password)
+
+    // 2. Determine if email confirmation is required
+    const requireConfirmation = this.configService.get<boolean>(
+      EnvVariables.AUTH_REQUIRE_EMAIL_CONFIRMATION,
+      false,
+    )
+
+    // 3. Create user and profile
     const result: RegisterUserResult =
-      await this.userService.registerUserComplete({
+      await this.userService.createUserWithProfile({
         email: input.email,
-        password: input.password,
         name: input.name,
+        passwordHash,
+        requireEmailConfirmation: requireConfirmation,
         inviteCode: input.inviteCode,
       })
 
-    // 2. Provision default resources (filters, example items)
+    // 4. Provision default resources (filters, example items)
     await this.defaultResources.provisionForUser(result.user.id, {
       username: result.profile.username,
     })
 
-    // 3. Track user creation in analytics
+    // 5. Track user creation in analytics
     this.analytics.trackUserCreated(
       result.user.id,
       result.user.email,
@@ -92,7 +104,7 @@ export class UserRegistrationService {
       },
     )
 
-    // 4. Notify other services via pub/sub
+    // 6. Notify other services via pub/sub
     await this.pubsub.userCreated(
       result.user.id,
       result.user.email,
@@ -100,7 +112,7 @@ export class UserRegistrationService {
       result.profile.username,
     )
 
-    // 5. Create Intercom contact for support
+    // 7. Create Intercom contact for support
     await this.intercom.createUserContact(
       result.user.id,
       result.user.email,
@@ -110,11 +122,7 @@ export class UserRegistrationService {
       result.user.sourceUserId,
     )
 
-    // 6. Handle email verification if required
-    const requireConfirmation = this.configService.get<boolean>(
-      EnvVariables.AUTH_REQUIRE_EMAIL_CONFIRMATION,
-      false,
-    )
+    // 8. Handle email verification if required
 
     if (requireConfirmation) {
       const verificationToken =

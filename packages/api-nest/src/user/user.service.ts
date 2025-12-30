@@ -5,10 +5,8 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
-import * as bcrypt from 'bcrypt'
 import { Repository } from 'typeorm'
 
-import { EnvVariables } from '../config/env-variables'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { UserProfile } from './entities/profile.entity'
@@ -65,36 +63,13 @@ export class UserService {
   ) {}
 
   /**
-   * Complete user registration - handles password hashing, email confirmation logic
-   * This method takes RegisterDto directly and handles all user-related registration logic
+   * Create a new user with profile in a transaction
+   * This is a low-level method called by registration services
+   * @internal - Should only be called by UserRegistrationService
    */
-  async registerUserComplete(
-    registerDto: RegisterDto,
+  async createUserWithProfile(
+    input: RegisterUserInput,
   ): Promise<RegisterUserResult> {
-    // Hash password
-    const passwordHash = await this.hashPassword(registerDto.password)
-
-    // Determine if email confirmation is required
-    const requireConfirmation = this.configService.get<boolean>(
-      EnvVariables.AUTH_REQUIRE_EMAIL_CONFIRMATION,
-      false,
-    )
-
-    // Use existing registration logic
-    return this.registerUser({
-      email: registerDto.email,
-      name: registerDto.name,
-      passwordHash,
-      requireEmailConfirmation: requireConfirmation,
-      inviteCode: registerDto.inviteCode,
-    })
-  }
-
-  /**
-   * Register a new user with profile in a single transaction
-   * This replaces the AccountLifecycleService logic
-   */
-  async registerUser(input: RegisterUserInput): Promise<RegisterUserResult> {
     const {
       email,
       name,
@@ -112,13 +87,7 @@ export class UserService {
     // Handle invite validation if invite code provided
     if (input.inviteCode) {
       // TODO: Implement full invite validation and group membership creation
-      // For now, just log the invite code for tracking
-      console.log(`User registration with invite code: ${input.inviteCode}`, {
-        email: normalizedEmail,
-        inviteCode: input.inviteCode,
-        implementation: 'STUB - needs full InviteValidationService integration',
-      })
-
+      // STUB - needs full InviteValidationService integration
       // In the full implementation, this would:
       // 1. Validate the invite code (expiration, max members)
       // 2. Create a GroupMembership record
@@ -199,19 +168,15 @@ export class UserService {
       throw new ConflictException('User with this email already exists')
     }
 
-    // Hash password if provided
-    let hashedPassword: string | null = null
-    if (createUserDto.password) {
-      hashedPassword = await this.hashPassword(createUserDto.password)
-    }
-
-    // Create user
+    // Create user (password should be pre-hashed if provided)
     const user = this.userRepository.create({
       name: createUserDto.name,
       email: createUserDto.email,
-      password: hashedPassword,
+      password: createUserDto.password ?? null,
       source: RegistrationType.EMAIL,
-      sourceUserId: `${RegistrationType.EMAIL}-${createUserDto.email}-${Date.now()}`,
+      sourceUserId: `${RegistrationType.EMAIL}-${
+        createUserDto.email
+      }-${Date.now()}`,
       role: createUserDto.role ?? UserRole.USER,
       status: StatusType.ACTIVE,
       createdAt: new Date(),
@@ -261,31 +226,6 @@ export class UserService {
   }
 
   /**
-   * Validate user credentials for authentication
-   */
-  async validateCredentials(
-    email: string,
-    password: string,
-  ): Promise<User | null> {
-    const user = await this.findByEmail(email)
-    if (!user || !user.password) {
-      return null
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-    if (!isPasswordValid) {
-      return null
-    }
-
-    // Check if user can access the system
-    if (!user.canAccess()) {
-      return null
-    }
-
-    return user
-  }
-
-  /**
    * Update user information
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
@@ -295,11 +235,8 @@ export class UserService {
     }
 
     // Update user fields
+    // Update fields (password should be pre-hashed if provided)
     Object.assign(user, updateUserDto)
-
-    if (updateUserDto.password) {
-      user.password = await this.hashPassword(updateUserDto.password)
-    }
 
     await this.userRepository.save(user)
 
@@ -314,7 +251,11 @@ export class UserService {
   /**
    * Update user role
    */
-  async updateRole(id: string, role: UserRole, reason?: string): Promise<User> {
+  async updateRole(
+    id: string,
+    role: UserRole,
+    _reason?: string,
+  ): Promise<User> {
     const user = await this.findById(id)
     if (!user) {
       throw new NotFoundException('User not found')
@@ -382,30 +323,16 @@ export class UserService {
     return { total, active, suspended, premium }
   }
 
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12) // Increased from 10 to 12 for better security
-  }
-
   /**
-   * Update a user's password
+   * Update a user's password hash
+   * @internal - Should only be called by PasswordService
    * @param userId - User ID
-   * @param newPassword - New password (plaintext, will be hashed)
-   * @returns Updated user
+   * @param passwordHash - Hashed password
    */
-  async updatePassword(userId: string, newPassword: string): Promise<User> {
-    const hashedPassword = await this.hashPassword(newPassword)
-
-    await this.userRepository.update(
-      { id: userId },
-      { password: hashedPassword },
-    )
-
-    const user = await this.findById(userId)
-
-    if (!user) {
-      throw new Error('User not found after password update')
-    }
-
-    return user
+  async updatePasswordHash(
+    userId: string,
+    passwordHash: string,
+  ): Promise<void> {
+    await this.userRepository.update({ id: userId }, { password: passwordHash })
   }
 }

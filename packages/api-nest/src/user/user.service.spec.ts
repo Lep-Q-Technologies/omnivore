@@ -2,18 +2,11 @@ import { NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import { getRepositoryToken } from '@nestjs/typeorm'
-import * as bcrypt from 'bcrypt'
 import { Repository } from 'typeorm'
 
 import { UserProfile } from './entities/profile.entity'
 import { RegistrationType, StatusType, User } from './entities/user.entity'
 import { UserService } from './user.service'
-
-// Mock bcrypt
-jest.mock('bcrypt', () => ({
-  hash: jest.fn(),
-  compare: jest.fn(),
-}))
 
 const createMockUser = (overrides: Partial<User> = {}): User =>
   ({
@@ -49,9 +42,9 @@ const createMockProfile = (overrides: Partial<UserProfile> = {}): UserProfile =>
 
 describe('UserService', () => {
   let service: UserService
-  let userRepository: Repository<User>
-  let profileRepository: Repository<UserProfile>
-  let configService: ConfigService
+  let _userRepository: Repository<User>
+  let _profileRepository: Repository<UserProfile>
+  let _configService: ConfigService
 
   const mockUserRepository = {
     create: jest.fn(),
@@ -89,11 +82,11 @@ describe('UserService', () => {
     }).compile()
 
     service = module.get<UserService>(UserService)
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User))
-    profileRepository = module.get<Repository<UserProfile>>(
+    _userRepository = module.get<Repository<User>>(getRepositoryToken(User))
+    _profileRepository = module.get<Repository<UserProfile>>(
       getRepositoryToken(UserProfile),
     )
-    configService = module.get<ConfigService>(ConfigService)
+    _configService = module.get<ConfigService>(ConfigService)
   })
 
   afterEach(() => {
@@ -105,16 +98,13 @@ describe('UserService', () => {
       const createUserDto = {
         email: 'test@example.com',
         name: 'Test User',
-        password: 'password123',
+        password: 'hashed-password',
       }
 
       const mockUser = createMockUser()
-      const hashedPassword = 'hashed-password'
 
       // Mock findByEmail to return null (user doesn't exist)
       mockUserRepository.findOne.mockResolvedValue(null)
-      // Mock password hashing
-      ;(bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword)
       // Mock user creation
       mockUserRepository.create.mockReturnValue(mockUser)
       mockUserRepository.save.mockResolvedValue(mockUser)
@@ -124,7 +114,6 @@ describe('UserService', () => {
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       })
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10)
       expect(mockUserRepository.save).toHaveBeenCalledWith(mockUser)
       expect(result).toBe(mockUser)
     })
@@ -180,64 +169,7 @@ describe('UserService', () => {
     })
   })
 
-  describe('validateCredentials', () => {
-    it('should return user when credentials are valid', async () => {
-      const email = 'test@example.com'
-      const password = 'password123'
-      const mockUser = createMockUser()
-
-      mockUserRepository.findOne.mockResolvedValue(mockUser)
-      ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
-
-      const result = await service.validateCredentials(email, password)
-
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { email: email.toLowerCase() },
-      })
-      expect(bcrypt.compare).toHaveBeenCalledWith(password, mockUser.password)
-      expect(result).toBe(mockUser)
-    })
-
-    it('should return null when user not found', async () => {
-      const email = 'nonexistent@example.com'
-      const password = 'password123'
-
-      mockUserRepository.findOne.mockResolvedValue(null)
-
-      const result = await service.validateCredentials(email, password)
-
-      expect(result).toBeNull()
-    })
-
-    it('should return null when password is invalid', async () => {
-      const email = 'test@example.com'
-      const password = 'wrongpassword'
-      const mockUser = createMockUser()
-
-      mockUserRepository.findOne.mockResolvedValue(mockUser)
-      ;(bcrypt.compare as jest.Mock).mockResolvedValue(false)
-
-      const result = await service.validateCredentials(email, password)
-
-      expect(result).toBeNull()
-    })
-  })
-
-  describe('hashPassword', () => {
-    it('should hash password with bcrypt', async () => {
-      const password = 'password123'
-      const hashedPassword = 'hashed-password'
-
-      ;(bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword)
-
-      const result = await service.hashPassword(password)
-
-      expect(bcrypt.hash).toHaveBeenCalledWith(password, 10)
-      expect(result).toBe(hashedPassword)
-    })
-  })
-
-  describe('registerUser', () => {
+  describe('createUserWithProfile', () => {
     it('should register user and profile using repositories', async () => {
       const registerInput = {
         email: 'test@example.com',
@@ -254,7 +186,7 @@ describe('UserService', () => {
       mockProfileRepository.create.mockReturnValue(mockProfile)
       mockProfileRepository.save.mockResolvedValue(mockProfile)
 
-      const result = await service.registerUser(registerInput)
+      const result = await service.createUserWithProfile(registerInput)
 
       expect(mockUserRepository.create).toHaveBeenCalledWith({
         email: 'test@example.com',
@@ -267,8 +199,8 @@ describe('UserService', () => {
       expect(mockUserRepository.save).toHaveBeenCalledWith(mockUser)
       expect(mockProfileRepository.create).toHaveBeenCalledWith({
         username: expect.any(String),
-        bio: undefined,
-        pictureUrl: undefined,
+        bio: null,
+        pictureUrl: null,
         private: false,
         user: mockUser,
       })
@@ -288,9 +220,9 @@ describe('UserService', () => {
       mockUserRepository.create.mockReturnValue(mockUser)
       mockUserRepository.save.mockRejectedValue(new Error('Database error'))
 
-      await expect(service.registerUser(registerInput)).rejects.toThrow(
-        'Database error',
-      )
+      await expect(
+        service.createUserWithProfile(registerInput),
+      ).rejects.toThrow('Database error')
     })
 
     it('should create pending user when email confirmation required', async () => {
@@ -309,7 +241,7 @@ describe('UserService', () => {
       mockProfileRepository.create.mockReturnValue(mockProfile)
       mockProfileRepository.save.mockResolvedValue(mockProfile)
 
-      const result = await service.registerUser(registerInput)
+      const result = await service.createUserWithProfile(registerInput)
 
       expect(mockUserRepository.create).toHaveBeenCalledWith({
         email: 'test@example.com',
@@ -320,40 +252,6 @@ describe('UserService', () => {
         status: 'PENDING',
       })
       expect(result.user.status).toBe(StatusType.PENDING)
-    })
-  })
-
-  describe('registerUserComplete', () => {
-    it('should hash password and call registerUser', async () => {
-      const registerDto = {
-        email: 'test@example.com',
-        name: 'Test User',
-        password: 'password123',
-      }
-
-      const hashedPassword = 'hashed-password'
-      const mockResult = {
-        user: createMockUser(),
-        profile: createMockProfile(),
-      }
-
-      ;(bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword)
-      mockConfigService.get.mockReturnValue(false)
-
-      // Mock the registerUser method
-      jest.spyOn(service, 'registerUser').mockResolvedValue(mockResult)
-
-      const result = await service.registerUserComplete(registerDto)
-
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10)
-      expect(service.registerUser).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        name: 'Test User',
-        passwordHash: hashedPassword,
-        requireEmailConfirmation: false,
-        inviteCode: undefined,
-      })
-      expect(result).toBe(mockResult)
     })
   })
 

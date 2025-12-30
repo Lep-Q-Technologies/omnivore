@@ -60,7 +60,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-    })
+    }),
   )
 
   app.setGlobalPrefix('api/v2')
@@ -81,7 +81,7 @@ bootstrap()
 
 ```dockerfile
 # packages/api-nest/Dockerfile
-FROM node:22-alpine AS builder
+FROM node:25.2.1-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -90,7 +90,7 @@ RUN npm ci --only=production
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS runtime
+FROM node:25.2.1-alpine AS runtime
 
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
@@ -493,7 +493,7 @@ export class LibraryService {
   constructor(
     @InjectRepository(LibraryItem) private libraryRepo: Repository<LibraryItem>,
     private contentService: ContentService,
-    private queueService: QueueService
+    private queueService: QueueService,
   ) {}
 
   async saveArticle(url: string, userId: string): Promise<LibraryItem> {

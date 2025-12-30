@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { Test, TestingModule } from '@nestjs/testing'
@@ -20,6 +21,8 @@ import { RegisterDto } from '../dto/register.dto'
 import { EmailVerificationService } from '../email-verification.service'
 import { NotificationClient } from '../interfaces/notification-client.interface'
 import { AuthService } from './auth.service'
+import { PasswordService } from './password.service'
+import { UserRegistrationService } from './user-registration.service'
 
 const createMockUser = (overrides: Partial<User> = {}): User =>
   ({
@@ -30,7 +33,7 @@ const createMockUser = (overrides: Partial<User> = {}): User =>
     email: 'test@example.com',
     source: RegistrationType.EMAIL,
     sourceUserId: 'email-test-123',
-    passwordHash: 'hashed-password',
+    password: 'hashed-password',
     status: StatusType.ACTIVE,
     role: UserRole.USER,
     createdAt: new Date(),
@@ -40,26 +43,13 @@ const createMockUser = (overrides: Partial<User> = {}): User =>
     ...overrides,
   }) as User
 
-const createMockProfile = (overrides: Partial<UserProfile> = {}): UserProfile =>
-  ({
-    id: '1',
-    username: 'test_user',
-    bio: null,
-    pictureUrl: null,
-    isPublic: true,
-    userId: '1',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  }) as UserProfile
-
 describe('AuthService', () => {
-  let service: AuthService
-  let jwtService: JwtService
-  let userService: UserService
-  let emailVerificationService: EmailVerificationService
-  let defaultResourcesService: DefaultUserResourcesService
-  let notificationClient: NotificationClient
+  let service: AuthService = null
+  let jwtService: JwtService = null
+  let userService: UserService = null
+  let emailVerificationService: EmailVerificationService = null
+  let defaultResourcesService: DefaultUserResourcesService = null
+  let notificationClient: NotificationClient = null
 
   const mockJwtService = {
     sign: jest.fn(),
@@ -71,10 +61,19 @@ describe('AuthService', () => {
 
   const mockUserService = {
     findByEmail: jest.fn(),
-    validateCredentials: jest.fn(),
-    registerUserComplete: jest.fn(),
     findById: jest.fn(),
     activateUser: jest.fn(),
+  }
+
+  const mockPasswordService = {
+    validatePassword: jest.fn(),
+    requestPasswordReset: jest.fn(),
+    resetPassword: jest.fn(),
+  }
+
+  const mockUserRegistrationService = {
+    registerUser: jest.fn(),
+    resendVerification: jest.fn(),
   }
 
   const mockEmailVerificationService = {
@@ -125,6 +124,14 @@ describe('AuthService', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: PasswordService,
+          useValue: mockPasswordService,
+        },
+        {
+          provide: UserRegistrationService,
+          useValue: mockUserRegistrationService,
         },
         {
           provide: EmailVerificationService,
@@ -196,40 +203,72 @@ describe('AuthService', () => {
     it('should return user when credentials are valid', async () => {
       const mockUser = createMockUser()
 
-      mockUserService.validateCredentials.mockResolvedValue(mockUser)
+      mockUserService.findByEmail.mockResolvedValue(mockUser)
+      mockPasswordService.validatePassword.mockResolvedValue(true)
 
       const result = await service.validateUser('test@example.com', 'password')
 
-      expect(userService.validateCredentials).toHaveBeenCalledWith(
-        'test@example.com',
+      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(mockPasswordService.validatePassword).toHaveBeenCalledWith(
         'password',
+        'hashed-password',
       )
       expect(result).toEqual(mockUser)
     })
 
     it('should return null when user is not found', async () => {
-      mockUserService.validateCredentials.mockResolvedValue(null)
+      mockUserService.findByEmail.mockResolvedValue(null)
 
       const result = await service.validateUser('test@example.com', 'password')
 
-      expect(userService.validateCredentials).toHaveBeenCalledWith(
-        'test@example.com',
-        'password',
-      )
+      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(mockPasswordService.validatePassword).not.toHaveBeenCalled()
       expect(result).toBeNull()
     })
 
-    it('should return null when credentials are invalid', async () => {
-      mockUserService.validateCredentials.mockResolvedValue(null)
+    it('should return null when password is invalid', async () => {
+      const mockUser = createMockUser()
+
+      mockUserService.findByEmail.mockResolvedValue(mockUser)
+      mockPasswordService.validatePassword.mockResolvedValue(false)
 
       const result = await service.validateUser(
         'test@example.com',
         'wrongpassword',
       )
 
-      expect(userService.validateCredentials).toHaveBeenCalledWith(
-        'test@example.com',
+      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(mockPasswordService.validatePassword).toHaveBeenCalledWith(
         'wrongpassword',
+        'hashed-password',
+      )
+      expect(result).toBeNull()
+    })
+
+    it('should return null when user has no password', async () => {
+      const mockUser = createMockUser({ password: null })
+
+      mockUserService.findByEmail.mockResolvedValue(mockUser)
+
+      const result = await service.validateUser('test@example.com', 'password')
+
+      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(mockPasswordService.validatePassword).not.toHaveBeenCalled()
+      expect(result).toBeNull()
+    })
+
+    it('should return null when user cannot access', async () => {
+      const mockUser = createMockUser({ canAccess: () => false })
+
+      mockUserService.findByEmail.mockResolvedValue(mockUser)
+      mockPasswordService.validatePassword.mockResolvedValue(true)
+
+      const result = await service.validateUser('test@example.com', 'password')
+
+      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(mockPasswordService.validatePassword).toHaveBeenCalledWith(
+        'password',
+        'hashed-password',
       )
       expect(result).toBeNull()
     })
@@ -274,10 +313,6 @@ describe('AuthService', () => {
         email: 'newuser@example.com',
         name: 'New User',
       })
-      const mockProfile = createMockProfile({
-        username: 'newuser',
-      })
-      const mockResult = { user: mockUser, profile: mockProfile }
       const mockLoginResult = {
         success: true,
         accessToken: 'jwt-token',
@@ -288,83 +323,51 @@ describe('AuthService', () => {
         },
       }
 
-      mockUserService.registerUserComplete.mockResolvedValue(mockResult)
-      mockDefaultResourcesService.provisionForUser.mockResolvedValue(undefined)
+      mockUserRegistrationService.registerUser.mockResolvedValue({
+        user: {
+          id: mockUser.id,
+          email: mockUser.email,
+          name: mockUser.name,
+        },
+        pendingEmailVerification: false,
+      })
       mockConfigService.get.mockImplementation((key: string) => {
-        if (key === 'AUTH_REQUIRE_EMAIL_CONFIRMATION') {
-          return false
-        }
-        if (key === 'NODE_ENV') {
-          return 'test'
-        } // Skip seeding in tests
         if (key === 'JWT_EXPIRES_IN') {
           return '1h'
         }
 
-        return undefined
+        return null
       })
+      mockUserService.findById.mockResolvedValue(mockUser)
       mockJwtService.sign.mockReturnValue('jwt-token')
 
       const result = await service.register(registerDto)
 
-      expect(userService.registerUserComplete).toHaveBeenCalledWith(registerDto)
-      expect(defaultResourcesService.provisionForUser).toHaveBeenCalledWith(
-        '1',
-        {
-          username: 'newuser',
-        },
-      )
+      expect(mockUserRegistrationService.registerUser).toHaveBeenCalledWith({
+        email: registerDto.email,
+        name: registerDto.name,
+        password: registerDto.password,
+      })
+      expect(userService.findById).toHaveBeenCalledWith(mockUser.id)
       expect(result).toEqual(mockLoginResult)
     })
 
     it('should register user and return pending verification when email confirmation required', async () => {
-      const mockUser = createMockUser({
-        email: 'newuser@example.com',
-        name: 'New User',
-        status: StatusType.PENDING,
+      mockUserRegistrationService.registerUser.mockResolvedValue({
+        user: {
+          id: '1',
+          email: 'newuser@example.com',
+          name: 'New User',
+        },
+        pendingEmailVerification: true,
       })
-      const mockProfile = createMockProfile({
-        username: 'newuser',
-      })
-      const mockResult = { user: mockUser, profile: mockProfile }
-      const mockToken = 'verification-token'
-
-      mockUserService.registerUserComplete.mockResolvedValue(mockResult)
-      mockDefaultResourcesService.provisionForUser.mockResolvedValue(undefined)
-      mockConfigService.get.mockImplementation((key: string) => {
-        if (key === 'AUTH_REQUIRE_EMAIL_CONFIRMATION') {
-          return true
-        }
-        if (key === 'NODE_ENV') {
-          return 'test'
-        } // Skip seeding in tests
-
-        return undefined
-      })
-      mockEmailVerificationService.createVerificationToken.mockResolvedValue(
-        mockToken,
-      )
-      mockNotificationClient.sendEmailVerification.mockResolvedValue(undefined)
 
       const result = await service.register(registerDto)
 
-      expect(userService.registerUserComplete).toHaveBeenCalledWith(registerDto)
-      expect(defaultResourcesService.provisionForUser).toHaveBeenCalledWith(
-        '1',
-        {
-          username: 'newuser',
-        },
-      )
-      expect(
-        emailVerificationService.createVerificationToken,
-      ).toHaveBeenCalledWith({
-        userId: '1',
-        email: 'newuser@example.com',
-      })
-      expect(notificationClient.sendEmailVerification).toHaveBeenCalledWith({
-        email: 'newuser@example.com',
-        name: 'New User',
-        token: mockToken,
+      expect(mockUserRegistrationService.registerUser).toHaveBeenCalledWith({
+        email: registerDto.email,
+        name: registerDto.name,
+        password: registerDto.password,
       })
       expect(result).toEqual({
         success: true,
@@ -493,33 +496,13 @@ describe('AuthService', () => {
 
   describe('resendVerification', () => {
     it('should send verification email for pending user', async () => {
-      const mockUser = createMockUser({
-        status: StatusType.PENDING,
-        email: 'test@example.com',
-        name: 'Test User',
-      })
-      const mockToken = 'verification-token'
-
-      mockUserService.findByEmail.mockResolvedValue(mockUser)
-      mockEmailVerificationService.createVerificationToken.mockResolvedValue(
-        mockToken,
-      )
-      mockNotificationClient.sendEmailVerification.mockResolvedValue(undefined)
+      mockUserRegistrationService.resendVerification.mockResolvedValue(null)
 
       const result = await service.resendVerification('test@example.com')
 
-      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
       expect(
-        emailVerificationService.createVerificationToken,
-      ).toHaveBeenCalledWith({
-        userId: '1',
-        email: 'test@example.com',
-      })
-      expect(notificationClient.sendEmailVerification).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        name: 'Test User',
-        token: mockToken,
-      })
+        mockUserRegistrationService.resendVerification,
+      ).toHaveBeenCalledWith('test@example.com')
       expect(result).toEqual({
         success: true,
         message: 'Verification email sent',
@@ -527,25 +510,31 @@ describe('AuthService', () => {
     })
 
     it('should throw error when user not found', async () => {
-      mockUserService.findByEmail.mockResolvedValue(null)
+      mockUserRegistrationService.resendVerification.mockRejectedValue(
+        new Error('User not found'),
+      )
 
       await expect(
         service.resendVerification('test@example.com'),
       ).rejects.toThrow('User not found')
 
-      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(
+        mockUserRegistrationService.resendVerification,
+      ).toHaveBeenCalledWith('test@example.com')
     })
 
     it('should throw error when user is already verified', async () => {
-      const mockUser = createMockUser({ status: StatusType.ACTIVE })
-
-      mockUserService.findByEmail.mockResolvedValue(mockUser)
+      mockUserRegistrationService.resendVerification.mockRejectedValue(
+        new Error('Email already verified'),
+      )
 
       await expect(
         service.resendVerification('test@example.com'),
-      ).rejects.toThrow('Email already verified. Please login to continue.')
+      ).rejects.toThrow('Email already verified')
 
-      expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com')
+      expect(
+        mockUserRegistrationService.resendVerification,
+      ).toHaveBeenCalledWith('test@example.com')
     })
   })
 })

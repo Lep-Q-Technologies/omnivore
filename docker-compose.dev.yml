@@ -1,9 +1,9 @@
 services:
   postgres:
-    image: "ankane/pgvector:v0.5.1"
-    container_name: "omnivore-postgres-dev"
+    image: 'ankane/pgvector:v0.5.1'
+    container_name: 'omnivore-postgres-dev'
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d omnivore"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d omnivore']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: ./packages/db/Dockerfile
-    container_name: "omnivore-migrate-dev"
+    container_name: 'omnivore-migrate-dev'
     environment:
       - PGPASSWORD=postgres
       - POSTGRES_USER=postgres
@@ -97,9 +97,9 @@ services:
       context: .
       dockerfile: packages/api-nest/Dockerfile
       target: builder
-    container_name: "omnivore-api-nest-dev"
+    container_name: 'omnivore-api-nest-dev'
     ports:
-      - "4001:4001"
+      - '4001:4001'
     environment:
       - NODE_ENV=development
       - NEST_PORT=4001
@@ -129,55 +129,55 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
+          'CMD-SHELL',
           'node -e "require(''http'').get(''http://localhost:4001/api/v2/health'', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on(''error'', () => process.exit(1))"',
         ]
       interval: 30s
       timeout: 5s
       retries: 5
 
-  web-vite:
-    build:
-      context: .
-      dockerfile: packages/web-vite/Dockerfile.dev
-    container_name: "omnivore-web-vite-dev"
-    ports:
-      - "3000:3000"
-    environment:
-      # Vite Environment
-      - NODE_ENV=development
-      - VITE_APP_ENV=local
+  # web-vite:
+  #   build:
+  #     context: .
+  #     dockerfile: packages/web-vite/Dockerfile.dev
+  #   container_name: "omnivore-web-vite-dev"
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     # Vite Environment
+  #     - NODE_ENV=development
+  #     - VITE_APP_ENV=local
 
-      # API Configuration
-      - VITE_API_URL=http://localhost:4001/api/v2
-      - VITE_SERVER_BASE_URL=http://localhost:4001
+  #     # API Configuration
+  #     - VITE_API_URL=http://localhost:4001/api/v2
+  #     - VITE_SERVER_BASE_URL=http://localhost:4001
 
-      # Base URLs
-      - VITE_BASE_URL=http://localhost:3000
-      - VITE_HIGHLIGHTS_BASE_URL=http://localhost:3000
-      - VITE
+  #     # Base URLs
+  #     - VITE_BASE_URL=http://localhost:3000
+  #     - VITE_HIGHLIGHTS_BASE_URL=http://localhost:3000
+  #     - VITE
 
-      # OAuth Configuration (dummy values for development UI testing)
-      - VITE_GAUTH_CLIENT_ID=${GAUTH_CLIENT_ID:-dummy-google-client-id-for-development.apps.googleusercontent.com}
-      - VITE_GAUTH_IOS_CLIENT_ID=${GAUTH_IOS_CLIENT_ID:-dummy-ios-client-id}
-      - VITE_GAUTH_ANDROID_CLIENT_ID=${GAUTH_ANDROID_CLIENT_ID:-dummy-android-client-id}
-      - VITE_APPLE_CLIENT_ID=${APPLE_CLIENT_ID:-dummy-apple-client-id}
-    depends_on:
-      api-nest:
-        condition: service_healthy
-    volumes:
-      - ./packages/web-vite:/app/packages/web-vite
-      - /app/packages/web-vite/node_modules
-    command: npm run dev -- --host 0.0.0.0 --port 3000
-    restart: unless-stopped
+  #     # OAuth Configuration (dummy values for development UI testing)
+  #     - VITE_GAUTH_CLIENT_ID=${GAUTH_CLIENT_ID:-dummy-google-client-id-for-development.apps.googleusercontent.com}
+  #     - VITE_GAUTH_IOS_CLIENT_ID=${GAUTH_IOS_CLIENT_ID:-dummy-ios-client-id}
+  #     - VITE_GAUTH_ANDROID_CLIENT_ID=${GAUTH_ANDROID_CLIENT_ID:-dummy-android-client-id}
+  #     - VITE_APPLE_CLIENT_ID=${APPLE_CLIENT_ID:-dummy-apple-client-id}
+  #   depends_on:
+  #     api-nest:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./packages/web-vite:/app/packages/web-vite
+  #     - /app/packages/web-vite/node_modules
+  #   command: npm run dev -- --host 0.0.0.0 --port 3000
+  #   restart: unless-stopped
 
   omnivore-polish:
     build:
       context: .
       dockerfile: packages/omnivore-polish/Dockerfile.dev
-    container_name: "omnivore-polish-dev"
+    container_name: 'omnivore-polish-dev'
     ports:
-      - "3010:3010"
+      - '3010:3010'
     environment:
       # Vite Environment
       - NODE_ENV=development
@@ -207,12 +207,12 @@ services:
     restart: unless-stopped
 
   redis:
-    image: "redis:7.2.4"
-    container_name: "omnivore-redis-dev"
+    image: 'redis:7.2.4'
+    container_name: 'omnivore-redis-dev'
     expose:
       - 6379
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:

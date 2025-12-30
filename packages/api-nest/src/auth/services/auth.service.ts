@@ -19,7 +19,7 @@ import {
 } from '../dto/auth-responses.dto'
 import { RegisterDto } from '../dto/register.dto'
 import { EmailVerificationService } from '../email-verification.service'
-import { PasswordResetService } from './password-reset.service'
+import { PasswordService } from './password.service'
 import { UserRegistrationService } from './user-registration.service'
 
 export interface JwtPayload {
@@ -37,7 +37,7 @@ export interface JwtPayload {
  * - User login/logout
  * - Email verification (delegates to EmailVerificationService)
  * - Delegates registration to UserRegistrationService
- * - Delegates password reset to PasswordResetService
+ * - Delegates password operations to PasswordService
  */
 @Injectable()
 export class AuthService {
@@ -45,9 +45,9 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly passwordService: PasswordService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly userRegistrationService: UserRegistrationService,
-    private readonly passwordResetService: PasswordResetService,
     private readonly analytics: AnalyticsService,
     private readonly logger: StructuredLogger,
   ) {
@@ -61,7 +61,25 @@ export class AuthService {
    * @returns User entity if credentials are valid, null otherwise
    */
   async validateUser(email: string, password: string): Promise<User | null> {
-    return this.userService.validateCredentials(email, password)
+    const user = await this.userService.findByEmail(email)
+    if (!user || !user.password) {
+      return null
+    }
+
+    const isPasswordValid = await this.passwordService.validatePassword(
+      password,
+      user.password,
+    )
+    if (!isPasswordValid) {
+      return null
+    }
+
+    // Check if user can access the system
+    if (!user.canAccess()) {
+      return null
+    }
+
+    return user
   }
 
   /**
@@ -286,19 +304,19 @@ export class AuthService {
 
   /**
    * Request a password reset for a user
-   * Delegates to PasswordResetService
+   * Delegates to PasswordService
    * @param email - User's email address
    * @returns Success response (always returns success to prevent user enumeration)
    */
   async requestPasswordReset(
     email: string,
   ): Promise<{ success: boolean; message: string }> {
-    return this.passwordResetService.requestPasswordReset(email)
+    return this.passwordService.requestPasswordReset(email)
   }
 
   /**
    * Reset a user's password using a reset token
-   * Delegates to PasswordResetService
+   * Delegates to PasswordService
    * @param token - Password reset token
    * @param newPassword - New password (plaintext, will be hashed)
    * @returns Success response
@@ -308,7 +326,7 @@ export class AuthService {
     token: string,
     newPassword: string,
   ): Promise<{ success: boolean; message: string }> {
-    // PasswordResetService handles analytics tracking internally
-    return this.passwordResetService.resetPassword(token, newPassword)
+    // PasswordService handles analytics tracking internally
+    return this.passwordService.resetPassword(token, newPassword)
   }
 }

@@ -12,7 +12,7 @@
 
 ## Node.js Patterns
 
-- Use Node.js version 22 for stability (migrate to 23 after stabilization)
+- Use Node.js version 25.2.1 for consistency across the repo
 - Implement proper error handling with try-catch blocks
 - Use async/await over callbacks and promises chains
 - Implement proper stream handling

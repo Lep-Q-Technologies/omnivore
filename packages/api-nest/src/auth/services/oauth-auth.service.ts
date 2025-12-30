@@ -100,7 +100,7 @@ export class OAuthAuthService {
         registrationType,
       })
 
-      const registrationResult = await this.userService.registerUser({
+      const registrationResult = await this.userService.createUserWithProfile({
         email: userInfo.email,
         name: userInfo.name || userInfo.email.split('@')[0],
         sourceUserId: userInfo.sourceUserId,

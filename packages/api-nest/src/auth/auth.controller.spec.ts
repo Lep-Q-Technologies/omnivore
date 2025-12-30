@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 
 import { AuthController } from './auth.controller'
@@ -225,22 +225,28 @@ describe('AuthController', () => {
       expect(result).toEqual(mockResult)
     })
 
-    it('should throw BadRequestException for user not found', async () => {
+    it('should return generic success message for user not found to prevent enumeration', async () => {
       const error = new Error('USER_NOT_FOUND')
       mockAuthService.resendVerification.mockRejectedValue(error)
 
-      await expect(controller.resendVerification(resendDto)).rejects.toThrow(
-        BadRequestException,
-      )
+      const result = await controller.resendVerification(resendDto)
+
+      expect(result).toEqual({
+        success: true,
+        message: 'If the email exists, a verification link has been sent',
+      })
     })
 
-    it('should throw BadRequestException for already verified user', async () => {
+    it('should return generic success message for already verified user to prevent enumeration', async () => {
       const error = new Error('USER_ALREADY_VERIFIED')
       mockAuthService.resendVerification.mockRejectedValue(error)
 
-      await expect(controller.resendVerification(resendDto)).rejects.toThrow(
-        BadRequestException,
-      )
+      const result = await controller.resendVerification(resendDto)
+
+      expect(result).toEqual({
+        success: true,
+        message: 'If the email exists, a verification link has been sent',
+      })
     })
   })
 })

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common'
+import * as bcrypt from 'bcrypt'
 
 import { AnalyticsService } from '../../analytics/analytics.service'
 import { StructuredLogger } from '../../logging/structured-logger.service'
@@ -8,15 +9,17 @@ import { UserService } from '../../user/user.service'
 import { PasswordResetTokenStore } from '../password-reset-token.store'
 
 /**
- * Dedicated service for password reset operations
- * Handles the complete password reset flow including:
- * - Token generation and storage
- * - Email sending
- * - Password validation and updates
+ * Consolidated service for all password-related operations
+ * Handles:
+ * - Password hashing and validation
+ * - Password updates
+ * - Password reset flow (request + completion)
  */
 @Injectable()
-export class PasswordResetService {
-  private readonly logger = new Logger(PasswordResetService.name)
+export class PasswordService {
+  private readonly logger = new Logger(PasswordService.name)
+
+  private readonly BCRYPT_ROUNDS = 12
 
   constructor(
     private readonly userService: UserService,
@@ -25,8 +28,77 @@ export class PasswordResetService {
     private readonly analytics: AnalyticsService,
     private readonly structuredLogger: StructuredLogger,
   ) {
-    this.structuredLogger.setContext({ service: 'password-reset' })
+    this.structuredLogger.setContext({ service: 'password' })
   }
+
+  // ==================== Password Hashing & Validation ====================
+
+  /**
+   * Hash a plaintext password using bcrypt
+   * @param password - Plaintext password
+   * @returns Hashed password
+   */
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, this.BCRYPT_ROUNDS)
+  }
+
+  /**
+   * Validate a plaintext password against a hashed password
+   * @param plaintext - Plaintext password
+   * @param hashed - Hashed password
+   * @returns True if password matches
+   */
+  async validatePassword(plaintext: string, hashed: string): Promise<boolean> {
+    return bcrypt.compare(plaintext, hashed)
+  }
+
+  /**
+   * Validate password strength
+   * @param password - Password to validate
+   * @throws BadRequestException if password is too weak
+   */
+  validatePasswordStrength(password: string): void {
+    if (password.length < 8) {
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      )
+    }
+
+    if (password.length > 128) {
+      throw new BadRequestException('Password must be less than 128 characters')
+    }
+
+    // Optional: Add more strength checks (uppercase, lowercase, numbers, symbols)
+    // For now, keeping it simple with length requirements only
+  }
+
+  // ==================== Password Update ====================
+
+  /**
+   * Update a user's password
+   * @param userId - User ID
+   * @param newPassword - New password (plaintext, will be hashed)
+   * @returns Success confirmation
+   */
+  async updatePassword(
+    userId: string,
+    newPassword: string,
+  ): Promise<{ success: boolean }> {
+    // Validate password strength
+    this.validatePasswordStrength(newPassword)
+
+    // Hash the new password
+    const hashedPassword = await this.hashPassword(newPassword)
+
+    // Update in database via UserService
+    await this.userService.updatePasswordHash(userId, hashedPassword)
+
+    this.structuredLogger.log('Password updated successfully', { userId })
+
+    return { success: true }
+  }
+
+  // ==================== Password Reset Flow ====================
 
   /**
    * Request a password reset for a user
@@ -112,6 +184,9 @@ export class PasswordResetService {
     token: string,
     newPassword: string,
   ): Promise<{ success: boolean; message: string }> {
+    // Validate password strength
+    this.validatePasswordStrength(newPassword)
+
     // Retrieve and validate token (one-time use)
     const payload = await this.passwordResetTokenStore.retrieve(token)
 
@@ -132,7 +207,8 @@ export class PasswordResetService {
     }
 
     // Hash and update password
-    await this.userService.updatePassword(user.id, newPassword)
+    const hashedPassword = await this.hashPassword(newPassword)
+    await this.userService.updatePasswordHash(user.id, hashedPassword)
 
     // Send confirmation email
     await this.emailService.sendPasswordChangedNotification(user.email)
