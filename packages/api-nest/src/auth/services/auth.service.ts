@@ -9,16 +9,9 @@ import { JwtService } from '@nestjs/jwt'
 
 import { AnalyticsService } from '../../analytics/analytics.service'
 import { EnvVariables } from '../../config/env-variables'
-import { IntercomService } from '../../integrations/intercom.service'
 import { StructuredLogger } from '../../logging/structured-logger.service'
-import { PubSubService } from '../../pubsub/pubsub.service'
-import {
-  RegistrationType,
-  StatusType,
-  User,
-} from '../../user/entities/user.entity'
+import { StatusType, User } from '../../user/entities/user.entity'
 import { UserService } from '../../user/user.service'
-import { DefaultUserResourcesService } from '../default-user-resources.service'
 import {
   LoginSuccessResponse,
   RegisterSuccessWithLoginResponse,
@@ -26,7 +19,8 @@ import {
 } from '../dto/auth-responses.dto'
 import { RegisterDto } from '../dto/register.dto'
 import { EmailVerificationService } from '../email-verification.service'
-import { NotificationClient } from '../interfaces/notification-client.interface'
+import { PasswordResetService } from './password-reset.service'
+import { UserRegistrationService } from './user-registration.service'
 
 export interface JwtPayload {
   sub: string
@@ -36,21 +30,28 @@ export interface JwtPayload {
   exp?: number
 }
 
+/**
+ * Core authentication service
+ * Responsibilities:
+ * - JWT token generation and validation
+ * - User login/logout
+ * - Email verification (delegates to EmailVerificationService)
+ * - Delegates registration to UserRegistrationService
+ * - Delegates password reset to PasswordResetService
+ */
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private configService: ConfigService,
-    private userService: UserService,
-    private emailVerificationService: EmailVerificationService,
-    private defaultResources: DefaultUserResourcesService,
-    private notificationClient: NotificationClient,
-    private analytics: AnalyticsService,
-    private pubsub: PubSubService,
-    private intercom: IntercomService,
-    private logger: StructuredLogger,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly userService: UserService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly userRegistrationService: UserRegistrationService,
+    private readonly passwordResetService: PasswordResetService,
+    private readonly analytics: AnalyticsService,
+    private readonly logger: StructuredLogger,
   ) {
-    this.logger.setContext({ operation: 'auth' })
+    this.logger.setContext({ service: 'auth' })
   }
 
   /**
@@ -149,10 +150,9 @@ export class AuthService {
   }
 
   /**
-   * Register a new user account with complete user provisioning
-   * Creates user, profile, default resources, and triggers analytics/notifications
-   * Returns either immediate login or email verification response based on config
-   * @param registerDto - User registration data (email, password, name, etc.)
+   * Register a new user account
+   * Delegates to UserRegistrationService for lifecycle management
+   * @param registerDto - User registration data
    * @returns Login response or email verification response
    */
   async register(
@@ -160,75 +160,15 @@ export class AuthService {
   ): Promise<
     RegisterSuccessWithLoginResponse | RegisterSuccessWithVerificationResponse
   > {
-    this.logger.log('User registration started', {
+    const result = await this.userRegistrationService.registerUser({
       email: registerDto.email,
-      hasInviteCode: !!registerDto.inviteCode,
+      password: registerDto.password,
+      name: registerDto.name,
+      inviteCode: registerDto.inviteCode,
     })
 
-    // Delegate core user registration to UserService
-    const result = await this.userService.registerUserComplete(registerDto)
-
-    // Provision default resources for the new user
-    // This includes default filters and example library items (in non-production envs)
-    await this.defaultResources.provisionForUser(result.user.id, {
-      username: result.profile.username,
-    })
-
-    // Analytics: Track user creation
-    this.analytics.trackUserCreated(
-      result.user.id,
-      result.user.email,
-      result.profile.username,
-      {
-        status: result.user.status,
-        hasInviteCode: !!registerDto.inviteCode,
-      },
-    )
-
-    // Pub/Sub: Notify other services about user creation
-    await this.pubsub.userCreated(
-      result.user.id,
-      result.user.email,
-      result.user.name,
-      result.profile.username,
-    )
-
-    // Intercom: Create contact for customer support
-    await this.intercom.createUserContact(
-      result.user.id,
-      result.user.email,
-      result.user.name,
-      result.profile.username,
-      result.profile.pictureUrl,
-      result.user.sourceUserId,
-    )
-
-    // Check if email confirmation is required
-    const requireConfirmation = this.configService.get<boolean>(
-      EnvVariables.AUTH_REQUIRE_EMAIL_CONFIRMATION,
-      false,
-    )
-
-    // Handle email verification if required
-    if (requireConfirmation) {
-      const verificationToken =
-        await this.emailVerificationService.createVerificationToken({
-          userId: result.user.id,
-          email: result.user.email,
-        })
-
-      await this.notificationClient.sendEmailVerification({
-        email: result.user.email,
-        name: result.user.name,
-        token: verificationToken,
-      })
-
-      this.logger
-        .withContext({ userId: result.user.id, email: result.user.email })
-        .log('User registration completed - email verification required', {
-          status: result.user.status,
-        })
-
+    // If email verification is required, return verification response
+    if (result.pendingEmailVerification) {
       return {
         success: true,
         message:
@@ -238,13 +178,13 @@ export class AuthService {
       }
     }
 
-    this.logger
-      .withContext({ userId: result.user.id, email: result.user.email })
-      .log('User registration completed - auto-login', {
-        status: result.user.status,
-      })
+    // Otherwise, auto-login the user
+    const user = await this.userService.findById(result.user.id)
+    if (!user) {
+      throw new NotFoundException('User not found after registration')
+    }
 
-    return this.login(result.user)
+    return this.login(user)
   }
 
   /**
@@ -314,116 +254,51 @@ export class AuthService {
 
   /**
    * Resend email verification for a pending user account
+   * Delegates to UserRegistrationService
    * @param email - User's email address
    * @returns Success response
    * @throws NotFoundException if user not found
    * @throws BadRequestException if user already verified
    */
   async resendVerification(email: string) {
-    const user = await this.userService.findByEmail(email.trim().toLowerCase())
-    if (!user) {
-      throw new NotFoundException('User not found')
-    }
+    try {
+      await this.userRegistrationService.resendVerification(email)
 
-    if (user.status !== StatusType.PENDING) {
-      throw new BadRequestException(
-        'Email already verified. Please login to continue.',
-      )
-    }
-
-    const verificationToken =
-      await this.emailVerificationService.createVerificationToken({
-        userId: user.id,
-        email: user.email,
-      })
-
-    await this.notificationClient.sendEmailVerification({
-      email: user.email,
-      name: user.name,
-      token: verificationToken,
-    })
-
-    return {
-      success: true,
-      message: 'Verification email sent',
+      return {
+        success: true,
+        message: 'Verification email sent',
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'User not found') {
+        throw new NotFoundException('User not found')
+      }
+      if (
+        error instanceof Error &&
+        error.message === 'Email already verified'
+      ) {
+        throw new BadRequestException(
+          'Email already verified. Please login to continue.',
+        )
+      }
+      throw error
     }
   }
 
   /**
    * Request a password reset for a user
-   * Generates a secure token and sends reset email
+   * Delegates to PasswordResetService
    * @param email - User's email address
    * @returns Success response (always returns success to prevent user enumeration)
    */
   async requestPasswordReset(
     email: string,
-    passwordResetTokenStore: any, // Will inject properly
-    emailService: any, // Will inject properly
   ): Promise<{ success: boolean; message: string }> {
-    try {
-      const user = await this.userService.findByEmail(
-        email.trim().toLowerCase(),
-      )
-
-      if (!user) {
-        // Don't reveal that user doesn't exist (prevent enumeration)
-        this.logger.debug(
-          `Password reset requested for non-existent email: ${email}`,
-        )
-
-        return {
-          success: true,
-          message: 'If the email exists, a password reset link has been sent',
-        }
-      }
-
-      // Only allow password reset for email/password users
-      if (user.source !== RegistrationType.EMAIL) {
-        this.logger.warn(
-          `Password reset attempted for OAuth user: ${user.email}`,
-        )
-
-        // Don't reveal the auth method (prevent enumeration)
-        return {
-          success: true,
-          message: 'If the email exists, a password reset link has been sent',
-        }
-      }
-
-      // Generate reset token
-      const token = await passwordResetTokenStore.create({
-        userId: user.id,
-        email: user.email,
-        createdAt: Date.now(),
-      })
-
-      // Send reset email
-      await emailService.sendPasswordResetEmail(user.email, token)
-
-      this.logger.log('Password reset email sent', {
-        userId: user.id,
-        email: user.email,
-      })
-
-      return {
-        success: true,
-        message: 'If the email exists, a password reset link has been sent',
-      }
-    } catch (error) {
-      this.logger.error(
-        `Error requesting password reset, email: ${email}, error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      )
-
-      // Return success to prevent enumeration
-      return {
-        success: true,
-        message: 'If the email exists, a password reset link has been sent',
-      }
-    }
+    return this.passwordResetService.requestPasswordReset(email)
   }
 
   /**
    * Reset a user's password using a reset token
+   * Delegates to PasswordResetService
    * @param token - Password reset token
    * @param newPassword - New password (plaintext, will be hashed)
    * @returns Success response
@@ -432,46 +307,8 @@ export class AuthService {
   async resetPassword(
     token: string,
     newPassword: string,
-    passwordResetTokenStore: any, // Will inject properly
-    emailService: any, // Will inject properly
   ): Promise<{ success: boolean; message: string }> {
-    // Retrieve and validate token (one-time use)
-    const payload = await passwordResetTokenStore.retrieve(token)
-
-    if (!payload) {
-      throw new BadRequestException('Invalid or expired password reset token')
-    }
-
-    // Get user
-    const user = await this.userService.findById(payload.userId)
-
-    if (!user) {
-      throw new BadRequestException('User not found')
-    }
-
-    // Verify email matches (extra security)
-    if (user.email !== payload.email) {
-      throw new BadRequestException('Token mismatch')
-    }
-
-    // Hash and update password
-    await this.userService.updatePassword(user.id, newPassword)
-
-    // Send confirmation email
-    await emailService.sendPasswordChangedNotification(user.email)
-
-    this.logger.log('Password reset successful', {
-      userId: user.id,
-      email: user.email,
-    })
-
-    // Analytics: Track password reset
-    this.analytics.trackPasswordReset(user.id, { email: user.email })
-
-    return {
-      success: true,
-      message:
-        'Password reset successful. You can now login with your new password.',
-    }
+    // PasswordResetService handles analytics tracking internally
+    return this.passwordResetService.resetPassword(token, newPassword)
   }
 }

@@ -10,6 +10,7 @@ import { EnvVariables } from '../config/env-variables'
 import { Filter } from '../filter/entities/filter.entity'
 import { IntercomService } from '../integrations/intercom.service'
 import { LoggingModule } from '../logging/logging.module'
+import { NotificationModule } from '../notification/notification.module'
 import { PubSubService } from '../pubsub/pubsub.service'
 import { UserModule } from '../user/user.module'
 import { AuthController } from './auth.controller'
@@ -21,12 +22,15 @@ import { EmailVerificationService } from './email-verification.service'
 import { InMemoryVerificationTokenStore } from './in-memory-verification-token.store'
 import { NotificationClient } from './interfaces/notification-client.interface'
 import { VerificationTokenStore } from './interfaces/verification-token-store.interface'
+import { PasswordResetTokenStore } from './password-reset-token.store'
 import { QueueNotificationClient } from './queue-notification.client'
 import { RedisVerificationTokenStore } from './redis-verification-token.store'
 import { AuthService } from './services/auth.service'
 import { GoogleOAuthService } from './services/google-oauth.service'
 import { OAuthAuthService } from './services/oauth-auth.service'
+import { PasswordResetService } from './services/password-reset.service'
 import { PendingUserService } from './services/pending-user.service'
+import { UserRegistrationService } from './services/user-registration.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { LocalStrategy } from './strategies/local.strategy'
 
@@ -34,6 +38,7 @@ import { LocalStrategy } from './strategies/local.strategy'
   imports: [
     UserModule, // Import user module for UserService
     LoggingModule, // Import logging module for StructuredLogger
+    NotificationModule, // Import notification module for EmailService
     TypeOrmModule.forFeature([Filter]), // Import Filter repository for DefaultUserResourcesService
     PassportModule,
     JwtModule.registerAsync({
@@ -56,6 +61,8 @@ import { LocalStrategy } from './strategies/local.strategy'
     GoogleOAuthService,
     PendingUserService,
     OAuthAuthService,
+    PasswordResetService,
+    UserRegistrationService,
     JwtStrategy,
     LocalStrategy,
     EmailVerificationService,
@@ -63,6 +70,7 @@ import { LocalStrategy } from './strategies/local.strategy'
     AnalyticsService,
     PubSubService,
     IntercomService,
+    PasswordResetTokenStore,
     {
       provide: NotificationClient,
       useClass: QueueNotificationClient,
