@@ -1,8 +1,82 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  # Root workspace dependencies
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'security'
+    # Allow all security updates, only production for features
     allow:
-      - dependency-type: "production"
+      - dependency-type: 'production'
+
+  # API-Nest package dependencies
+  - package-ecosystem: 'npm'
+    directory: '/packages/api-nest'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'security'
+      - 'api-nest'
+    groups:
+      nestjs:
+        patterns:
+          - '@nestjs/*'
+      security-patches:
+        patterns:
+          - '*'
+        update-types:
+          - 'major'
+          - 'minor'
+          - 'patch'
+
+  # Omnivore-Polish frontend dependencies
+  - package-ecosystem: 'npm'
+    directory: '/packages/omnivore-polish'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'security'
+      - 'frontend'
+    groups:
+      react-ecosystem:
+        patterns:
+          - 'react'
+          - 'react-*'
+          - '@types/react*'
+      security-patches:
+        patterns:
+          - '*'
+        update-types:
+          - 'security'
+
+  # Docker dependencies
+  - package-ecosystem: 'docker'
+    directory: '/packages/api-nest'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'dependencies'
+      - 'docker'
+
+  # GitHub Actions dependencies
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    labels:
+      - 'dependencies'
+      - 'github-actions'

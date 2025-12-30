@@ -65,12 +65,15 @@ export class PasswordResetTokenStore {
     if (this.redis) {
       const key = `password-reset:${token}`
       await this.redis.setex(key, this.TOKEN_TTL, JSON.stringify(payload))
-      this.logger.debug(`Created password reset token for user ${payload.userId}`)
+      this.logger.debug(
+        `Created password reset token for user ${payload.userId}`,
+      )
     } else {
       // Fallback to in-memory
+      const ttlMs = this.TOKEN_TTL * 1000
       this.inMemoryStore.set(token, {
         payload,
-        expiresAt: Date.now() + this.TOKEN_TTL * 1000,
+        expiresAt: Date.now() + ttlMs,
       })
     }
 

@@ -3,10 +3,13 @@ import { ConfigService } from '@nestjs/config'
 
 import { EnvVariables } from '../config/env-variables'
 
+type AnalyticsPropertyValue = string | number | boolean | null | undefined
+type AnalyticsProperties = Record<string | number, AnalyticsPropertyValue>
+
 export interface AnalyticsEvent {
   distinctId: string
   event: string
-  properties?: Record<string | number, any>
+  properties?: AnalyticsProperties
 }
 
 export interface AnalyticsClient {
@@ -67,7 +70,7 @@ export class AnalyticsService implements AnalyticsClient {
     userId: string,
     email: string,
     username: string,
-    properties: Record<string, any> = {},
+    properties: AnalyticsProperties = {},
   ): void {
     this.capture({
       distinctId: userId,
@@ -83,7 +86,7 @@ export class AnalyticsService implements AnalyticsClient {
   /**
    * Track user login event
    */
-  trackUserLogin(userId: string, properties: Record<string, any> = {}): void {
+  trackUserLogin(userId: string, properties: AnalyticsProperties = {}): void {
     this.capture({
       distinctId: userId,
       event: 'user_login',
@@ -97,7 +100,7 @@ export class AnalyticsService implements AnalyticsClient {
   trackEmailVerified(
     userId: string,
     email: string,
-    properties: Record<string, any> = {},
+    properties: AnalyticsProperties = {},
   ): void {
     this.capture({
       distinctId: userId,
@@ -109,9 +112,25 @@ export class AnalyticsService implements AnalyticsClient {
     })
   }
 
+  /**
+   * Track password reset event
+   *
+   */
+  async trackPasswordReset(
+    userId: string,
+    properties: Record<string, string> = {},
+  ): Promise<void> {
+    this.capture({
+      distinctId: userId,
+      event: 'password_reset',
+      properties,
+    })
+  }
+
   async shutdownAsync(): Promise<void> {
     this.logger.log('Analytics service shutting down')
     // Flush any pending events
+
     return Promise.resolve()
   }
 }

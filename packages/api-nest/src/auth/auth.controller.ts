@@ -263,11 +263,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('request-password-reset')
   async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
-    // Note: EmailService will be injected via NotificationModule
-    // For now, we'll need to update auth.module.ts to import NotificationModule
-    throw new Error(
-      'Password reset not yet fully integrated - NotificationModule needs to be added to AuthModule',
-    )
+    return this.authService.requestPasswordReset(dto.email)
   }
 
   @ApiOperation({ summary: 'Reset password with token' })
@@ -275,9 +271,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    // Note: EmailService will be injected via NotificationModule
-    throw new Error(
-      'Password reset not yet fully integrated - NotificationModule needs to be added to AuthModule',
-    )
+    return this.authService.resetPassword(dto.token, dto.newPassword)
   }
 }

@@ -41,4 +41,7 @@ export enum EnvVariables {
 
   // Webhook test overrides
   WEBHOOK_TEST_TOKEN = 'WEBHOOK_TEST_TOKEN',
+
+  POSTMARK_API_KEY = 'POSTMARK_API_KEY',
+  POSTMARK_FROM_EMAIL = 'POSTMARK_FROM_EMAIL',
 }
