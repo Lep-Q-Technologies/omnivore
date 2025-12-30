@@ -17,6 +17,10 @@ export interface VerifyTokenOptions {
   consume?: boolean
 }
 
+/**
+ * Email Verification Service
+ * Handles creation and verification of email verification tokens
+ */
 @Injectable()
 export class EmailVerificationService {
   private readonly ttlSeconds: number
@@ -32,6 +36,11 @@ export class EmailVerificationService {
     )
   }
 
+  /**
+   * Create a new email verification token
+   * @param payload - Token payload containing userId and optional email
+   * @returns A 64-character hex token string
+   */
   async createVerificationToken(
     payload: CreateVerificationOptions,
   ): Promise<string> {
@@ -45,6 +54,13 @@ export class EmailVerificationService {
     return token
   }
 
+  /**
+   * Verify an email verification token
+   * @param token - The verification token to verify
+   * @param options - Verification options (e.g., consume: true for one-time use)
+   * @returns The token payload if valid
+   * @throws Error if token is not found or invalid
+   */
   async verifyToken(
     token: string,
     options: VerifyTokenOptions = {},

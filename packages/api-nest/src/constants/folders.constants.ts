@@ -30,12 +30,22 @@ export const ALL_FOLDERS = [
   FOLDERS.ALL,
 ] as const
 
-// Helper function to check if a string is a valid folder
+/**
+ * Type guard to check if a string is a valid folder name
+ * @param folder - The string to check
+ * @returns True if the folder is one of the valid folder names (including virtual folders)
+ */
 export function isValidFolder(folder: string): folder is FolderName {
   return ALL_FOLDERS.includes(folder as FolderName)
 }
 
-// Helper function to check if a string is a valid physical folder (not virtual)
+/**
+ * Type guard to check if a string is a valid physical folder (not virtual)
+ * Physical folders are those that store actual items (inbox, archive, trash)
+ * Virtual folders like 'all' and 'following' are excluded
+ * @param folder - The string to check
+ * @returns True if the folder is a physical folder (inbox, archive, or trash)
+ */
 export function isPhysicalFolder(
   folder: string,
 ): folder is (typeof VALID_FOLDERS)[number] {
