@@ -51,6 +51,7 @@ const AddNewsletterForm: React.FC<AddNewsletterFormProps> = ({ onSuccess }) => {
     return (
       <div className="add-newsletter-prompt">
         <button
+          type="button"
           className="add-newsletter-button"
           onClick={() => setIsExpanded(true)}
         >
@@ -69,6 +70,7 @@ const AddNewsletterForm: React.FC<AddNewsletterFormProps> = ({ onSuccess }) => {
       <div className="add-newsletter-form-header">
         <h3>Add Newsletter Subscription</h3>
         <button
+          type="button"
           className="close-form-button"
           onClick={() => {
             setIsExpanded(false)
