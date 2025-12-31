@@ -147,16 +147,11 @@ export class TokenExchangeStore implements OnModuleDestroy {
   /**
    * Retrieve and delete a token using exchange code (one-time use)
    * @param exchangeCode - The unique exchange code to look up
-   * @param clientInfo - Optional client info for security logging
    * @returns The JWT access token if found and valid, null otherwise
    */
-  async retrieve(
-    exchangeCode: string,
-    clientInfo?: { userId?: string; ip?: string },
-  ): Promise<string | null> {
+  async retrieve(exchangeCode: string): Promise<string | null> {
     const logContext = {
       exchangeCode: `${exchangeCode.substring(0, 8)}...`,
-      ...clientInfo,
     }
 
     if (this.redis) {
