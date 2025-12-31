@@ -124,11 +124,13 @@ const Settings = () => {
     return 'Very Fast'
   }
 
-  const mockApiKey = 'mock_api_key_abc123def456ghi789jkl012'
+  // Demo API key for UI display only - not a real key
+  const DEMO_API_KEY =
+    import.meta.env.VITE_DEMO_API_KEY || 'demo_key_for_ui_display_only'
 
   const handleCopyApiKey = () => {
-    navigator.clipboard.writeText(mockApiKey)
-    toast.success('API key copied to clipboard')
+    navigator.clipboard.writeText(DEMO_API_KEY)
+    toast.success('Demo API key copied to clipboard')
   }
 
   const handleRegenerateApiKey = () => {
@@ -737,7 +739,7 @@ const Settings = () => {
                         <Input
                           type={showApiKey ? 'text' : 'password'}
                           value={
-                            showApiKey ? mockApiKey : '••••••••••••••••••••'
+                            showApiKey ? DEMO_API_KEY : '••••••••••••••••••••'
                           }
                           readOnly
                           className="bg-elevated border-border font-mono text-sm flex-1"
