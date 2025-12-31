@@ -38,15 +38,12 @@ export class OAuthStateStore implements OnModuleDestroy {
    */
   async store(state: string, data: string): Promise<void> {
     if (this.redis) {
-      try {
-        const key = `oauth:state:${state}`
-        await this.redis.setex(key, this.STATE_TTL, data)
-        this.logger.debug(`Stored OAuth state: ${state}`)
-      } catch (error) {
-        this.logger.error('Failed to store in Redis, using in-memory', error)
-        this.storeInMemory(state, data)
-      }
+      // Fail fast - don't silently fall back to in-memory
+      const key = `oauth:state:${state}`
+      await this.redis.setex(key, this.STATE_TTL, data)
+      this.logger.debug(`Stored OAuth state: ${state}`)
     } else {
+      // Only use in-memory if started without Redis (tests/local dev)
       this.storeInMemory(state, data)
     }
   }
@@ -68,26 +65,19 @@ export class OAuthStateStore implements OnModuleDestroy {
    */
   async retrieve(state: string): Promise<string | null> {
     if (this.redis) {
-      try {
-        const key = `oauth:state:${state}`
-        // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
-        const data = await this.redis.getdel(key)
+      // Fail fast - let Redis errors propagate
+      const key = `oauth:state:${state}`
+      // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
+      const data = await this.redis.getdel(key)
 
-        if (data) {
-          this.logger.debug(`Retrieved and deleted OAuth state: ${state}`)
-        }
-
-        return data
-      } catch (error) {
-        this.logger.error(
-          'Failed to retrieve from Redis, using in-memory',
-          error,
-        )
-
-        return this.retrieveFromMemory(state)
+      if (data) {
+        this.logger.debug(`Retrieved and deleted OAuth state: ${state}`)
       }
+
+      return data
     }
 
+    // Only use in-memory if started without Redis (tests/local dev)
     return this.retrieveFromMemory(state)
   }
 

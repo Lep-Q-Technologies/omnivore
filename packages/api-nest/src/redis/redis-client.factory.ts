@@ -49,27 +49,33 @@ export async function createRedisClient(
       : null,
   })
 
-  // Connect with graceful error handling
+  // Connect with error handling
+  // If Redis is configured, we expect it to be available
+  // Don't silently fall back to in-memory - fail fast to surface misconfigurations
   const logger = new Logger(context)
 
   try {
     await redis.connect()
-    logger.debug('Successfully connected to Redis')
+    logger.log(`Successfully connected to Redis (${context})`)
   } catch (err) {
     logger.error(
-      'Failed to connect to Redis, falling back to in-memory mode',
-      err instanceof Error ? err.stack : err,
+      'Failed to connect to Redis',
+      err instanceof Error ? { message: err.message, stack: err.stack } : err,
     )
 
-    // Clean up the failed connection
     try {
       await redis.quit()
     } catch {
       // Ignore cleanup errors - connection may already be closed
     }
 
-    // Fall back to in-memory mode
-    return { redis: null, isInMemoryMode: true }
+    // Re-throw the error - let the app fail at startup
+    // This prevents running in a degraded state and surfaces configuration issues
+    throw new Error(
+      `Redis connection failed (${context}): ${
+        err instanceof Error ? { message: err.message, stack: err.stack } : err
+      }`,
+    )
   }
 
   return { redis, isInMemoryMode: false }

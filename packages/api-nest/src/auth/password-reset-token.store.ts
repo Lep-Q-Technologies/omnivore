@@ -67,51 +67,33 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
    */
   async retrieve(token: string): Promise<PasswordResetTokenPayload | null> {
     if (this.redis) {
-      try {
-        const key = `password-reset:${token}`
-        // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
-        const data = await this.redis.getdel(key)
+      // Fail fast - let Redis errors propagate
+      const key = `password-reset:${token}`
+      // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
+      const data = await this.redis.getdel(key)
 
-        if (!data) {
-          return null
-        }
-
-        this.logger.debug(`Retrieved and deleted password reset token`)
-
-        // Safe JSON.parse with validation
-        let parsed: unknown = null
-        try {
-          parsed = JSON.parse(data)
-        } catch (parseError) {
-          this.logger.error(
-            'Failed to parse password reset token JSON from Redis',
-            parseError,
-          )
-
-          return this.retrieveFromMemory(token)
-        }
-
-        // Validate required fields
-        if (!this.isValidPayload(parsed)) {
-          this.logger.error(
-            'Invalid password reset token payload structure from Redis',
-            { parsed },
-          )
-
-          return this.retrieveFromMemory(token)
-        }
-
-        return parsed
-      } catch (error) {
-        this.logger.error(
-          'Failed to retrieve from Redis, using in-memory',
-          error,
-        )
-
-        return this.retrieveFromMemory(token)
+      if (!data) {
+        return null
       }
+
+      this.logger.debug(`Retrieved and deleted password reset token`)
+
+      // Safe JSON.parse with validation
+      const parsed: unknown = JSON.parse(data)
+
+      // Validate required fields
+      if (!this.isValidPayload(parsed)) {
+        this.logger.error(
+          'Invalid password reset token payload structure from Redis',
+          { parsed },
+        )
+        throw new Error('Corrupted password reset token data in Redis')
+      }
+
+      return parsed
     }
 
+    // Only use in-memory if started without Redis (tests/local dev)
     return this.retrieveFromMemory(token)
   }
 

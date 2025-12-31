@@ -12,8 +12,9 @@ import { IntercomService } from '../integrations/intercom.service'
 import { LoggingModule } from '../logging/logging.module'
 import { NotificationModule } from '../notification/notification.module'
 import { PubSubService } from '../pubsub/pubsub.service'
+import { REDIS_CLIENT } from '../redis/redis.constants'
+import { RedisModule } from '../redis/redis.module'
 import { UserModule } from '../user/user.module'
-import { REDIS_CLIENT } from './auth.constants'
 import { AuthController } from './auth.controller'
 import { AuthResolver } from './auth.resolver'
 import { GoogleOAuthController } from './controllers/google-oauth.controller'
@@ -26,8 +27,6 @@ import { VerificationTokenStore } from './interfaces/verification-token-store.in
 import { OAuthStateStore } from './oauth-state.store'
 import { PasswordResetTokenStore } from './password-reset-token.store'
 import { QueueNotificationClient } from './queue-notification.client'
-import { createRedisClient } from './redis-client.factory'
-import { RedisConnectionProvider } from './redis-connection.provider'
 import { RedisVerificationTokenStore } from './redis-verification-token.store'
 import { AuthService } from './services/auth.service'
 import { GoogleOAuthService } from './services/google-oauth.service'
@@ -41,6 +40,7 @@ import { TokenExchangeStore } from './token-exchange.store'
 
 @Module({
   imports: [
+    RedisModule, // Import shared Redis client
     UserModule, // Import user module for UserService
     LoggingModule, // Import logging module for StructuredLogger
     NotificationModule, // Import notification module for EmailService
@@ -75,31 +75,8 @@ import { TokenExchangeStore } from './token-exchange.store'
     AnalyticsService,
     PubSubService,
     IntercomService,
-    // Shared Redis connection lifecycle manager
-    {
-      provide: RedisConnectionProvider,
-      useFactory: async (configService: ConfigService) => {
-        const { redis, isInMemoryMode } = await createRedisClient(
-          configService,
-          {
-            rejectUnauthorized: true,
-            context: 'AuthRedis',
-          },
-        )
-
-        return new RedisConnectionProvider(isInMemoryMode ? null : redis)
-      },
-      inject: [ConfigService],
-    },
-    // Shared Redis client accessor for dependency injection
-    {
-      provide: REDIS_CLIENT,
-      useFactory: (connectionProvider: RedisConnectionProvider) => {
-        return connectionProvider.client
-      },
-      inject: [RedisConnectionProvider],
-    },
     // Token exchange store (OAuth flow)
+    // Uses shared REDIS_CLIENT from RedisModule
     {
       provide: TokenExchangeStore,
       useFactory: (redis: Redis | null, configService: ConfigService) => {
