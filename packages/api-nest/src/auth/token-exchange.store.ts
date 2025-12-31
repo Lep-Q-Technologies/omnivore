@@ -125,21 +125,16 @@ export class TokenExchangeStore implements OnModuleDestroy {
     userId?: string,
   ): Promise<void> {
     if (this.redis) {
-      try {
-        const key = `token:exchange:${exchangeCode}`
-        await this.redis.setex(key, this.exchangeCodeTtl, accessToken)
-        this.logger.debug('Stored token exchange code', {
-          exchangeCode: `${exchangeCode.substring(0, 8)}...`,
-          userId,
-        })
-      } catch (error) {
-        this.logger.error('Failed to store in Redis, using in-memory', {
-          error,
-          userId,
-        })
-        this.storeInMemory(exchangeCode, accessToken)
-      }
+      // Fail fast - don't silently fall back to in-memory
+      // If Redis is down, OAuth flow fails and user retries
+      const key = `token:exchange:${exchangeCode}`
+      await this.redis.setex(key, this.exchangeCodeTtl, accessToken)
+      this.logger.debug('Stored token exchange code', {
+        exchangeCode: `${exchangeCode.substring(0, 8)}...`,
+        userId,
+      })
     } else {
+      // Only use in-memory if started without Redis (tests/local dev)
       this.storeInMemory(exchangeCode, accessToken)
     }
   }
@@ -155,33 +150,26 @@ export class TokenExchangeStore implements OnModuleDestroy {
     }
 
     if (this.redis) {
-      try {
-        const key = `token:exchange:${exchangeCode}`
-        // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
-        const token = await this.redis.getdel(key)
+      // Fail fast - let Redis errors propagate
+      const key = `token:exchange:${exchangeCode}`
+      // Use GETDEL for atomic retrieval and deletion (Redis 6.2+)
+      const token = await this.redis.getdel(key)
 
-        if (token) {
-          this.metrics.codesRedeemedSuccess++
-          this.logger.debug('Exchange code redeemed successfully', logContext)
-        } else {
-          this.metrics.codesRedeemedFailure++
-          this.logger.warn(
-            'Exchange code retrieval failed: not found or expired',
-            logContext,
-          )
-        }
-
-        return token
-      } catch (error) {
-        this.logger.error('Failed to retrieve from Redis, checking in-memory', {
-          error,
-          ...logContext,
-        })
-
-        return this.retrieveFromMemory(exchangeCode, logContext)
+      if (token) {
+        this.metrics.codesRedeemedSuccess++
+        this.logger.debug('Exchange code redeemed successfully', logContext)
+      } else {
+        this.metrics.codesRedeemedFailure++
+        this.logger.warn(
+          'Exchange code retrieval failed: not found or expired',
+          logContext,
+        )
       }
+
+      return token
     }
 
+    // Only use in-memory if started without Redis (tests/local dev)
     return this.retrieveFromMemory(exchangeCode, logContext)
   }
 
