@@ -1,5 +1,6 @@
 echo "🧪 Running unit tests for api-nest and web-vite..."
-yarn test
+# Run tests serially to avoid parallel resource contention with external HTTP requests
+yarn workspace @omnivore/api-nest test --runInBand && yarn workspace web-vite test && yarn workspace @omnivore/polish test
 
 if [ $? -ne 0 ]; then
   echo "❌ Unit tests failed. Push aborted."
@@ -10,7 +11,7 @@ fi
 echo "✅ Unit tests passed."
 echo ""
 echo "🧪 Running E2E tests for api-nest..."
-yarn test:e2e
+yarn workspace @omnivore/api-nest test:e2e
 
 if [ $? -ne 0 ]; then
   echo "❌ E2E tests failed. Push aborted."
