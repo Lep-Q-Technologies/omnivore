@@ -111,11 +111,11 @@ services:
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev-jwt-secret-at-least-32-characters-long-for-development
       - FRONTEND_URL=http://localhost:3000,http://localhost:3010
-      # OAuth Configuration
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-63233828890-nlsc5rl1bpoh40mkl1aipnl6vv8o5hgg.apps.googleusercontent.com}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-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}
-      - GOOGLE_IOS_CLIENT_ID=${GOOGLE_IOS_CLIENT_ID:-dummy-ios-client-id}
-      - GOOGLE_ANDROID_CLIENT_ID=${GOOGLE_ANDROID_CLIENT_ID:-dummy-android-client-id}
+      # OAuth Configuration - Must be set in .env file
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID must be set in .env file}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET must be set in .env file}
+      - GOOGLE_IOS_CLIENT_ID=${GOOGLE_IOS_CLIENT_ID:?GOOGLE_IOS_CLIENT_ID must be set in .env file}
+      - GOOGLE_ANDROID_CLIENT_ID=${GOOGLE_ANDROID_CLIENT_ID:?GOOGLE_ANDROID_CLIENT_ID must be set in .env file}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -192,11 +192,12 @@ services:
       - VITE_BASE_URL=http://localhost:3010
       - VITE_HIGHLIGHTS_BASE_URL=http://localhost:3010
 
-      # OAuth Configuration
-      - VITE_GAUTH_CLIENT_ID=${GAUTH_CLIENT_ID:-63233828890-nlsc5rl1bpoh40mkl1aipnl6vv8o5hgg.apps.googleusercontent.com}
-      - VITE_GAUTH_IOS_CLIENT_ID=${GAUTH_IOS_CLIENT_ID:-dummy-ios-client-id}
-      - VITE_GAUTH_ANDROID_CLIENT_ID=${GAUTH_ANDROID_CLIENT_ID:-dummy-android-client-id}
-      - VITE_APPLE_CLIENT_ID=${APPLE_CLIENT_ID:-dummy-apple-client-id}
+      # OAuth Configuration - Must be set in .env file
+      # Note: VITE_ prefixed vars are bundled into browser code (public by design)
+      - VITE_GAUTH_CLIENT_ID=${GAUTH_CLIENT_ID:?GAUTH_CLIENT_ID must be set in .env file}
+      - VITE_GAUTH_IOS_CLIENT_ID=${GAUTH_IOS_CLIENT_ID:?GAUTH_IOS_CLIENT_ID must be set in .env file}
+      - VITE_GAUTH_ANDROID_CLIENT_ID=${GAUTH_ANDROID_CLIENT_ID:?GAUTH_ANDROID_CLIENT_ID must be set in .env file}
+      - VITE_APPLE_CLIENT_ID=${APPLE_CLIENT_ID:?APPLE_CLIENT_ID must be set in .env file}
     depends_on:
       api-nest:
         condition: service_healthy
