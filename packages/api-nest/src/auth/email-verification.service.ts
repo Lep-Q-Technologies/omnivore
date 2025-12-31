@@ -40,6 +40,7 @@ export class EmailVerificationService {
    * Create a new email verification token
    * @param payload - Token payload containing userId and optional email
    * @returns A 64-character hex token string
+   * @throws {Error} May throw on storage/network/IO failures from store.write() (e.g., Redis connection errors)
    */
   async createVerificationToken(
     payload: CreateVerificationOptions,

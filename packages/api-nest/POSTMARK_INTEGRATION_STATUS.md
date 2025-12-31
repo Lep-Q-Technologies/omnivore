@@ -42,7 +42,7 @@
 
 1. **API Key Invalid/Expired**
 
-   - Current key: `[REDACTED - See .env file]`
+   - Current key: `[REDACTED]` (stored in `packages/api-nest/.env` — never commit this file; ensure it's in `.gitignore`)
    - Verify this is the correct Postmark Server API Token
    - Check if it's expired or revoked
 
@@ -113,8 +113,10 @@ Once emails are sending successfully:
 
 ## 📊 Current Configuration
 
+<!-- Never commit .env files with real secrets; add .env to .gitignore. Live values are in packages/api-nest/.env -->
+
 ```env
-POSTMARK_API_KEY=[REDACTED - See .env file]
+POSTMARK_API_KEY=[REDACTED]
 POSTMARK_FROM_EMAIL=hello@lepq.io
 FRONTEND_URL=http://localhost:3010
 ```

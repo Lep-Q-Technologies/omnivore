@@ -12,7 +12,7 @@ import { EnvVariables } from '../config/env-variables'
 export class OAuthStateStore implements OnModuleDestroy {
   private readonly logger = new Logger(OAuthStateStore.name)
 
-  private readonly redis: Redis | null = null
+  private redis: Redis | null = null
 
   private readonly inMemoryStore = new Map<
     string,
@@ -23,11 +23,19 @@ export class OAuthStateStore implements OnModuleDestroy {
 
   private cleanupInterval: NodeJS.Timeout | null = null
 
+  private readonly cleanupIntervalMs: number
+
   constructor(private readonly configService: ConfigService) {
+    // Configurable cleanup interval (default 5 minutes)
+    this.cleanupIntervalMs = this.configService.get<number>(
+      'OAUTH_STATE_CLEANUP_INTERVAL_MS',
+      300000,
+    )
+
     const redisUrl = this.configService.get<string>(EnvVariables.REDIS_URL)
 
     if (redisUrl) {
-      this.redis = new Redis(redisUrl, {
+      const redis = new Redis(redisUrl, {
         lazyConnect: true,
         retryStrategy: (times) => {
           if (times > 3) {
@@ -38,11 +46,21 @@ export class OAuthStateStore implements OnModuleDestroy {
         },
       })
 
-      this.redis.connect().catch((err) => {
-        this.logger.error('Failed to connect to Redis for OAuth state', err)
-        this.logger.warn('Falling back to in-memory storage')
-        this.startCleanupInterval()
-      })
+      redis
+        .connect()
+        .then(() => {
+          this.redis = redis
+          this.logger.debug('Connected to Redis for OAuth state storage')
+        })
+        .catch((err) => {
+          this.logger.error('Failed to connect to Redis for OAuth state', err)
+          this.logger.warn('Falling back to in-memory storage')
+          // Set redis to null so store()/retrieve() use in-memory fallback
+          this.redis = null
+          // Attempt to cleanup the broken client
+          redis.disconnect(false)
+          this.startCleanupInterval()
+        })
     } else {
       this.logger.warn(
         'Redis not configured, using in-memory OAuth state storage (not safe for multi-instance deployments)',
@@ -158,10 +176,12 @@ export class OAuthStateStore implements OnModuleDestroy {
     if (!this.cleanupInterval) {
       this.cleanupInterval = setInterval(
         () => this.cleanupExpired(),
-        300000, // Every 5 minutes
+        this.cleanupIntervalMs,
       )
+      // Unref so the timer doesn't keep the Node.js event loop alive
+      this.cleanupInterval.unref()
       this.logger.debug(
-        'Started cleanup interval for in-memory OAuth state storage',
+        `Started cleanup interval for in-memory OAuth state storage (${this.cleanupIntervalMs}ms)`,
       )
     }
   }

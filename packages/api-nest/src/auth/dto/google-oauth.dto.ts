@@ -1,5 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsOptional, IsString } from 'class-validator'
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+
+export class ExchangeTokenDto {
+  @ApiProperty({
+    description: 'One-time exchange code from OAuth redirect',
+    example: 'a1b2c3d4e5f6...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  code: string
+}
 
 export class GoogleWebAuthDto {
   @ApiProperty({

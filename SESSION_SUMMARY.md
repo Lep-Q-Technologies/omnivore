@@ -261,8 +261,10 @@
 
 **File:** `packages/api-nest/.env`
 
+<!-- Credentials are redacted for security. Live values are stored in packages/api-nest/.env (not committed to git). Never commit unredacted secrets. -->
+
 ```bash
-POSTMARK_API_KEY=[REDACTED - See .env file]
+POSTMARK_API_KEY=[REDACTED]
 POSTMARK_FROM_EMAIL=hello@lepq.io
 FRONTEND_URL=http://localhost:3010
 ```

@@ -101,7 +101,30 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
 
         this.logger.debug(`Retrieved and deleted password reset token`)
 
-        return JSON.parse(data) as PasswordResetTokenPayload
+        // Safe JSON.parse with validation
+        let parsed: unknown = null
+        try {
+          parsed = JSON.parse(data)
+        } catch (parseError) {
+          this.logger.error(
+            'Failed to parse password reset token JSON from Redis',
+            parseError,
+          )
+
+          return this.retrieveFromMemory(token)
+        }
+
+        // Validate required fields
+        if (!this.isValidPayload(parsed)) {
+          this.logger.error(
+            'Invalid password reset token payload structure from Redis',
+            { parsed },
+          )
+
+          return this.retrieveFromMemory(token)
+        }
+
+        return parsed
       } catch (error) {
         this.logger.error(
           'Failed to retrieve from Redis, using in-memory',
@@ -113,6 +136,23 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
     }
 
     return this.retrieveFromMemory(token)
+  }
+
+  /**
+   * Validate that parsed data has required PasswordResetTokenPayload shape
+   */
+  private isValidPayload(data: unknown): data is PasswordResetTokenPayload {
+    if (!data || typeof data !== 'object') {
+      return false
+    }
+
+    const obj = data as Record<string, unknown>
+
+    return (
+      typeof obj.userId === 'string' &&
+      typeof obj.email === 'string' &&
+      typeof obj.createdAt === 'number'
+    )
   }
 
   /**
@@ -192,8 +232,15 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
     }
 
     if (this.redis) {
-      await this.redis.quit()
-      this.logger.debug('Disconnected from Redis')
+      try {
+        await this.redis.quit()
+        this.logger.debug('Disconnected from Redis')
+      } catch (error) {
+        this.logger.warn('Error disconnecting from Redis during shutdown', {
+          error,
+        })
+        // Swallow exception so shutdown continues
+      }
     }
   }
 }
