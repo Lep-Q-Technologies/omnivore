@@ -6,12 +6,11 @@ import {
   Logger,
   Post,
   Query,
-  Req,
   Res,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
-import { Request, Response } from 'express'
+import { Response } from 'express'
 
 import { ExchangeTokenDto, GoogleWebAuthDto } from '../dto/google-oauth.dto'
 import { GoogleOAuthService } from '../services/google-oauth.service'
@@ -159,12 +158,10 @@ export class GoogleOAuthController {
     summary:
       'Exchange one-time code for access token (secure OAuth redirect flow)',
   })
-  async exchangeToken(@Body() body: ExchangeTokenDto, @Req() req: Request) {
+  async exchangeToken(@Body() body: ExchangeTokenDto) {
     try {
-      // Retrieve and delete the token (one-time use) with client info for audit logging
-      const accessToken = await this.tokenExchangeStore.retrieve(body.code, {
-        ip: req.ip,
-      })
+      // Retrieve and delete the token (one-time use)
+      const accessToken = await this.tokenExchangeStore.retrieve(body.code)
 
       if (!accessToken) {
         throw new UnauthorizedException('Invalid or expired exchange code')

@@ -20,7 +20,7 @@ export class RedisConnectionProvider implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.client && this.client.status !== 'end') {
+    if (this.client && !['end', 'close'].includes(this.client.status)) {
       try {
         await this.client.quit()
         this.logger.debug('Shared Redis connection closed')
