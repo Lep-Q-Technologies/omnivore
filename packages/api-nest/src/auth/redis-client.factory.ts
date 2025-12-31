@@ -54,11 +54,22 @@ export async function createRedisClient(
 
   try {
     await redis.connect()
+    logger.debug('Successfully connected to Redis')
   } catch (err) {
     logger.error(
-      'Failed to connect to Redis',
+      'Failed to connect to Redis, falling back to in-memory mode',
       err instanceof Error ? err.stack : err,
     )
+
+    // Clean up the failed connection
+    try {
+      await redis.quit()
+    } catch {
+      // Ignore cleanup errors - connection may already be closed
+    }
+
+    // Fall back to in-memory mode
+    return { redis: null, isInMemoryMode: true }
   }
 
   return { redis, isInMemoryMode: false }
