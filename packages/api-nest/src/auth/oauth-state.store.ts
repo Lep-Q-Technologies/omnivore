@@ -1,18 +1,15 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import Redis from 'ioredis'
-
-import { EnvVariables } from '../config/env-variables'
 
 /**
  * Store for OAuth state tokens to prevent CSRF attacks
  * States are stored with a TTL of 10 minutes
+ *
+ * Supports injection of a pre-configured Redis client for shared connection pooling
  */
 @Injectable()
 export class OAuthStateStore implements OnModuleDestroy {
   private readonly logger = new Logger(OAuthStateStore.name)
-
-  private redis: Redis | null = null
 
   private readonly inMemoryStore = new Map<
     string,
@@ -23,49 +20,16 @@ export class OAuthStateStore implements OnModuleDestroy {
 
   private cleanupInterval: NodeJS.Timeout | null = null
 
-  private readonly cleanupIntervalMs: number
+  private readonly cleanupIntervalMs = 300000 // 5 minutes
 
-  constructor(private readonly configService: ConfigService) {
-    // Configurable cleanup interval (default 5 minutes)
-    this.cleanupIntervalMs = this.configService.get<number>(
-      'OAUTH_STATE_CLEANUP_INTERVAL_MS',
-      300000,
-    )
-
-    const redisUrl = this.configService.get<string>(EnvVariables.REDIS_URL)
-
-    if (redisUrl) {
-      const redis = new Redis(redisUrl, {
-        lazyConnect: true,
-        retryStrategy: (times) => {
-          if (times > 3) {
-            return null
-          }
-
-          return Math.min(times * 50, 2000)
-        },
-      })
-
-      redis
-        .connect()
-        .then(() => {
-          this.redis = redis
-          this.logger.debug('Connected to Redis for OAuth state storage')
-        })
-        .catch((err) => {
-          this.logger.error('Failed to connect to Redis for OAuth state', err)
-          this.logger.warn('Falling back to in-memory storage')
-          // Set redis to null so store()/retrieve() use in-memory fallback
-          this.redis = null
-          // Attempt to cleanup the broken client
-          redis.disconnect(false)
-          this.startCleanupInterval()
-        })
-    } else {
+  constructor(private readonly redis: Redis | null) {
+    if (!this.redis) {
       this.logger.warn(
-        'Redis not configured, using in-memory OAuth state storage (not safe for multi-instance deployments)',
+        'Redis not provided, using in-memory OAuth state storage (not safe for multi-instance deployments)',
       )
       this.startCleanupInterval()
+    } else {
+      this.logger.debug('OAuthStateStore initialized with Redis client')
     }
   }
 
@@ -187,7 +151,8 @@ export class OAuthStateStore implements OnModuleDestroy {
   }
 
   /**
-   * Disconnect Redis and cleanup on module destroy
+   * Cleanup on module destroy
+   * Note: Redis client is shared, so lifecycle is managed by the provider
    */
   async onModuleDestroy(): Promise<void> {
     if (this.cleanupInterval) {
@@ -195,9 +160,6 @@ export class OAuthStateStore implements OnModuleDestroy {
       this.logger.debug('Stopped cleanup interval')
     }
 
-    if (this.redis) {
-      await this.redis.quit()
-      this.logger.debug('Disconnected from Redis')
-    }
+    this.logger.debug('OAuthStateStore destroyed')
   }
 }

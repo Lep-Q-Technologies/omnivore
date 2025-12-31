@@ -6,6 +6,10 @@ import {
   VerificationTokenStore,
 } from './interfaces/verification-token-store.interface'
 
+/**
+ * Redis-backed verification token store
+ * Supports injection of a pre-configured Redis client for shared connection pooling
+ */
 @Injectable()
 export class RedisVerificationTokenStore
   implements VerificationTokenStore, OnModuleDestroy
@@ -27,17 +31,17 @@ export class RedisVerificationTokenStore
     )
   }
 
-  async read(token: string): Promise<VerificationTokenPayload | undefined> {
+  async read(token: string): Promise<VerificationTokenPayload | null> {
     const raw = await this.redis.get(this.key(token))
     if (!raw) {
-      return undefined
+      return null
     }
     try {
       return JSON.parse(raw) as VerificationTokenPayload
     } catch (err) {
       this.logger.warn(`Failed to parse verification token payload: ${err}`)
 
-      return undefined
+      return null
     }
   }
 
@@ -45,10 +49,12 @@ export class RedisVerificationTokenStore
     await this.redis.del(this.key(token))
   }
 
+  /**
+   * Cleanup on module destroy
+   * Note: Redis client is shared, so lifecycle is managed by the provider
+   */
   async onModuleDestroy(): Promise<void> {
-    if (this.redis.status !== 'end') {
-      await this.redis.quit()
-    }
+    this.logger.debug('RedisVerificationTokenStore destroyed')
   }
 
   private key(token: string): string {

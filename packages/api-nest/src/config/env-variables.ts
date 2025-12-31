@@ -44,4 +44,7 @@ export enum EnvVariables {
 
   POSTMARK_API_KEY = 'POSTMARK_API_KEY',
   POSTMARK_FROM_EMAIL = 'POSTMARK_FROM_EMAIL',
+
+  // Token exchange configuration
+  TOKEN_EXCHANGE_TTL = 'TOKEN_EXCHANGE_TTL',
 }

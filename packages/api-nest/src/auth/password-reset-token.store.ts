@@ -1,9 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'crypto'
 import Redis from 'ioredis'
-
-import { EnvVariables } from '../config/env-variables'
 
 export interface PasswordResetTokenPayload {
   userId: string
@@ -14,12 +11,12 @@ export interface PasswordResetTokenPayload {
 /**
  * Store for password reset tokens
  * Tokens are stored with a TTL of 1 hour for security
+ *
+ * Supports injection of a pre-configured Redis client for shared connection pooling
  */
 @Injectable()
 export class PasswordResetTokenStore implements OnModuleDestroy {
   private readonly logger = new Logger(PasswordResetTokenStore.name)
-
-  private readonly redis: Redis | null = null
 
   private readonly inMemoryStore = new Map<
     string,
@@ -30,34 +27,14 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
 
   private cleanupInterval: NodeJS.Timeout | null = null
 
-  constructor(private readonly configService: ConfigService) {
-    const redisUrl = this.configService.get<string>(EnvVariables.REDIS_URL)
-
-    if (redisUrl) {
-      this.redis = new Redis(redisUrl, {
-        lazyConnect: true,
-        retryStrategy: (times) => {
-          if (times > 3) {
-            return null
-          }
-
-          return Math.min(times * 50, 2000)
-        },
-      })
-
-      this.redis.connect().catch((err) => {
-        this.logger.error(
-          'Failed to connect to Redis for password reset tokens',
-          err,
-        )
-        this.logger.warn('Falling back to in-memory storage')
-        this.startCleanupInterval()
-      })
-    } else {
+  constructor(private readonly redis: Redis | null) {
+    if (!this.redis) {
       this.logger.warn(
-        'Redis not configured, using in-memory password reset token storage',
+        'Redis not provided, using in-memory password reset token storage (not safe for multi-instance deployments)',
       )
       this.startCleanupInterval()
+    } else {
+      this.logger.debug('PasswordResetTokenStore initialized with Redis client')
     }
   }
 
@@ -223,7 +200,8 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
   }
 
   /**
-   * Disconnect Redis and cleanup on module destroy
+   * Cleanup on module destroy
+   * Note: Redis client is shared, so lifecycle is managed by the provider
    */
   async onModuleDestroy(): Promise<void> {
     if (this.cleanupInterval) {
@@ -231,16 +209,6 @@ export class PasswordResetTokenStore implements OnModuleDestroy {
       this.logger.debug('Stopped cleanup interval')
     }
 
-    if (this.redis) {
-      try {
-        await this.redis.quit()
-        this.logger.debug('Disconnected from Redis')
-      } catch (error) {
-        this.logger.warn('Error disconnecting from Redis during shutdown', {
-          error,
-        })
-        // Swallow exception so shutdown continues
-      }
-    }
+    this.logger.debug('PasswordResetTokenStore destroyed')
   }
 }
