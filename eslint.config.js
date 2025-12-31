@@ -1,6 +1,5 @@
 import js from '@eslint/js'
 import prettierConfig from 'eslint-config-prettier'
-import prettierPlugin from 'eslint-plugin-prettier'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import tseslint from 'typescript-eslint'
 
@@ -11,8 +10,8 @@ export default [
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
-      'packages/omnivore-polish/**', // Has its own ESLint 9 config
-      'packages/web-vite/**', // Has its own ESLint 9 config
+      'packages/omnivore-polish/**', // React app with browser-specific config
+      'packages/web-vite/**', // React app with browser-specific config
     ],
   },
   js.configs.recommended,
@@ -22,7 +21,6 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint.plugin,
       'simple-import-sort': simpleImportSort,
-      prettier: prettierPlugin,
     },
     languageOptions: {
       parser: tseslint.parser,
@@ -32,55 +30,55 @@ export default [
       },
     },
     rules: {
-      // Prettier integration
+      // Prettier integration - only disable conflicting rules
       ...prettierConfig.rules,
-      'prettier/prettier': 'error',
 
       // Import sorting
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
 
-      // Code quality rules from .eslintrc.base.json
+      // Code quality rules - only 'error' (blocks commit) or 'off' (disabled)
+      // No 'warn' - warnings don't block commits and get ignored
       'arrow-body-style': 'off',
       'prefer-arrow-callback': 'off',
-      'prefer-const': 'warn',
+      'prefer-const': 'error', // Prevents accidental mutation
       'array-callback-return': 'error',
       'block-scoped-var': 'error',
       'consistent-this': 'error',
       curly: ['error', 'all'],
-      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
-      'dot-notation': 'warn',
+      'no-console': 'off', // Useful for debugging, Prettier handles formatting
+      'dot-notation': 'off', // Style preference
       eqeqeq: 'error',
       'for-direction': 'error',
-      'global-require': 'warn',
-      'guard-for-in': 'warn',
-      'handle-callback-err': 'warn',
+      'global-require': 'off', // Not applicable to ES modules
+      'guard-for-in': 'error', // Prevents prototype pollution bugs
+      'handle-callback-err': 'error', // Prevents swallowed errors
       'id-blacklist': 'error',
-      'init-declarations': 'warn',
-      'lines-around-directive': 'error',
-      'lines-between-class-members': ['warn', 'always'],
+      'init-declarations': 'off', // Style preference
+      'lines-around-directive': 'off', // Style preference
+      'lines-between-class-members': 'off', // Style preference
       'max-depth': ['error', 4],
       'max-nested-callbacks': ['error', 4],
       'max-params': ['error', 11],
-      'newline-before-return': 'warn',
+      'newline-before-return': 'off', // Style preference
       'no-array-constructor': 'error',
-      'no-await-in-loop': 'warn',
+      'no-await-in-loop': 'off', // Often intentional for sequential async
       'no-caller': 'error',
       'no-catch-shadow': 'error',
       'no-duplicate-imports': 'error',
-      'no-else-return': 'warn',
+      'no-else-return': 'off', // Style preference
       'no-empty-function': 'off',
       'no-eq-null': 'error',
       'no-eval': 'error',
       'no-implicit-globals': 'error',
       'no-implied-eval': 'error',
       'no-labels': 'error',
-      'no-lone-blocks': 'warn',
-      'no-lonely-if': 'warn',
-      'no-loop-func': 'warn',
+      'no-lone-blocks': 'error', // Likely a mistake
+      'no-lonely-if': 'off', // Style preference
+      'no-loop-func': 'error', // Prevents closure bugs
       'no-mixed-operators': 'error',
       'no-multi-assign': 'error',
-      'no-multi-str': 'warn',
+      'no-multi-str': 'error', // Prevents syntax errors in strict mode
       'no-native-reassign': 'error',
       'no-proto': 'error',
       'no-prototype-builtins': 'off',
@@ -89,7 +87,7 @@ export default [
       'no-restricted-modules': 'error',
       'no-restricted-properties': 'error',
       'no-restricted-syntax': 'error',
-      'no-return-await': 'warn',
+      'no-return-await': 'off', // Deprecated in modern JS
       'no-self-compare': 'error',
       'no-sequences': 'error',
       'no-shadow': 'off',
@@ -97,18 +95,16 @@ export default [
       'no-shadow-restricted-names': 'error',
       'no-tabs': 'error',
       'no-template-curly-in-string': 'error',
-      'no-undef-init': 'warn',
-      'no-undefined': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      'no-undef-init': 'off', // Style preference
+      'no-undefined': 'off', // Style preference
+      // Type-aware rules requiring strictNullChecks (disabled - codebase uses strictNullChecks: false)
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/no-unnecessary-condition': [
-        'warn',
-        { allowConstantLoopConditions: true },
-      ],
+      '@typescript-eslint/no-unnecessary-condition': 'off',
       'no-unmodified-loop-condition': 'error',
       'no-unneeded-ternary': 'error',
       'no-use-before-define': [
-        'warn',
+        'error', // Prevents hoisting bugs
         {
           functions: false,
         },
@@ -116,28 +112,34 @@ export default [
       'no-useless-call': 'error',
       'no-useless-concat': 'error',
       'no-useless-constructor': 'off',
-      'no-useless-escape': 'warn',
+      'no-useless-escape': 'off', // Style preference
       'no-useless-rename': 'error',
       'no-useless-return': 'error',
       'no-void': 'error',
       'no-with': 'error',
-      'prefer-promise-reject-errors': 'warn',
+      'prefer-promise-reject-errors': 'error', // Prevents debugging issues
       'prefer-rest-params': 'error',
-      'prefer-template': 'warn',
-      radix: 'warn',
+      'prefer-template': 'off', // Style preference
+      radix: 'error', // Prevents parseInt bugs
       'symbol-description': 'error',
       'vars-on-top': 'error',
       yoda: 'error',
       'class-methods-use-this': 'off',
-      '@typescript-eslint/no-empty-interface': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-empty-interface': 'error', // Prevents meaningless types
+      '@typescript-eslint/no-explicit-any': 'error', // Prevents type safety issues
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_', // Allow unused args prefixed with _
+          varsIgnorePattern: '^_', // Allow unused vars prefixed with _
+        },
+      ],
     },
   },
   {
     files: ['**/*.spec.ts', '**/*.test.ts'],
     rules: {
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // Test files can have console statements for debugging
       'no-console': 'off',
     },
   },
