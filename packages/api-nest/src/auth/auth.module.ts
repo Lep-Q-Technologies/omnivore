@@ -13,6 +13,7 @@ import { LoggingModule } from '../logging/logging.module'
 import { NotificationModule } from '../notification/notification.module'
 import { PubSubService } from '../pubsub/pubsub.service'
 import { UserModule } from '../user/user.module'
+import { REDIS_CLIENT } from './auth.constants'
 import { AuthController } from './auth.controller'
 import { AuthResolver } from './auth.resolver'
 import { GoogleOAuthController } from './controllers/google-oauth.controller'
@@ -22,8 +23,11 @@ import { EmailVerificationService } from './email-verification.service'
 import { InMemoryVerificationTokenStore } from './in-memory-verification-token.store'
 import { NotificationClient } from './interfaces/notification-client.interface'
 import { VerificationTokenStore } from './interfaces/verification-token-store.interface'
+import { OAuthStateStore } from './oauth-state.store'
 import { PasswordResetTokenStore } from './password-reset-token.store'
 import { QueueNotificationClient } from './queue-notification.client'
+import { createRedisClient } from './redis-client.factory'
+import { RedisConnectionProvider } from './redis-connection.provider'
 import { RedisVerificationTokenStore } from './redis-verification-token.store'
 import { AuthService } from './services/auth.service'
 import { GoogleOAuthService } from './services/google-oauth.service'
@@ -71,79 +75,74 @@ import { TokenExchangeStore } from './token-exchange.store'
     AnalyticsService,
     PubSubService,
     IntercomService,
-    PasswordResetTokenStore,
+    // Shared Redis connection lifecycle manager
+    {
+      provide: RedisConnectionProvider,
+      useFactory: async (configService: ConfigService) => {
+        const { redis, isInMemoryMode } = await createRedisClient(
+          configService,
+          {
+            rejectUnauthorized: true,
+            context: 'AuthRedis',
+          },
+        )
+
+        return new RedisConnectionProvider(isInMemoryMode ? null : redis)
+      },
+      inject: [ConfigService],
+    },
+    // Shared Redis client accessor for dependency injection
+    {
+      provide: REDIS_CLIENT,
+      useFactory: (connectionProvider: RedisConnectionProvider) => {
+        return connectionProvider.client
+      },
+      inject: [RedisConnectionProvider],
+    },
+    // Token exchange store (OAuth flow)
     {
       provide: TokenExchangeStore,
-      useFactory: (configService: ConfigService) => {
-        const nodeEnv = configService.get<string>(
-          EnvVariables.NODE_ENV,
-          'development',
-        )
-        const redisUrl = configService.get<string>(EnvVariables.REDIS_URL)
+      useFactory: (redis: Redis | null, configService: ConfigService) => {
         const exchangeCodeTtl = configService.get<number>(
-          'TOKEN_EXCHANGE_TTL',
+          EnvVariables.TOKEN_EXCHANGE_TTL,
           60,
         )
 
-        // In test mode or without Redis, use in-memory storage
-        if (nodeEnv === 'test' || !redisUrl) {
-          return new TokenExchangeStore(null, exchangeCodeTtl)
-        }
-
-        // Configure TLS-aware Redis client
-        const tlsCert = configService.get<string>(EnvVariables.REDIS_TLS_CERT)
-
-        const redis = new Redis(redisUrl, {
-          lazyConnect: true,
-          tls: tlsCert
-            ? {
-                ca: tlsCert,
-                rejectUnauthorized: false,
-              }
-            : null,
-        })
-
-        // Connect and handle errors gracefully
-        redis.connect().catch((err) => {
-          console.error('TokenExchangeStore: Failed to connect to Redis', err)
-        })
-
         return new TokenExchangeStore(redis, exchangeCodeTtl)
       },
-      inject: [ConfigService],
+      inject: [REDIS_CLIENT, ConfigService],
+    },
+    // Password reset token store
+    {
+      provide: PasswordResetTokenStore,
+      useFactory: (redis: Redis | null) => {
+        return new PasswordResetTokenStore(redis)
+      },
+      inject: [REDIS_CLIENT],
+    },
+    // OAuth state store (CSRF protection)
+    {
+      provide: OAuthStateStore,
+      useFactory: (redis: Redis | null) => {
+        return new OAuthStateStore(redis)
+      },
+      inject: [REDIS_CLIENT],
+    },
+    // Verification token store (email verification)
+    {
+      provide: VerificationTokenStore,
+      useFactory: (redis: Redis | null) => {
+        if (!redis) {
+          return new InMemoryVerificationTokenStore()
+        }
+
+        return new RedisVerificationTokenStore(redis)
+      },
+      inject: [REDIS_CLIENT],
     },
     {
       provide: NotificationClient,
       useClass: QueueNotificationClient,
-    },
-    {
-      provide: VerificationTokenStore,
-      useFactory: (configService: ConfigService) => {
-        const nodeEnv = configService.get<string>(
-          EnvVariables.NODE_ENV,
-          'development',
-        )
-        const redisUrl = configService.get<string>(EnvVariables.REDIS_URL)
-
-        if (nodeEnv === 'test' || !redisUrl) {
-          return new InMemoryVerificationTokenStore()
-        }
-
-        const tlsCert = configService.get<string>(EnvVariables.REDIS_TLS_CERT)
-
-        const redis = new Redis(redisUrl, {
-          lazyConnect: true,
-          tls: tlsCert
-            ? {
-                ca: tlsCert,
-                rejectUnauthorized: false,
-              }
-            : null,
-        })
-
-        return new RedisVerificationTokenStore(redis)
-      },
-      inject: [ConfigService],
     },
     AuthResolver,
   ],

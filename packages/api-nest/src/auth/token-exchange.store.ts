@@ -281,15 +281,14 @@ export class TokenExchangeStore implements OnModuleDestroy {
   }
 
   /**
-   * Disconnect Redis and cleanup on module destroy
+   * Cleanup on module destroy
+   * Note: Redis client is shared, so lifecycle is managed by the provider
    */
   async onModuleDestroy(): Promise<void> {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval)
     }
 
-    // Note: Redis client is injected, so we don't manage its lifecycle here
-    // The factory that created us is responsible for cleanup
     this.logger.debug('TokenExchangeStore destroyed', {
       metrics: this.getMetrics(),
     })

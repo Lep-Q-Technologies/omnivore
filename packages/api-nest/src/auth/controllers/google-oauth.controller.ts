@@ -6,11 +6,12 @@ import {
   Logger,
   Post,
   Query,
+  Req,
   Res,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
-import { Response } from 'express'
+import { Request, Response } from 'express'
 
 import { ExchangeTokenDto, GoogleWebAuthDto } from '../dto/google-oauth.dto'
 import { GoogleOAuthService } from '../services/google-oauth.service'
@@ -87,16 +88,31 @@ export class GoogleOAuthController {
         await this.oauthAuthService.handleVerifiedOAuthUser(userInfo)
 
       if (result.success && result.accessToken) {
-        // Generate one-time exchange code and store the token
-        const exchangeCode = this.tokenExchangeStore.generateExchangeCode()
+        // Ensure we have user info for rate limiting and audit logging
+        if (!result.user?.id) {
+          this.logger.error('User ID missing in OAuth result')
+
+          return res.redirect('/login?errorCodes=AuthFailed')
+        }
+
+        // Generate one-time exchange code and store the token (with userId for rate limiting)
+        const exchangeCode = this.tokenExchangeStore.generateExchangeCode(
+          result.user.id,
+        )
 
         if (!exchangeCode) {
-          this.logger.warn('Rate limit hit during exchange code generation')
+          this.logger.warn('Rate limit hit during exchange code generation', {
+            userId: result.user.id,
+          })
 
           return res.redirect('/login?errorCodes=RateLimitExceeded')
         }
 
-        await this.tokenExchangeStore.store(exchangeCode, result.accessToken)
+        await this.tokenExchangeStore.store(
+          exchangeCode,
+          result.accessToken,
+          result.user.id,
+        )
 
         // Redirect with exchange code (not the token) - frontend will exchange it
         const redirectUrl = `/library?exchange_code=${encodeURIComponent(
@@ -143,10 +159,12 @@ export class GoogleOAuthController {
     summary:
       'Exchange one-time code for access token (secure OAuth redirect flow)',
   })
-  async exchangeToken(@Body() body: ExchangeTokenDto) {
+  async exchangeToken(@Body() body: ExchangeTokenDto, @Req() req: Request) {
     try {
-      // Retrieve and delete the token (one-time use)
-      const accessToken = await this.tokenExchangeStore.retrieve(body.code)
+      // Retrieve and delete the token (one-time use) with client info for audit logging
+      const accessToken = await this.tokenExchangeStore.retrieve(body.code, {
+        ip: req.ip,
+      })
 
       if (!accessToken) {
         throw new UnauthorizedException('Invalid or expired exchange code')
