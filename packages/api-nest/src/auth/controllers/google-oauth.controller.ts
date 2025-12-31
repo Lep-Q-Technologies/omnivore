@@ -2,26 +2,20 @@ import {
   Body,
   Controller,
   Get,
-  HttpStatus,
+  InternalServerErrorException,
   Logger,
   Post,
   Query,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common'
-import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { Response } from 'express'
 
+import { ExchangeTokenDto, GoogleWebAuthDto } from '../dto/google-oauth.dto'
 import { GoogleOAuthService } from '../services/google-oauth.service'
 import { OAuthAuthService } from '../services/oauth-auth.service'
 import { TokenExchangeStore } from '../token-exchange.store'
-
-interface GoogleWebAuthDto {
-  idToken: string
-}
-
-interface ExchangeTokenDto {
-  code: string
-}
 
 @ApiTags('google-oauth')
 @Controller('auth')
@@ -95,6 +89,13 @@ export class GoogleOAuthController {
       if (result.success && result.accessToken) {
         // Generate one-time exchange code and store the token
         const exchangeCode = this.tokenExchangeStore.generateExchangeCode()
+
+        if (!exchangeCode) {
+          this.logger.warn('Rate limit hit during exchange code generation')
+
+          return res.redirect('/login?errorCodes=RateLimitExceeded')
+        }
+
         await this.tokenExchangeStore.store(exchangeCode, result.accessToken)
 
         // Redirect with exchange code (not the token) - frontend will exchange it
@@ -115,37 +116,25 @@ export class GoogleOAuthController {
 
   @Post('google-web-signin')
   @ApiOperation({ summary: 'Google web authentication with ID token' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        idToken: { type: 'string' },
-      },
-      required: ['idToken'],
-    },
-  })
-  async googleWebSignIn(@Body() body: GoogleWebAuthDto, @Res() res: Response) {
+  async googleWebSignIn(@Body() body: GoogleWebAuthDto) {
     try {
       const result = await this.oauthAuthService.handleGoogleWebAuth(
         body.idToken,
       )
 
       if (!result.success) {
-        return res.status(HttpStatus.UNAUTHORIZED).json({
-          success: false,
-          error: 'Authentication failed',
-        })
+        throw new UnauthorizedException('Authentication failed')
       }
 
       // Return token in response body (frontend stores in localStorage)
-      return res.status(HttpStatus.OK).json(result)
+      return result
     } catch (error) {
-      this.logger.error('Error in Google web sign-in', error)
+      if (error instanceof UnauthorizedException) {
+        throw error
+      }
 
-      return res.status(HttpStatus.UNAUTHORIZED).json({
-        success: false,
-        error: 'Authentication failed',
-      })
+      this.logger.error('Error in Google web sign-in', error)
+      throw new UnauthorizedException('Authentication failed')
     }
   }
 
@@ -154,45 +143,26 @@ export class GoogleOAuthController {
     summary:
       'Exchange one-time code for access token (secure OAuth redirect flow)',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'string' },
-      },
-      required: ['code'],
-    },
-  })
-  async exchangeToken(@Body() body: ExchangeTokenDto, @Res() res: Response) {
+  async exchangeToken(@Body() body: ExchangeTokenDto) {
     try {
-      if (!body.code) {
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          error: 'Exchange code is required',
-        })
-      }
-
       // Retrieve and delete the token (one-time use)
       const accessToken = await this.tokenExchangeStore.retrieve(body.code)
 
       if (!accessToken) {
-        return res.status(HttpStatus.UNAUTHORIZED).json({
-          success: false,
-          error: 'Invalid or expired exchange code',
-        })
+        throw new UnauthorizedException('Invalid or expired exchange code')
       }
 
-      return res.status(HttpStatus.OK).json({
+      return {
         success: true,
         accessToken,
-      })
+      }
     } catch (error) {
-      this.logger.error('Error exchanging token', error)
+      if (error instanceof UnauthorizedException) {
+        throw error
+      }
 
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: 'Failed to exchange token',
-      })
+      this.logger.error('Error exchanging token', error)
+      throw new InternalServerErrorException('Failed to exchange token')
     }
   }
 }

@@ -86,7 +86,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript']
+        language: ['javascript', 'typescript']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

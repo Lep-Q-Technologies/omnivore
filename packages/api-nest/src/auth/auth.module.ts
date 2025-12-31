@@ -72,7 +72,46 @@ import { TokenExchangeStore } from './token-exchange.store'
     PubSubService,
     IntercomService,
     PasswordResetTokenStore,
-    TokenExchangeStore,
+    {
+      provide: TokenExchangeStore,
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>(
+          EnvVariables.NODE_ENV,
+          'development',
+        )
+        const redisUrl = configService.get<string>(EnvVariables.REDIS_URL)
+        const exchangeCodeTtl = configService.get<number>(
+          'TOKEN_EXCHANGE_TTL',
+          60,
+        )
+
+        // In test mode or without Redis, use in-memory storage
+        if (nodeEnv === 'test' || !redisUrl) {
+          return new TokenExchangeStore(null, exchangeCodeTtl)
+        }
+
+        // Configure TLS-aware Redis client
+        const tlsCert = configService.get<string>(EnvVariables.REDIS_TLS_CERT)
+
+        const redis = new Redis(redisUrl, {
+          lazyConnect: true,
+          tls: tlsCert
+            ? {
+                ca: tlsCert,
+                rejectUnauthorized: false,
+              }
+            : null,
+        })
+
+        // Connect and handle errors gracefully
+        redis.connect().catch((err) => {
+          console.error('TokenExchangeStore: Failed to connect to Redis', err)
+        })
+
+        return new TokenExchangeStore(redis, exchangeCodeTtl)
+      },
+      inject: [ConfigService],
+    },
     {
       provide: NotificationClient,
       useClass: QueueNotificationClient,
