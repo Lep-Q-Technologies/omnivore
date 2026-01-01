@@ -80,6 +80,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
+    permissions: {}
     needs: [codeql-analysis, docker-security-scan]
     if: always()
     steps:
