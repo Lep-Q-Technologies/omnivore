@@ -50,6 +50,9 @@ jobs:
   docker-security-scan:
     name: Docker Image Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     if: github.event_name == 'push' || github.event_name == 'schedule'
     steps:
       - name: Checkout code
