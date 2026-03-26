@@ -31,7 +31,7 @@
     "test:postmark-webhook": "TS_NODE_TRANSPILE_ONLY=true ts-node -r tsconfig-paths/register scripts/test-postmark-webhook.ts"
   },
   "dependencies": {
-    "@apollo/server": "^4.11.1",
+    "@apollo/server": "^5.5.0",
     "@mozilla/readability": "^0.6.0",
     "@nestjs/apollo": "^12.0.11",
     "@nestjs/bullmq": "^11.0.4",
